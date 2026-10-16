@@ -4,6 +4,7 @@
 # start, so shells start fast. Runs after mise.sh, on every boot.
 set -eux -o pipefail
 
+# shellcheck source=/dev/null
 . ~/.config/limabean/env.sh
 dir=~/.local/share/zsh/completions
 mkdir -p "$dir"

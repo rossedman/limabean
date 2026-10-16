@@ -7,6 +7,7 @@
 set -eux -o pipefail
 
 host_git=/mnt/host/git
+# shellcheck disable=SC2154  # PARAM_codeDir is set by Lima from the codeDir param
 code_dir="${PARAM_codeDir/#\~/$HOME}"
 mkdir -p "$code_dir"
 

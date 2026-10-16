@@ -133,21 +133,28 @@ apply a Linux-safe subset in a
 `features/dotfiles.sh` script. This needs D3 (shell config portability) to be
 settled first.
 
-## Wrapper CLI
+## Wrapper CLI: `bin/limabean`
 
-Keep it small. A `justfile` or a ~100-line bash script:
+A single bash script (bash 3.2-compatible, so macOS's stock `/bin/bash` runs
+it) that wraps `limactl`. The README has the command reference. Design points:
 
-```
-limabean new go [--name go-api]   # limactl start --name=go-api templates/go.yaml
-limabean ls                       # limactl list
-limabean sh go-api                # limactl shell go-api (or ssh lima-go-api)
-limabean rebuild go-api           # stop, delete, create from the current template
-limabean update                   # re-run feature scripts in place (idempotent)
-limabean lint                     # limactl validate + shellcheck features/*.sh
-```
+- **Config file instead of Lima params.** `~/.config/limabean/config` (sourced
+  shell: `GIT_CONFIG_DIR`, `CODE_DIR`, `CPUS`, `MEMORY`) is passed to
+  `limactl start` as `--param`/`--cpus`/`--memory`. It replaces Lima's
+  `override.yaml`, which can't set mount paths.
+- **`doctor` turns silent failures into explicit ones**: a missing or
+  misplaced `Include` (inside a `Host`/`Match` block it doesn't apply), an
+  empty ssh-agent, and a missing git config.
+- **`rm`/`rebuild` guard unsaved work.** Over SSH, every git repo under
+  `CODE_DIR` is checked for uncommitted changes, stashes and commits on no
+  remote (`git log --branches --not --remotes`). `--force` skips the check.
+- **The environment is remembered** in `~/.local/state/limabean/<name>.env`, so
+  `rebuild` recreates from the same template. `ls` shows only VMs built from
+  these templates (their `lima.yaml` references `/etc/limabean/mise/`).
+- **Templates are found next to the script** (symlinks resolved), so it can be
+  symlinked onto PATH from a checkout.
 
-`rebuild` is the main maintenance path: change a template, rebuild, done. Avoid
-patching long-lived VMs by hand.
+`rebuild` is the main maintenance path: change a template, rebuild, done.
 
 ## Claude over SSH
 
@@ -235,8 +242,10 @@ heavy extras most VMs don't need.
 1. ✅ `layer-os.yaml` + `layer-base.yaml` + the `apt-common`, `mise`, `git` and
    `nerdctl`/`shell` features, plus the global editorconfig. `scratch` boots, and `ssh lima-scratch` has every tool.
 2. A second environment, to exercise per-environment mise TOML files.
-3. `bin/limabean` with `new/rebuild/lint`.
+3. ✅ `bin/limabean`: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
+   `rebuild` and `rm`, with the unsaved-work guard.
 4. Dotfiles (`features/dotfiles.sh`). Code-location option C (persistent
    disk) if rebuilds become painful.
-5. A smoke test: `limabean lint` plus a script that rebuilds `scratch` and
-   checks the probes.
+5. `limabean bump` (rewrite pinned versions in `base.toml`), CI (`limactl
+   tmpl validate` + shellcheck), and a persistent `~/code` disk so rebuilds
+   keep repositories.

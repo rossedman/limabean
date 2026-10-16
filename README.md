@@ -10,6 +10,9 @@ See [SPEC.md](SPEC.md) for the design.
 
 ## Requirements
 
+`limabean doctor` checks all of these and prints the fix for anything missing.
+`limabean init` can make the SSH config change for you.
+
 ### 1. Lima 2.0 or newer
 
 ```bash
@@ -57,7 +60,7 @@ Check it with `ssh-add -l`. It should list your key, not "The agent has no
 identities."
 
 If you use another agent, such as 1Password or Secretive, make sure
-`SSH_AUTH_SOCK` points at it in the shell where you run `limactl start`.
+`SSH_AUTH_SOCK` points at it in the shell where you run `limabean new`.
 Forwarding uses whichever agent that variable names.
 
 ### 4. Your git config in a directory
@@ -71,7 +74,7 @@ git's own XDG location. Git on the Mac reads it too.
 |---|---|
 | Config already at `~/.config/git/config` | Nothing. |
 | Config at `~/.gitconfig` | `mkdir -p ~/.config/git && mv ~/.gitconfig ~/.config/git/config` (git still finds it) |
-| Config in a dotfiles repo | Pass the directory when creating a VM: `--param gitConfigDir=~/dotfiles/git` |
+| Config in a dotfiles repo | Nothing: `limabean init` follows the `~/.gitconfig` symlink and suggests that directory. Or set `GIT_CONFIG_DIR` in `~/.config/limabean/config` |
 
 Files the VM looks for in that directory, first match wins:
 
@@ -85,26 +88,57 @@ sense on the host are overridden inside the VM (`core.editor` becomes `vim`).
 ## Quick start
 
 ```bash
-limactl start --name=scratch templates/scratch.yaml
-ssh lima-scratch
+git clone https://github.com/rossedman/limabean ~/code/github.com/rossedman/limabean
+ln -s ~/code/github.com/rossedman/limabean/bin/limabean ~/.local/bin/limabean   # any directory on your PATH
+
+limabean init          # save your settings, fix ~/.ssh/config, run doctor
+limabean new dev       # create a VM called "dev" (takes a minute or two the first time)
+limabean ssh dev       # or: ssh lima-dev
 ```
 
-With a custom git config directory:
-
-```bash
-limactl start --name=scratch --param gitConfigDir=~/dotfiles/git templates/scratch.yaml
-```
-
-The first start takes about a minute: it downloads the Ubuntu image, then
-installs apt packages, containerd and the mise tools. Later starts take seconds.
+`limabean init` asks two things, the host directory with your git config and
+where repositories go inside VMs, then runs `limabean doctor`, which checks
+every requirement above and prints the exact fix for anything missing.
 
 Check that git push will work from the VM:
 
 ```bash
-ssh lima-scratch ssh -T git@github.com
+limabean ssh dev ssh -T git@github.com
 ```
 
 It should greet you by your GitHub username.
+
+## The `limabean` command
+
+| Command | What it does |
+|---|---|
+| `limabean init` | Writes `~/.config/limabean/config`, offers to add the `Include` to `~/.ssh/config` (with a backup), then runs `doctor` |
+| `limabean doctor` | Checks Lima, the SSH `Include` and where it sits, agent keys and the git config directory |
+| `limabean new <name> [env]` | Creates a VM from `templates/<env>.yaml` (default `scratch`) using your config |
+| `limabean ls` | Lists limabean VMs with status, environment, size and SSH host |
+| `limabean ssh <name> [cmd…]` | Opens a shell or runs a command, starting the VM first if it's stopped |
+| `limabean get <name> [-p] <repo>` | `ghq get` inside the VM, e.g. `limabean get dev rossedman/limabean` |
+| `limabean stop <name>` | Stops a VM |
+| `limabean rebuild <name>` | Deletes and recreates the VM from the current templates, with the same environment |
+| `limabean rm <name>` | Deletes a VM |
+
+**Your work is protected.** `rm` and `rebuild` first look at every git
+repository under `~/code` in the VM. They refuse to run if any repository has
+uncommitted changes, stashes or commits not pushed to a remote, and list what
+they found. `--force` skips the check.
+
+Settings live in `~/.config/limabean/config`, a small shell file:
+
+```bash
+GIT_CONFIG_DIR="~/.dotfiles/git"   # host directory mounted read-only into VMs
+CODE_DIR="~/code"                  # where ghq clones inside VMs
+CPUS=""                            # empty: template default (4)
+MEMORY=""                          # GiB; empty: template default (8)
+```
+
+Changes apply to VMs created afterwards, or to existing ones after
+`limabean rebuild`. Everything `limabean` does is plain `limactl`, so you can
+always use `limactl` directly.
 
 ## Connecting Claude
 
@@ -197,7 +231,7 @@ GitHub repositories are fetched over https and pushed over SSH, through
 `pushInsteadOf` and your forwarded agent. Public repositories clone without a
 key. For private ones use `ghq get -p` (SSH) so the clone itself authenticates.
 
-To use another directory, create the VM with `--param codeDir=~/src`. A
+To use another directory, set `CODE_DIR` in `~/.config/limabean/config`. A
 `[ghq "<url>"] root = …` in your own git config still applies to that URL.
 
 ## Changing things
@@ -205,20 +239,20 @@ To use another directory, create the VM with `--param codeDir=~/src`. A
 | To… | Edit |
 |---|---|
 | Add or upgrade a CLI tool | [templates/mise/base.toml](templates/mise/base.toml). Pin a version; `mise latest <tool>` in a VM shows the newest. |
-| Change where ghq clones | `codeDir` param in [templates/layer-base.yaml](templates/layer-base.yaml), or per VM: `--param codeDir=…` |
+| Change where ghq clones | `CODE_DIR` in `~/.config/limabean/config` |
 | Change the prompt, aliases or shell options | [templates/files/zshrc](templates/files/zshrc) |
 | Add a tool's zsh completion | a `gen` line in [templates/features/completions.sh](templates/features/completions.sh) |
 | Add an environment variable for every shell | [templates/files/env.sh](templates/files/env.sh) |
 | Change the global editorconfig | [templates/files/editorconfig](templates/files/editorconfig) |
 | Add a system package | `packages=(…)` in [templates/features/apt-common.sh](templates/features/apt-common.sh) |
-| Change CPU, memory or disk | [templates/layer-os.yaml](templates/layer-os.yaml), or per VM: `limactl start --cpus 8 --memory 16 …` |
+| Change CPU or memory | `CPUS`/`MEMORY` in `~/.config/limabean/config`, or the defaults in [templates/layer-os.yaml](templates/layer-os.yaml) |
+| Change disk size | [templates/layer-os.yaml](templates/layer-os.yaml) |
 | Add a new environment | a new `templates/<env>.yaml` with `base: [./layer-base.yaml]` |
 
 Then rebuild. VMs are disposable, and rebuilding is how changes get applied:
 
 ```bash
-limactl delete -f scratch
-limactl start --name=scratch templates/scratch.yaml
+limabean rebuild dev
 ```
 
 Lima doesn't allow `..` in relative paths or base template file names starting
@@ -226,6 +260,9 @@ with `_`. That's why scripts and TOML files live under `templates/` and the
 layers are named `layer-*.yaml`.
 
 ## Troubleshooting
+
+Start with `limabean doctor`.
+
 
 | Symptom | Cause |
 |---|---|
