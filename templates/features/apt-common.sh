@@ -3,7 +3,14 @@
 set -eux -o pipefail
 
 export DEBIAN_FRONTEND=noninteractive
-packages=(git curl ca-certificates build-essential unzip xz-utils jq)
+packages=(
+  git curl wget ca-certificates build-essential unzip xz-utils jq
+  vim httpie tree htop tmux stow
+  zsh zsh-autosuggestions zsh-syntax-highlighting
+  git-extras git-quick-stats speedtest-cli
+  python3 python3-pip python3-venv
+  skopeo
+)
 
 missing=()
 for p in "${packages[@]}"; do

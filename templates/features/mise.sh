@@ -1,6 +1,6 @@
 #!/bin/bash
-# Install mise, activate it for every shell, and install the tools listed in
-# /etc/limabean/mise/*.toml. Runs as the VM user on every boot.
+# Install mise and the tools listed in /etc/limabean/mise/*.toml (PATH is set
+# by files/env.sh). Runs as the VM user on every boot.
 set -eux -o pipefail
 
 if [ ! -x ~/.local/bin/mise ]; then
@@ -12,14 +12,6 @@ mkdir -p ~/.config/mise/conf.d
 for f in /etc/limabean/mise/*.toml; do
   ln -sf "$f" ~/.config/mise/conf.d/
 done
-
-# Put mise shims on PATH before Ubuntu's non-interactive guard in .bashrc, so
-# `ssh lima-<name> <cmd>` sees the tools too.
-marker='# limabean: PATH'
-if ! grep -qF "$marker" ~/.bashrc; then
-  line="export PATH=\"\$HOME/.local/bin:\$HOME/.local/share/mise/shims:\$PATH\" $marker"
-  sed -i "1i $line" ~/.bashrc
-fi
 
 ~/.local/bin/mise install --yes
 

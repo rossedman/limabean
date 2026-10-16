@@ -12,3 +12,9 @@ disk: 50GiB
 ssh:
   # Use the Mac's ssh-agent for git push; keys never enter the VM.
   forwardAgent: true
+
+# Containers: Lima installs and manages containerd + nerdctl + BuildKit,
+# rootless. features/nerdctl.sh makes `docker` an alias for nerdctl.
+containerd:
+  system: false
+  user: true
