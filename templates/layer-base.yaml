@@ -1,0 +1,25 @@
+# Layer 2: everything every environment gets.
+# Environments add tools by shipping a mise TOML to /etc/limabean/mise/
+# (see scratch.yaml / go.yaml); features/mise.sh installs whatever is there.
+base:
+- ./layer-os.yaml
+
+provision:
+- mode: system
+  file: ./features/apt-common.sh
+- mode: data
+  path: /etc/limabean/mise/00-base.toml
+  file: ./mise/base.toml
+- mode: user
+  file: ./features/mise.sh
+
+probes:
+- description: mise tools are installed
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 600s bash -c 'until test -f ~/.local/state/limabean/mise.done; do sleep 5; done'; then
+      echo >&2 "mise tools are not installed yet"
+      exit 1
+    fi
+  hint: Check /var/log/cloud-init-output.log inside the VM.

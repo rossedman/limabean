@@ -1,0 +1,14 @@
+# Layer 1: operating system and VM shape. No host mounts: code lives in the VM.
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-24.04
+
+vmType: vz
+cpus: 4
+memory: 8GiB
+disk: 50GiB
+
+ssh:
+  # Use the Mac's ssh-agent for git push; keys never enter the VM.
+  forwardAgent: true

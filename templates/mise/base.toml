@@ -1,0 +1,5 @@
+# Tools every environment gets. Pin versions here to keep rebuilds reproducible.
+[tools]
+ripgrep = "latest"
+fzf = "latest"
+gh = "latest"
