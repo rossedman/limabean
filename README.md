@@ -159,6 +159,24 @@ Also included:
 - syntax highlighting
 - fzf on `ctrl-r` (history), `ctrl-t` (files) and `alt-c` (directories)
 - `repo [query]` to jump to any ghq repository with fzf
+- tab completion for almost every installed tool. Most is generated at boot
+  into `~/.local/share/zsh/completions` by
+  [completions.sh](templates/features/completions.sh): gh, kubectl, helm, kind,
+  k9s, docker/nerdctl, mise, go, goreleaser, golangci-lint, uv, pip, cosign,
+  syft, grype, glow, gum, svu, rg, fd, bat, yq and ghq. aws and terraform use
+  their own completers. git, ssh, make, tmux and others come with zsh.
+
+### Paths
+
+[env.sh](templates/files/env.sh) is loaded by every shell, interactive or not.
+It sets:
+
+| Variable | Value | Used by |
+|---|---|---|
+| `GOPATH` | `~/go` | Go module cache and workspace |
+| `GOBIN` | `~/go/bin` | `go install` |
+| `PYTHONUSERBASE` | `~/.local` | `pip install --user`, `uv tool install` and pipx, which put scripts in `~/.local/bin` |
+| `PATH` | `$GOBIN`, `~/.local/bin`, mise shims, then the system | Each directory is added once, so nested shells don't grow it |
 
 | File in the VM | Source | Notes |
 |---|---|---|
@@ -189,6 +207,7 @@ To use another directory, create the VM with `--param codeDir=~/src`. A
 | Add or upgrade a CLI tool | [templates/mise/base.toml](templates/mise/base.toml). Pin a version; `mise latest <tool>` in a VM shows the newest. |
 | Change where ghq clones | `codeDir` param in [templates/layer-base.yaml](templates/layer-base.yaml), or per VM: `--param codeDir=…` |
 | Change the prompt, aliases or shell options | [templates/files/zshrc](templates/files/zshrc) |
+| Add a tool's zsh completion | a `gen` line in [templates/features/completions.sh](templates/features/completions.sh) |
 | Add an environment variable for every shell | [templates/files/env.sh](templates/files/env.sh) |
 | Change the global editorconfig | [templates/files/editorconfig](templates/files/editorconfig) |
 | Add a system package | `packages=(…)` in [templates/features/apt-common.sh](templates/features/apt-common.sh) |

@@ -52,7 +52,7 @@ templates/
   go.yaml             #          base: layer-base + mise/go.toml
   python.yaml  k8s.yaml  ...
   features/           # idempotent shell scripts, one per capability
-    apt-common.sh  mise.sh  git.sh  nerdctl.sh  shell.sh
+    zsh-install.sh  apt-common.sh  mise.sh  completions.sh  git.sh  nerdctl.sh  shell.sh
   files/              # static files written into the VM (zshrc, env.sh, editorconfig)
   mise/               # tool versions; base.toml + one per environment
     base.toml  go.toml  python.toml
@@ -110,11 +110,20 @@ provision:
   mise shims, plus env vars) is sourced from `~/.zshenv`, which zsh reads even
   for non-interactive commands, and from the top of `~/.bashrc`. So commands run
   over SSH (`ssh lima-<name> go test ./...`) see the same tools as a login.
-- **Shell.** zsh is the login shell (`features/shell.sh`). `files/zshrc` holds
+- **Shell.** zsh is the login shell from the moment the account exists:
+  `user.shell` in `layer-os.yaml`, with zsh installed by a `mode: dependency`
+  script before the first login. Changing the shell later (`usermod`) doesn't
+  work. Lima's persistent SSH connection keeps the shell and groups it saw at
+  login, and closing that connection from inside the guest breaks Lima's
+  readiness checks. `files/zshrc` holds
   plain zsh config with a `vcs_info` prompt. There's deliberately no prompt
   framework or plugin manager: two apt plugins (autosuggestions, syntax
   highlighting) and fzf's built-in keybindings. Managed files are rewritten on
   every boot; personal additions go in `~/.zshrc.local`.
+- **Completions** are generated once per boot by `features/completions.sh`
+  into a single fpath directory, not with `eval "$(tool completion zsh)"` in
+  zshrc. That keeps shell startup fast. Tools without zsh output (aws,
+  terraform, go through gocomplete) use `bashcompinit`.
 
 ## Dotfiles: deferred
 

@@ -19,6 +19,8 @@ mounts:
   writable: false
 
 provision:
+- mode: dependency
+  file: ./features/zsh-install.sh
 - mode: system
   file: ./features/apt-common.sh
 - mode: data
@@ -43,6 +45,8 @@ provision:
   owner: "{{.User}}:{{.User}}"
 - mode: user
   file: ./features/mise.sh
+- mode: user
+  file: ./features/completions.sh
 - mode: user
   file: ./features/git.sh
 - mode: user
