@@ -78,9 +78,10 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
 | `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code or Cursor |
 | `limabean start [name]` | Start a stopped VM |
-| `limabean stop [name]` | Stop a running VM |
+| `limabean stop [name]` | Stop a running VM, or with `--idle 2h` every VM nobody is using |
 | `limabean rebuild [name]` | Recreate a VM from the current templates |
 | `limabean rm [name]` | Delete a VM |
+| `limabean autostop on\|off\|status` | Stop idle VMs automatically in the background |
 
 **Secrets and access**
 

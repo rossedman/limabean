@@ -28,16 +28,20 @@ type fakeWorld struct {
 	calls    []string
 	sshStdin map[string]string // VM → last stdin written over ssh
 	keychain map[string]string
-	unsaved  string // what the unsaved-work check prints
-	ghq      string // what ghq list -p prints in every VM
+	unsaved  string            // what the unsaved-work check prints
+	ghq      string            // what ghq list -p prints in every VM
+	activity map[string]string // VM → what stop --idle's check prints
+
+	agentLoaded bool // the autostop agent is loaded in launchd
 
 	failStart bool // limactl start fails, with output
+	failStop  bool // limactl stop fails
 	reboot    bool // the first boot left /var/run/reboot-required
 	sshFail   bool // every ssh call fails
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}}
 }
 
 func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -76,6 +80,9 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			}
 			w.vms[args[len(args)-1]] = "Running"
 		case "stop":
+			if w.failStop {
+				return []byte("stop failed"), errors.New("exit status 1")
+			}
 			w.vms[args[1]] = "Stopped"
 		case "delete":
 			delete(w.vms, args[len(args)-1])
@@ -96,6 +103,8 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
+		case remote == "sh -s": // stop --idle's check
+			return []byte(w.activity[vm]), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
 			return []byte(w.ghq), nil
 		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
@@ -202,6 +211,19 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 	a.attachSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "attach ssh "+inst.Name+" "+strings.Join(command, " "))
 		return nil
+	}
+	a.launchctl = func(_ context.Context, args ...string) ([]byte, error) {
+		h.world.calls = append(h.world.calls, "launchctl "+strings.Join(args, " "))
+		switch args[0] {
+		case "bootstrap":
+			h.world.agentLoaded = true
+		case "bootout", "print":
+			if !h.world.agentLoaded {
+				return []byte("Could not find service"), errors.New("exit status 113")
+			}
+			h.world.agentLoaded = args[0] == "print"
+		}
+		return nil, nil
 	}
 	a.openEditor = func(_ context.Context, ide string, args ...string) error {
 		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
