@@ -1,0 +1,25 @@
+{
+  "name": "limabean",
+  "version": "0.1.0",
+  "description": "Shows Claude and you which limabean VM it's in and what that VM may reach; on the Mac, a pane of your VMs.",
+  "author": { "name": "Ross Edman" },
+  "homepage": "https://rossedman.github.io/limabean/claude-mod/",
+  "repository": "https://github.com/rossedman/limabean",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "limabean": {
+      "type": "string",
+      "title": "limabean binary",
+      "description": "Path to limabean on the Mac, if it isn't on the PATH Claude Code starts with (e.g. /opt/homebrew/bin/limabean). Empty: look in the usual places.",
+      "default": ""
+    },
+    "preview": {
+      "type": "string",
+      "title": "Preview",
+      "description": "Show sample data instead of real VMs, to see what the mod looks like: mac (the pane and status line) or vm (inside a VM).",
+      "options": ["off", "mac", "vm"],
+      "default": "off"
+    }
+  }
+}

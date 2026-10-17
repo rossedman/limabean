@@ -16,7 +16,8 @@ internal/project/    .limabean.yaml for `limabean up`
 internal/templates/  the templates directory, packs and environments
 internal/pins/       pinned versions in mise TOML, for `limabean bump`
 templates/           Lima templates, embedded in the binary: layer-os, layer-base,
-                     environments, features/*.sh, files/, packs/
+                     environments, features/*.sh, files/, packs/, and claude/limabean,
+                     the Claude Code mod (also installable from .claude-plugin/marketplace.json)
 docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 
@@ -36,6 +37,7 @@ shellcheck templates/features/*.sh templates/files/limabean-network
 shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git
 actionlint                       # when .github/ changes
 mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
+claude plugin validate templates/claude/limabean && claude plugin test templates/claude/limabean   # the mod
 ```
 
 - Build the docs **outside the repo** (`-d`): a committed `site/` has
