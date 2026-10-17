@@ -45,7 +45,7 @@ func (r Resolver) Resolve(ctx context.Context, ref string) (string, error) {
 		name := strings.TrimPrefix(ref, "env:")
 		v, ok := r.LookupEnv(name)
 		if !ok {
-			return "", fmt.Errorf("$%s isn't set where limabean runs", name)
+			return "", fmt.Errorf("$%s isn't in limabean's environment; is it exported? (check: env | grep %s)", name, name)
 		}
 		return v, nil
 	case strings.HasPrefix(ref, "cmd:"):
