@@ -99,3 +99,14 @@ func TestExpand(t *testing.T) {
 		t.Fatal("Expand mismatch")
 	}
 }
+
+func TestEmptyEnvironmentVariableIsAValue(t *testing.T) {
+	t.Setenv("LIMABEAN_AWS_DIR", "")
+	c, err := Load(New(), filepath.Join(t.TempDir(), "none"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.AWSDir != "" {
+		t.Fatalf("LIMABEAN_AWS_DIR=\"\" should turn the AWS mount off, got %q", c.AWSDir)
+	}
+}
