@@ -25,6 +25,10 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 alias ls='ls --color=auto'
 alias ll='ls -lAh --color=auto'
 alias grep='grep --color=auto'
+# bat as cat: highlighting and line numbers but no file header, and no pager.
+# When piped, bat drops all decorations and colors, so `cat f | grep x` works.
+# The real cat: `command cat`.
+alias cat='bat --style=default,-header --paging=never'
 
 # jump to a ghq repository with fzf
 repo() {

@@ -193,6 +193,9 @@ Also included:
 - syntax highlighting
 - fzf on `ctrl-r` (history), `ctrl-t` (files) and `alt-c` (directories)
 - `repo [query]` to jump to any ghq repository with fzf
+- `cat` is bat without the file header and without a pager. Piped output is
+  plain, and the real cat is `command cat`. bat uses the `ansi` theme, so its
+  colors follow your terminal's palette.
 - tab completion for almost every installed tool. Most is generated at boot
   into `~/.local/share/zsh/completions` by
   [completions.sh](templates/features/completions.sh): gh, kubectl, helm, kind,

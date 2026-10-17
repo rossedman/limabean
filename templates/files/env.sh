@@ -22,5 +22,8 @@ done
 export PATH
 
 export EDITOR=vim
+# bat (also git's pager): use the terminal's own 16-color palette instead of a
+# fixed theme, so highlighting matches your terminal's color scheme.
+export BAT_THEME=ansi
 # kind looks for docker by default; `docker` here is nerdctl.
 export KIND_EXPERIMENTAL_PROVIDER=nerdctl
