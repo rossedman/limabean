@@ -82,14 +82,6 @@ and deleting or restoring VMs needs `--allow-destructive`.
 [Claude and MCP](docs/mcp.md) covers Claude Desktop, example prompts, every
 tool and the safety model.
 
-limabean also ships a [mod for Claude Code](docs/claude-mod.md): in a VM it
-tells Claude which VM it's in and what it may reach (it's already there), and
-on your Mac it keeps a status line and a pane of your VMs:
-
-```
-/plugin install limabean --marketplace rossedman/limabean
-```
-
 <p align="center">
   <img src="docs/assets/terminal.png" alt="Creating a VM with limabean new, listing it, then running docker inside it" width="100%">
 </p>
@@ -170,7 +162,6 @@ built from the [`docs/`](docs) folder:
 - [Getting started](docs/getting-started.md): install, requirements, first VM
 - [Claude and MCP](docs/mcp.md): let Claude create and drive VMs
 - [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
-- [The Claude Code mod](docs/claude-mod.md): which VM Claude is in, and your VMs at a glance
 - [Sandboxes](docs/network.md): network allowlists, learn mode and locked VMs
 - [Projects](docs/projects.md): `.limabean.yaml` and `limabean up`
 - [Rebuilds, clones and snapshots](docs/lifecycle.md): throwaway VMs and autostop too

@@ -28,8 +28,3 @@ paths:
   becomes outdated and the next VM of each kind is provisioned from scratch.
   That's intended; mention it in the PR when it matters.
 - Template changes are validated by `limactl tmpl validate` on macOS CI only.
-- `claude/limabean` is the Claude Code mod (see `docs/claude-mod.md`). Every
-  file it loads is written into VMs by `layer-base.yaml`
-  (`TestClaudeModIsProvisioned` enforces it). Check it with
-  `claude plugin validate` and `claude plugin test` on its folder; its hooks
-  module may only pass `$` to functions declared at the top of the file.

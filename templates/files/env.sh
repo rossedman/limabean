@@ -28,15 +28,6 @@ if [ -r "$HOME/.config/limabean/secrets.env" ]; then
   . "$HOME/.config/limabean/secrets.env"
 fi
 
-# The limabean mod for Claude Code (templates/claude/limabean), loaded by any
-# `claude` run here: it tells Claude which VM it's in and what it may reach.
-limabean_mod=/usr/local/share/limabean/claude/limabean
-case ":${CLAUDE_CODE_PLUGIN_DIRS:-}:" in
-  *":$limabean_mod:"*) ;;
-  *) [ -d "$limabean_mod" ] && export CLAUDE_CODE_PLUGIN_DIRS="${CLAUDE_CODE_PLUGIN_DIRS:+$CLAUDE_CODE_PLUGIN_DIRS:}$limabean_mod" ;;
-esac
-unset limabean_mod
-
 export EDITOR=vim
 # bat (also git's pager): use the terminal's own 16-color palette instead of a
 # fixed theme, so highlighting matches your terminal's color scheme.

@@ -44,5 +44,3 @@ coverage.out
 # Claude Code: personal settings stay local
 .claude/settings.local.json
 CLAUDE.local.md
-# Types Claude Code writes beside a mod it loads from a folder
-templates/claude/limabean/.claude-plugin/types/
