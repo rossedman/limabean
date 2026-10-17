@@ -1,9 +1,11 @@
 # Inside a VM
 
 Each VM runs Ubuntu 26.04 LTS, with systemd 259 and its Varlink APIs, fully
-updated on first boot. It has no access to
-your Mac's files apart from the read-only git config mount. Keep code in the VM
-under `~/code` and push it to a remote.
+updated on first boot. It has no access to your Mac's files apart from a
+few read-only mounts: your git config, `~/.aws` if you have it, and the VM's
+own [network policy](network.md). Keep code in the VM under `~/code`, which is
+on its own disk and [survives rebuilds](lifecycle.md), and push it to a
+remote.
 
 ## Tools
 
@@ -12,7 +14,7 @@ under `~/code` and push it to a remote.
   (`# syntax=docker/dockerfile:1`) work. Your user owns the socket, so `docker`
   needs no sudo, and kind and testcontainers work as they do on a Mac.
 - **mise**, with every version pinned in
-  [`templates/mise/base.toml`](../templates/mise/base.toml): go, goreleaser,
+  [`templates/mise/base.toml`](https://github.com/rossedman/limabean/blob/main/templates/mise/base.toml): go, goreleaser,
   golangci-lint, uv, kubectl, helm, kind, k9s, terraform, aws-cli, cosign,
   syft, grype, ripgrep, fd, fzf, bat, gh, ghq, yq, direnv, glow, gum,
   shellcheck and svu. Use `mise use python@3.12` or `mise use terraform@1.9`
@@ -66,14 +68,14 @@ Also included:
 - `cat` is bat without the header or pager. Run the real one with
   `command cat`. bat uses your terminal's colors.
 - tab completion for nearly every tool, generated at boot by
-  [`completions.sh`](../templates/features/completions.sh)
+  [`completions.sh`](https://github.com/rossedman/limabean/blob/main/templates/features/completions.sh)
 
 Put personal shell additions in `~/.zshrc.local`. `~/.zshrc` itself is
 rewritten on every boot.
 
 ## Paths
 
-[`env.sh`](../templates/files/env.sh) is loaded by every shell, interactive
+[`env.sh`](https://github.com/rossedman/limabean/blob/main/templates/files/env.sh) is loaded by every shell, interactive
 or not, so `ssh lima-dev <cmd>` sees the same tools as a login shell.
 
 | Variable | Value |
@@ -106,5 +108,5 @@ setting runs commands on your Mac. That means:
 - set `AWS_DIR=""` in `~/.config/limabean/config` to stop mounting it, or point
   it at a different directory
 
-The global [`.editorconfig`](../templates/files/editorconfig) applies unless a
+The global [`.editorconfig`](https://github.com/rossedman/limabean/blob/main/templates/files/editorconfig) applies unless a
 project has its own.

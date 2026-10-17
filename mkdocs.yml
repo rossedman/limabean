@@ -1,18 +1,41 @@
-# Landing page for limabean, published to GitHub Pages by .github/workflows/pages.yml.
+# The limabean site: the landing page (overrides/home.html) and every page in
+# docs/. Published to GitHub Pages by .github/workflows/pages.yml.
 # Preview locally: pip install mkdocs-material && mkdocs serve
 site_name: limabean
 site_description: Disposable Linux dev VMs for macOS, ready for SSH and Claude.
 site_url: https://rossedman.github.io/limabean/
 repo_url: https://github.com/rossedman/limabean
 repo_name: rossedman/limabean
+edit_uri: edit/main/docs/
 
-# The long-form docs are written for GitHub and link into the repo, so the
-# site is one page that links to them there.
+# Strict builds (CI) fail on broken links and #anchors between pages.
+validation:
+  links:
+    anchors: warn
+
 exclude_docs: |
-  /*.md
-  !/index.md
   /assets/src/
   /assets/render.sh
+
+nav:
+  - Home: index.md
+  - Get started: getting-started.md
+  - Claude:
+      - Claude and MCP: mcp.md
+      - Claude Desktop SSH connections: claude-desktop.md
+  - Guides:
+      - Sandboxes: network.md
+      - Rebuilds, snapshots and autostop: lifecycle.md
+      - Inside a VM: inside-a-vm.md
+      - Secrets: secrets.md
+      - GitHub access: github.md
+      - Customizing: customizing.md
+  - Reference:
+      - CLI: cli.md
+      - Troubleshooting: troubleshooting.md
+  - Project:
+      - Design notes: design.md
+      - The Go CLI: go-cli.md
 
 theme:
   name: material
@@ -24,11 +47,40 @@ theme:
   font:
     text: Inter
     code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil-outline
   features:
     - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
 
 extra_css:
   - assets/site/landing.css
+  - assets/site/docs.css
 extra_javascript:
   - assets/site/landing.js
 

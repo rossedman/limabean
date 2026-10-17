@@ -11,7 +11,11 @@
 limabean creates disposable Ubuntu dev VMs on your Mac from layered
 [Lima](https://lima-vm.io) templates. Each VM has a complete, version-pinned
 toolchain and your git identity. It pushes with your SSH keys without ever
-copying them in, and appears in Claude Desktop as an SSH connection.
+copying them in. Claude can drive it: through limabean's MCP server it
+creates VMs, runs code in them and snapshots them, and every VM appears in
+Claude Desktop as an SSH connection.
+
+**Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
 
 - **One command per VM.** `limabean new dev` is ready in about a minute.
 - **Batteries included.** Docker Engine, Go, Python, Kubernetes tooling,
@@ -23,8 +27,9 @@ copying them in, and appears in Claude Desktop as an SSH connection.
   1Password, environment variables or commands, chosen when you create a VM.
 - **Sandboxes for agents.** Limit a VM to the domains its work needs and
   lock it, so nothing inside, an agent included, can turn that off.
-- **Built for Claude.** Every VM is registered as an SSH connection in Claude
-  Desktop.
+- **Claude drives it.** With [MCP](docs/mcp.md), Claude creates VMs, clones
+  repositories, runs builds and tests, and snapshots VMs, all without touching
+  your Mac. Every VM is also an SSH connection in Claude Desktop.
 - **Safe to throw away.** `~/code` lives on its own disk, so `rebuild`
   keeps your repositories, and `rm` refuses to run while you have unpushed
   work.
@@ -48,6 +53,27 @@ limabean ssh dev    # or: ssh lima-dev
 
 Prebuilt binaries for Apple Silicon and Intel are on the
 [releases page](https://github.com/rossedman/limabean/releases).
+
+## Use it with Claude
+
+Add limabean's MCP server to Claude Code:
+
+```bash
+claude mcp add --scope user limabean -- limabean mcp
+```
+
+Then ask:
+
+> Make a VM called scratch, clone owner/repo into it and get the tests passing.
+
+Claude creates the VM, clones the repository, runs commands in it and can
+snapshot it before risky changes. For an agent that should only reach certain
+hosts, ask for a locked sandbox: *"create a locked VM that can only reach
+github and python"*. Nothing runs on your Mac, Claude never sees secret values,
+and deleting or restoring VMs needs `--allow-destructive`.
+
+[Claude and MCP](docs/mcp.md) covers Claude Desktop, example prompts, every
+tool and the safety model.
 
 <p align="center">
   <img src="docs/assets/terminal.png" alt="Creating a VM with limabean new, listing it, then running docker inside it" width="100%">
@@ -105,7 +131,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean github logout` | Remove the token from the Keychain and VMs |
 | `limabean network ls\|allow\|rm\|open\|lock\|unlock` | Limit which domains a VM can reach, and lock it so that holds |
 | `limabean claude sync` | Register running VMs in Claude Desktop, remove the rest |
-| `limabean mcp` | Let Claude create, run and snapshot VMs, as an MCP server ([details](docs/claude-desktop.md#let-claude-manage-vms)) |
+| `limabean mcp` | Let Claude create, run and snapshot VMs, as an MCP server ([details](docs/mcp.md)) |
 
 **More**
 
@@ -116,12 +142,18 @@ Leave out a VM name and you pick one from a list. Every command has
 
 ## Documentation
 
+The full docs are at **[rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**,
+built from the [`docs/`](docs) folder:
+
 - [Getting started](docs/getting-started.md): install, requirements, first VM
-- [CLI reference](docs/cli.md): commands, settings, unsaved-work protection
-- [Inside a VM](docs/inside-a-vm.md): tools, Docker, shell, paths, updates
+- [Claude and MCP](docs/mcp.md): let Claude create and drive VMs
+- [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
+- [Sandboxes](docs/network.md): network allowlists and locked VMs
+- [Rebuilds, snapshots and autostop](docs/lifecycle.md)
+- [Inside a VM](docs/inside-a-vm.md): tools, Docker, shell, ports, paths
 - [Secrets](docs/secrets.md): API keys and settings from the Keychain, 1Password and more
 - [GitHub access](docs/github.md): a scoped token for `gh`, kept in your Keychain
-- [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
+- [CLI reference](docs/cli.md): every command and setting
 - [Customizing](docs/customizing.md): templates, adding tools and environments
 - [Troubleshooting](docs/troubleshooting.md)
 - [Design notes](docs/design.md) and [the Go CLI's design](docs/go-cli.md)

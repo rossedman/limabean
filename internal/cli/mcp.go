@@ -37,7 +37,7 @@ What the tools can't do:
   - read secret values, or add secrets (a cmd: secret would run on the Mac)
   - delete, rebuild or restore a VM, unless you pass --allow-destructive.
     Even then, deleting stops at unsaved work as "limabean rm" does, and
-    those tools are marked destructive so clients ask you first.
+    Claude Code asks you before every call to them.
 
 Commands in a VM run as you, with the VM's secrets in their environment,
 and can reach anything the VM can, including GitHub with its token.`,
@@ -214,7 +214,14 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 	if !allowDestructive {
 		return s
 	}
-	mcp.AddTool(s, tool("snapshot_restore", "Restore a snapshot", "Put a VM's system and ~/code back the way a snapshot saved them. Everything changed since is lost, pushed or not.", false, &yes),
+	// Claude Code asks before every call to a tool with this, whatever its
+	// permission mode, with no "don't ask again"; other clients see
+	// destructiveHint.
+	ask := func(t *mcp.Tool) *mcp.Tool {
+		t.Meta = mcp.Meta{"anthropic/requiresUserInteraction": true}
+		return t
+	}
+	mcp.AddTool(s, ask(tool("snapshot_restore", "Restore a snapshot", "Put a VM's system and ~/code back the way a snapshot saved them. Everything changed since is lost, pushed or not.", false, &yes)),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpSnapshot) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name); err != nil {
 				return nil, nil, err
@@ -228,14 +235,14 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			return cli(ctx, args...)
 		})
-	mcp.AddTool(s, tool("delete_vm", "Delete a VM", "Delete a VM, its ~/code disk and its snapshots. Refuses while a repository in ~/code has uncommitted, stashed or unpushed work.", false, &yes),
+	mcp.AddTool(s, ask(tool("delete_vm", "Delete a VM", "Delete a VM, its ~/code disk and its snapshots. Refuses while a repository in ~/code has uncommitted, stashed or unpushed work.", false, &yes)),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name); err != nil {
 				return nil, nil, err
 			}
 			return cli(ctx, "rm", "--", in.Name)
 		})
-	mcp.AddTool(s, tool("rebuild_vm", "Rebuild a VM", "Recreate a VM from the current templates. ~/code is kept when it's on its own disk; snapshots are deleted.", false, &yes),
+	mcp.AddTool(s, ask(tool("rebuild_vm", "Rebuild a VM", "Recreate a VM from the current templates. ~/code is kept when it's on its own disk; snapshots are deleted.", false, &yes)),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name); err != nil {
 				return nil, nil, err

@@ -110,5 +110,26 @@ limabean get dev owner/repo            # clone into ~/code/github.com/owner/repo
 For `gh` and the GitHub API inside VMs, add a scoped token once with
 `limabean github login`; see [GitHub access](github.md).
 
-Next: [the CLI](cli.md), [what's inside a VM](inside-a-vm.md),
-[GitHub access](github.md) and [Claude Desktop](claude-desktop.md).
+## Connect Claude
+
+Every VM already shows up in Claude Desktop as an SSH connection: pick
+**SSH → `dev (limabean)`** in the prompt box's environment menu
+([details](claude-desktop.md)).
+
+To let Claude manage VMs itself, add limabean's MCP server to Claude Code:
+
+```bash
+claude mcp add --scope user limabean -- limabean mcp
+```
+
+Then ask Claude to *"make a VM, clone owner/repo and run the tests"*. Setup
+for Claude Desktop, example prompts and what Claude can and can't do are in
+[Claude and MCP](mcp.md).
+
+## Next
+
+- [Claude and MCP](mcp.md): let Claude create and drive VMs
+- [Sandboxes](network.md): limit what a VM can reach, for agents
+- [Inside a VM](inside-a-vm.md): tools, Docker, shell, ports
+- [Rebuilds, snapshots and autostop](lifecycle.md)
+- [The CLI](cli.md): every command and setting

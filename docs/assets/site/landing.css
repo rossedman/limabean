@@ -348,3 +348,33 @@
   .lb-section { padding: 3.5rem 0; }
   .lb-term__body { font-size: 0.68rem; }
 }
+
+/* Claude and MCP */
+.lb-points { list-style: none; margin: 1.2rem 0 1.4rem !important; padding: 0 !important; }
+.lb-points li { margin: 0 0 0.45rem !important; display: flex; gap: 0.55rem; align-items: center; font-size: 0.82rem; color: var(--cream); }
+.lb-points svg { color: var(--leaf); flex: none; }
+#claude .lb-code { margin-top: 0.4rem; }
+#claude .lb-code code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lb-chat {
+  display: flex; flex-direction: column; gap: 0.6rem;
+  padding: 1.2rem;
+  background: #08110c;
+  border: 1px solid var(--ink-3);
+  border-radius: 0.9rem;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+  font-size: 0.76rem;
+  min-width: 0;
+}
+.lb-chat__you, .lb-chat__claude { padding: 0.7rem 0.9rem; border-radius: 0.7rem; line-height: 1.5; }
+.lb-chat__you { align-self: flex-end; max-width: 88%; background: var(--ink-3); color: var(--cream); border-bottom-right-radius: 0.2rem; }
+.lb-chat__claude { max-width: 92%; background: rgba(143, 209, 106, 0.08); color: var(--cream); border: 1px solid rgba(143, 209, 106, 0.18); border-bottom-left-radius: 0.2rem; }
+.lb-chat__tool, .lb-chat__ok {
+  font-family: var(--md-code-font-family); font-variant-ligatures: none;
+  font-size: 0.68rem; line-height: 1.5;
+  padding: 0.35rem 0.6rem; border-radius: 0.4rem;
+  overflow-wrap: anywhere;
+}
+.lb-chat__tool { background: var(--ink-2); color: var(--dim); border-left: 2px solid var(--amber); }
+.lb-chat__tool b { color: var(--amber); font-weight: 700; margin-right: 0.3rem; }
+.lb-chat__tool span { color: var(--mist); }
+.lb-chat__ok { color: var(--leaf-2); padding-left: 0.8rem; }

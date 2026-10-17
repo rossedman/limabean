@@ -25,10 +25,13 @@ data.
 ```
 cmd/limabean/main.go       entry point: cli.Execute()
 internal/cli/              Cobra commands, one per file (root.go, new.go, ls.go,
-                           secrets_set.go, …); groups (github, secrets, claude)
-                           have a file for the parent and one per subcommand
+                           secrets_set.go, …); groups (github, secrets, claude,
+                           network, snapshot, autostop) have a file for the
+                           parent and one per subcommand; mcp.go is the MCP
+                           server, which runs these commands in-process
 internal/config/           Viper: config file, LIMABEAN_* environment, flags
-internal/lima/             limactl runner (list, start, stop, delete, ssh)
+internal/lima/             limactl runner (list, start, stop, delete, disks, ssh)
+internal/pins/             pinned versions in mise TOML files, for bump
 internal/secrets/          reference files: parse, merge, resolve, render
 internal/keychain/         macOS Keychain via `security`, values on stdin
 internal/claude/           sshConfigs entries in ~/.claude/settings.json
@@ -57,11 +60,13 @@ its `dotenv` format, so configs written by the bash `init` keep working.
 
 | Key | Default | Flag | Environment |
 |---|---|---|---|
-| `GIT_CONFIG_DIR` | `~/.config/git` | `--git-config-dir` | `LIMABEAN_GIT_CONFIG_DIR` |
-| `CODE_DIR` | `~/code` | `--code-dir` | `LIMABEAN_CODE_DIR` |
+| `GIT_CONFIG_DIR` | `~/.config/git` | | `LIMABEAN_GIT_CONFIG_DIR` |
+| `CODE_DIR` | `~/code` | | `LIMABEAN_CODE_DIR` |
+| `CODE_DISK` | `50` (GiB) | | `LIMABEAN_CODE_DISK` |
 | `CPUS` / `MEMORY` | template defaults | `--cpus` / `--memory` on `new` | `LIMABEAN_CPUS` / `LIMABEAN_MEMORY` |
 | `CLAUDE_DESKTOP` | `yes` | | `LIMABEAN_CLAUDE_DESKTOP` |
 | `AWS_DIR` | `~/.aws` | | `LIMABEAN_AWS_DIR` |
+| `IDE` | `code` | `--ide` on `code` | `LIMABEAN_IDE` |
 
 Global flags: `--config`, `--plain` (also `LIMABEAN_PLAIN=1`), `--templates`
 (use a templates directory instead of the embedded copy, for development).
@@ -136,7 +141,7 @@ it load secrets after `limabean rebuild`.
 
 ## Releases
 
-GoReleaser ([`.goreleaser.yaml`](../.goreleaser.yaml)) builds one universal
+GoReleaser ([`.goreleaser.yaml`](https://github.com/rossedman/limabean/blob/main/.goreleaser.yaml)) builds one universal
 macOS binary, with the version set through `-X main.version`. Pull requests
 get snapshot builds as workflow artifacts (`snapshot.yml`). A `v*` tag runs
 `release.yml`, which tests, builds and publishes a GitHub release with the

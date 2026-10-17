@@ -1,7 +1,7 @@
 # Design notes
 
 The decisions behind limabean, with the trade-offs considered. For usage, see
-the [README](../README.md) and the other pages in this folder.
+the [home page](index.md) and the other pages of these docs.
 
 Reproducible Lima VMs that act as personal dev environments, one per purpose,
 usable by anyone on macOS. Claude, or any SSH client, connects to them over SSH
@@ -331,8 +331,9 @@ An opt-in `--mount` of a host directory (B) is still open.
   - names and snapshot tags are validated before reaching the command line,
     where `--force` would be a flag, and a repository can't start with `-`;
   - tools that destroy work exist only with `--allow-destructive`, carry
-    `destructiveHint` so clients confirm them, and `delete_vm` keeps rm's
-    unsaved-work check;
+    `_meta["anthropic/requiresUserInteraction"]` (Claude Code then asks before
+    every call, in any permission mode) and `destructiveHint` for other
+    clients, and `delete_vm` keeps rm's unsaved-work check;
   - one limabean command runs at a time; `run_in_vm` has a timeout (10
     minutes by default, an hour at most) and returns the last 100 KiB.
   What a VM can reach (its secrets, GitHub with its token, the network)

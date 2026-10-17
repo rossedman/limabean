@@ -80,7 +80,7 @@ needs **Contents: read and write** on a repository to push to it.
   `logout` removes that line. To give one VM a different token, set
   `GITHUB_TOKEN` in its own file: `limabean secrets set GITHUB_TOKEN --vm <name>`.
 - **In the VM**, it arrives in `~/.config/limabean/secrets.env` (mode 600),
-  which [`env.sh`](../templates/files/env.sh) loads in every shell. gh uses
+  which [`env.sh`](https://github.com/rossedman/limabean/blob/main/templates/files/env.sh) loads in every shell. gh uses
   `GITHUB_TOKEN` automatically, and git uses gh as its credential helper for
   `https://github.com`.
 - **Never in a template.** Lima keeps templates in plain text under `~/.lima`,

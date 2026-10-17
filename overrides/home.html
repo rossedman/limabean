@@ -3,7 +3,7 @@
 {% extends "main.html" %}
 
 {% set gh = "https://github.com/rossedman/limabean" %}
-{% set docs = gh ~ "/blob/main/docs/" %}
+{% set mcp_cmd = "claude mcp add --scope user limabean -- limabean mcp" %}
 {% set install = "go install github.com/rossedman/limabean/cmd/limabean@latest" %}
 
 {% block tabs %}
@@ -27,7 +27,7 @@
         </div>
         <div class="lb-cta">
           <a class="lb-btn lb-btn--primary" href="#quick-start">Get started {% include ".icons/material/arrow-right.svg" %}</a>
-          <a class="lb-btn" href="{{ gh }}">{% include ".icons/material/github.svg" %} View on GitHub</a>
+          <a class="lb-btn" href="{{ 'mcp/' | url }}">{% include ".icons/material/robot-happy-outline.svg" %} Use it with Claude</a>
         </div>
       </div>
 
@@ -51,6 +51,34 @@
       <li><b>0</b><span>SSH keys copied in</span></li>
       <li><b>100%</b><span>plain Lima underneath</span></li>
     </ul>
+  </section>
+
+  <!-- Claude and MCP -->
+  <section class="lb-section lb-section--alt" id="claude">
+    <div class="lb-wrap lb-split">
+      <div>
+        <p class="lb-eyebrow">Claude drives it</p>
+        <h2>Let Claude drive<br><span>its own VMs.</span></h2>
+        <p class="lb-lede">limabean is an MCP server too. From Claude Code or Claude Desktop, Claude creates VMs, clones repositories, runs builds and tests, and snapshots VMs before risky changes. Nothing it runs touches your Mac.</p>
+        <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> {{ mcp_cmd }}</code></pre>
+        <ul class="lb-points">
+          <li>{% include ".icons/material/laptop.svg" %} Commands run inside VMs, never on your Mac</li>
+          <li>{% include ".icons/material/key-chain-variant.svg" %} Claude never sees secret values</li>
+          <li>{% include ".icons/material/shield-lock-outline.svg" %} Locked sandboxes it can't widen</li>
+        </ul>
+        <a class="lb-btn lb-btn--primary" href="{{ 'mcp/' | url }}">Set up Claude {% include ".icons/material/arrow-right.svg" %}</a>
+      </div>
+      <div class="lb-chat" aria-label="An example: Claude creating a sandbox VM through limabean's MCP tools">
+        <div class="lb-chat__you">Make a locked VM that can only reach GitHub and PyPI, clone acme/scraper and get its tests passing.</div>
+        <div class="lb-chat__tool"><b>create_vm</b> <span>name: "scraper", allow: ["github", "python"], locked: true</span></div>
+        <div class="lb-chat__ok">✓ Created scraper · Network: 6 domain(s), locked</div>
+        <div class="lb-chat__tool"><b>clone_repo</b> <span>name: "scraper", repo: "acme/scraper"</span></div>
+        <div class="lb-chat__tool"><b>snapshot_save</b> <span>name: "scraper", snapshot: "fresh"</span></div>
+        <div class="lb-chat__tool"><b>run_in_vm</b> <span>cd ~/code/github.com/acme/scraper && uv run pytest</span></div>
+        <div class="lb-chat__ok">exit code 0 · 48 passed</div>
+        <div class="lb-chat__claude">The tests pass in a sandbox that can only reach GitHub and PyPI. I saved a snapshot called <code>fresh</code> before running anything.</div>
+      </div>
+    </div>
   </section>
 
   <!-- Features -->
@@ -82,7 +110,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/robot-happy-outline.svg" %}</div>
           <h3>Built for Claude and your editor</h3>
-          <p>Each running VM shows up in Claude Desktop as an SSH connection, and <code>limabean code</code> opens it in VS Code or Cursor. Either way, work happens with the VM's tools and can't touch files on your Mac.</p>
+          <p>Claude manages VMs through MCP, each running VM is an SSH connection in Claude Desktop, and <code>limabean code</code> opens one in VS Code or Cursor. Work happens with the VM's tools, away from your Mac's files.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/delete-restore.svg" %}</div>
@@ -102,7 +130,7 @@
         <p class="lb-lede">limabean is a single binary with its VM templates built in. All it needs is macOS and
           <a href="https://lima-vm.io">Lima</a> 2.0 or newer. Prebuilt binaries for Apple Silicon and Intel are on the
           <a href="{{ gh }}/releases">releases page</a>.</p>
-        <a class="lb-btn" href="{{ docs }}getting-started.md">{% include ".icons/material/book-open-page-variant-outline.svg" %} Full getting-started guide</a>
+        <a class="lb-btn" href="{{ 'getting-started/' | url }}">{% include ".icons/material/book-open-page-variant-outline.svg" %} Full getting-started guide</a>
       </div>
       <ol class="lb-steps">
         <li>
@@ -123,6 +151,11 @@
           <h4>Create a VM and jump in</h4>
           <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean new dev
 <span class="p">$</span> limabean ssh dev   <span class="d"># or: ssh lima-dev</span></code></pre>
+        </li>
+        <li>
+          <h4>Hand it to Claude</h4>
+          <p>Every VM is already an SSH connection in Claude Desktop. Add MCP and Claude can make VMs itself.</p>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> {{ mcp_cmd }}</code></pre>
         </li>
       </ol>
     </div>
@@ -192,7 +225,7 @@
           </dl>
         </div>
       </div>
-      <p class="lb-center"><a class="lb-link" href="{{ docs }}cli.md">Full CLI reference {% include ".icons/material/arrow-right.svg" %}</a></p>
+      <p class="lb-center"><a class="lb-link" href="{{ 'cli/' | url }}">Full CLI reference {% include ".icons/material/arrow-right.svg" %}</a></p>
     </div>
   </section>
 
@@ -203,16 +236,16 @@
       <h2>Go deeper.</h2>
       <div class="lb-docs">
         {% for path, name, blurb in [
-          ("getting-started.md", "Getting started", "Install, requirements, first VM"),
-          ("cli.md", "CLI reference", "Commands, settings, unsaved-work protection"),
-          ("inside-a-vm.md", "Inside a VM", "Tools, Docker, shell, paths, updates"),
-          ("secrets.md", "Secrets", "Keychain, 1Password, env vars and commands"),
-          ("github.md", "GitHub access", "A scoped token for gh, kept in your Keychain"),
-          ("claude-desktop.md", "Claude Desktop", "How VMs become SSH connections"),
-          ("customizing.md", "Customizing", "Templates, tools and environments"),
-          ("troubleshooting.md", "Troubleshooting", "When something doesn't work"),
+          ("getting-started/", "Getting started", "Install, requirements, first VM"),
+          ("mcp/", "Claude and MCP", "Let Claude create and drive VMs"),
+          ("network/", "Sandboxes", "Allowlists and locked VMs for agents"),
+          ("lifecycle/", "Rebuilds and snapshots", "Keep ~/code, roll back, stop idle VMs"),
+          ("inside-a-vm/", "Inside a VM", "Tools, Docker, shell, ports"),
+          ("secrets/", "Secrets", "Keychain, 1Password, env vars and commands"),
+          ("cli/", "CLI reference", "Every command and setting"),
+          ("troubleshooting/", "Troubleshooting", "When something doesn't work"),
         ] %}
-        <a class="lb-doc" href="{{ docs }}{{ path }}">
+        <a class="lb-doc" href="{{ path | url }}">
           <b>{{ name }}</b><span>{{ blurb }}</span>
           {% include ".icons/material/arrow-right.svg" %}
         </a>
