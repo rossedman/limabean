@@ -253,6 +253,24 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   from the Mac over a forwarded socket was considered and rejected: any
   process in the VM could still request it, so it adds moving parts without
   real protection.
+- **D8 Interface. Decided: gum, with a plain fallback.** In a terminal,
+  `limabean` uses gum for spinners (Lima's logs are shown only on failure),
+  prompts, VM pickers, confirmations and tables. Status lines use the README
+  palette as 24-bit escape codes rather than a `gum style` process per line.
+  Without a terminal, or with `LIMABEAN_PLAIN=1`, output is plain and nothing
+  prompts, so scripts and CI keep working. gum is required in a terminal, and
+  limabean offers to install it with Homebrew.
+- **D9 GitHub push transport. Decided: https with the token when one is
+  installed, SSH otherwise.** Claude Desktop's helper in the VM runs without
+  `SSH_AUTH_SOCK`, so SSH pushes can't work in Claude sessions.
+  `limabean-github-git` writes `~/.config/limabean/github.gitconfig`: with a
+  token, `insteadOf` rules send GitHub SSH remotes over https; without one,
+  `pushInsteadOf` sends https pushes over SSH.
+- **D10 AWS. Decided: mount `~/.aws` read-only when it exists.** A writable
+  mount would let the VM edit `~/.aws/config`, whose `credential_process` runs
+  commands on the Mac. Read-only means SSO logins happen on the Mac. limabean
+  adds the mount at creation (`--set .mounts += …`) only when the directory
+  exists, so the templates stay host-independent.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

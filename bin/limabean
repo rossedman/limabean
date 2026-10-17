@@ -30,22 +30,125 @@ CODE_DIR="~/code"
 CPUS=""
 MEMORY=""
 CLAUDE_DESKTOP="yes"   # register each VM as an SSH connection in Claude Desktop
+AWS_DIR="~/.aws"       # mounted read-only into VMs when it exists; empty: never
 # shellcheck disable=SC1090
 [ -f "$CONFIG" ] && . "$CONFIG"
 
-# --- output ------------------------------------------------------------------
+# --- UI ----------------------------------------------------------------------
+# In a terminal, gum (https://github.com/charmbracelet/gum) draws spinners,
+# prompts, pickers and tables. When output isn't a terminal (pipes, scripts,
+# CI), or LIMABEAN_PLAIN=1, limabean prints plain text and never prompts:
+# prompts take their defaults, and missing arguments are errors.
 
-if [ -t 1 ]; then
-  bold=$'\e[1m' red=$'\e[31m' green=$'\e[32m' yellow=$'\e[33m' reset=$'\e[0m'
+INTERACTIVE=0
+if [ -t 1 ] && [ -z "${LIMABEAN_PLAIN:-}" ]; then INTERACTIVE=1; fi
+can_prompt() { [ $INTERACTIVE -eq 1 ] && [ -t 0 ]; }
+
+# The palette from the README graphics.
+LEAF='#8fd16a' LEAF2='#b9e69a' DIM='#6f8a77' RED='#ef7d7d' AMBER='#f0c36a' INK='#0d1912'
+if [ $INTERACTIVE -eq 1 ]; then
+  rgb() { printf '\033[38;2;%d;%d;%dm' "0x${1:1:2}" "0x${1:3:2}" "0x${1:5:2}"; }
+  c_leaf=$(rgb "$LEAF") c_leaf2=$(rgb "$LEAF2") c_dim=$(rgb "$DIM") c_red=$(rgb "$RED") c_amber=$(rgb "$AMBER")
+  bold=$'\033[1m' reset=$'\033[0m'
+  export GUM_SPIN_SPINNER=dot GUM_SPIN_SPINNER_FOREGROUND=$LEAF
+  export GUM_CONFIRM_PROMPT_FOREGROUND=$LEAF2 GUM_CONFIRM_SELECTED_BACKGROUND=$LEAF \
+    GUM_CONFIRM_SELECTED_FOREGROUND=$INK GUM_CONFIRM_UNSELECTED_BACKGROUND='#1b3224'
+  export GUM_CHOOSE_CURSOR_FOREGROUND=$LEAF GUM_CHOOSE_HEADER_FOREGROUND=$DIM GUM_CHOOSE_SELECTED_FOREGROUND=$LEAF
+  export GUM_FILTER_INDICATOR_FOREGROUND=$LEAF GUM_FILTER_MATCH_FOREGROUND=$LEAF \
+    GUM_FILTER_PROMPT_FOREGROUND=$LEAF GUM_FILTER_HEADER_FOREGROUND=$DIM
+  export GUM_INPUT_CURSOR_FOREGROUND=$LEAF GUM_INPUT_PROMPT_FOREGROUND=$LEAF GUM_INPUT_HEADER_FOREGROUND=$LEAF2
+  export GUM_TABLE_BORDER_FOREGROUND=$DIM GUM_TABLE_HEADER_FOREGROUND=$LEAF
 else
-  bold='' red='' green='' yellow='' reset=''
+  c_leaf='' c_leaf2='' c_dim='' c_red='' c_amber='' bold='' reset=''
 fi
-ok()   { printf '  %s✓%s %s\n' "$green" "$reset" "$*"; }
-bad()  { printf '  %s✗%s %s\n' "$red" "$reset" "$*"; }
-warn() { printf '  %s!%s %s\n' "$yellow" "$reset" "$*"; }
-hint() { printf '      %s\n' "$@"; }
-die()  { printf '%slimabean:%s %s\n' "$red" "$reset" "$*" >&2; exit 1; }
-info() { printf '%s==>%s %s\n' "$bold" "$reset" "$*"; }
+
+ok()      { printf '  %s✓%s %s\n' "$c_leaf" "$reset" "$*"; }
+bad()     { printf '  %s✗%s %s\n' "$c_red" "$reset" "$*"; }
+warn()    { printf '  %s!%s %s\n' "$c_amber" "$reset" "$*"; }
+hint()    { local l; for l in "$@"; do printf '    %s%s%s\n' "$c_dim" "$l" "$reset"; done; }
+info()    { printf '%s›%s %s\n' "$c_leaf" "$reset" "$*"; }
+section() {
+  if [ -z "${2:-}" ]; then printf '\n%s%s%s\n' "$bold$c_leaf2" "$1" "$reset"
+  elif [ $INTERACTIVE -eq 1 ]; then printf '\n%s%s%s  %s%s%s\n' "$bold$c_leaf2" "$1" "$reset" "$c_dim" "$2" "$reset"
+  else printf '\n%s (%s)\n' "$1" "$2"; fi
+}
+die()     { printf '%slimabean:%s %s\n' "$c_red" "$reset" "$*" >&2; exit 1; }
+code()    { printf '%s%s%s' "$c_leaf2" "$*" "$reset"; }   # inline command or name
+
+# box <line…>: a rounded box, for results worth noticing.
+box() {
+  if [ $INTERACTIVE -eq 1 ]; then
+    gum style --border rounded --border-foreground "$LEAF" --padding "0 2" --margin "1 0 0 0" "$@"
+  else
+    printf '\n'; printf '%s\n' "$@"
+  fi
+}
+
+# spin <title> <command…>: run an external command under a spinner. Its
+# output is shown only if it fails. Plain mode prints the title and the output.
+spin() {
+  local title=$1; shift
+  if [ $INTERACTIVE -eq 1 ]; then
+    local rc=0
+    gum spin --title " $title" --show-error -- "$@" || rc=$?
+    printf '\r\033[K'   # gum leaves the cursor past column 0
+    return $rc
+  else
+    info "$title"
+    "$@"
+  fi
+}
+
+# ask <question> [yes|no]: a yes/no question; the default applies when there's
+# no terminal to ask on (and to a piped answer that's empty).
+ask() {
+  local q=$1 def=${2:-no} rc=0 reply
+  if can_prompt; then
+    if [ "$def" = yes ]; then gum confirm "$q" || rc=$?; else gum confirm --default=false "$q" || rc=$?; fi
+    [ $rc -ne 130 ] || exit 130
+    return $rc
+  fi
+  if [ ! -t 0 ] && read -r reply; then
+    case $reply in [yY]*) return 0 ;; [nN]*) return 1 ;; esac
+  fi
+  [ "$def" = yes ]
+}
+
+# input <header> <default> [placeholder]: a line of text. Without a terminal,
+# reads a line from stdin, or uses the default.
+input() {
+  local header=$1 def=$2 ph=${3:-} v
+  if can_prompt; then
+    v=$(gum input --header "$header" --value "$def" --placeholder "$ph" --width 72) || exit 130
+  elif [ ! -t 0 ]; then
+    read -r v || true
+  fi
+  printf '%s' "${v:-$def}"
+}
+
+# pick_vm <verb>: choose one of the VMs (only offered in a terminal).
+pick_vm() {
+  local vms
+  vms=$(limabean_vms)
+  [ -n "$vms" ] || die "no VMs yet (limabean new <name>)"
+  can_prompt || die "usage: limabean $CMD <name>"
+  printf '%s\n' "$vms" | gum choose --header "VM to $1:" --select-if-one || exit 130
+}
+
+# need_gum: in a terminal limabean needs gum; offer to install it.
+need_gum() {
+  [ $INTERACTIVE -eq 1 ] || return 0
+  command -v gum >/dev/null && return 0
+  printf 'limabean uses gum for its interface (https://github.com/charmbracelet/gum).\n'
+  if command -v brew >/dev/null && [ -t 0 ]; then
+    local reply
+    read -r -p "Install it now with Homebrew (brew install gum)? [Y/n] " reply
+    case $reply in
+      ""|[yY]*) brew install gum && command -v gum >/dev/null && return 0 ;;
+    esac
+  fi
+  die "install gum (brew install gum), or set LIMABEAN_PLAIN=1 for plain output"
+}
 
 # Expand a leading ~ (config values are stored unexpanded).
 expand() { case $1 in "~") echo "$HOME" ;; "~/"*) echo "$HOME/${1#\~/}" ;; *) echo "$1" ;; esac; }
@@ -59,8 +162,7 @@ need_vm() { exists "$1" || die "no VM named '$1' (see: limabean ls)"; }
 
 ensure_running() {
   if [ "$(status "$1")" != Running ]; then
-    info "Starting $1"
-    limactl start --tty=false "$1"
+    spin "Starting $1" limactl start --tty=false "$1"
   fi
 }
 
@@ -81,22 +183,35 @@ create() {
     --param "codeDir=$CODE_DIR")
   [ -n "$CPUS" ] && args+=(--cpus "$CPUS")
   [ -n "$MEMORY" ] && args+=(--memory "$MEMORY")
-  info "Creating $name from $env (first boot takes a minute or two)"
-  limactl start "${args[@]}" "$template"
+  # AWS CLI config and credentials, read-only: a writable mount would let the
+  # VM change ~/.aws/config, whose credential_process runs commands on the Mac.
+  local aws=""
+  if [ -n "$AWS_DIR" ] && [ -d "$(expand "$AWS_DIR")" ]; then
+    aws=$AWS_DIR
+    args+=(--set ".mounts += [{\"location\": \"$AWS_DIR\", \"mountPoint\": \"{{.Home}}/.aws\", \"writable\": false}]")
+  fi
+  spin "Creating $name from $env. The first boot takes a minute or two…" \
+    limactl start "${args[@]}" "$template" || die "couldn't create $name (Lima's output is above)"
+  ok "Created $(code "$name") from $env"
+  [ -z "$aws" ] || ok "Mounted $aws read-only at ~/.aws"
   mkdir -p "$STATE"
   echo "$env" > "$STATE/$name.env"
   # The first boot upgrades every package (features/apt-upgrade.sh). Some
   # updates, like a new kernel, only take effect after a restart.
   if ssh -o BatchMode=yes "lima-$name" test -f /var/run/reboot-required 2>/dev/null; then
-    info "Restarting $name to finish installing updates"
-    limactl stop "$name" >/dev/null 2>&1
-    limactl start --tty=false "$name" 2>&1 | grep -E 'READY|level=(error|fatal)' || true
+    # shellcheck disable=SC2016  # $1 is for the inner sh
+    spin "Restarting $name to finish installing updates" \
+      sh -c 'limactl stop "$1" && limactl start --tty=false "$1"' _ "$name"
+    ok "Installed updates and restarted"
+  else
+    ok "Packages up to date"
   fi
   local token
   if token=$(gh_token); then
-    gh_install "$name" "$token" && info "Installed your GitHub token (limabean github)"
+    gh_install "$name" "$token" && ok "Installed your GitHub token"
   else
-    hint "No GitHub token saved, so gh in the VM isn't logged in (limabean github login)."
+    warn "No GitHub token saved, so gh in the VM isn't logged in"
+    hint "limabean github login"
   fi
 }
 
@@ -211,23 +326,32 @@ gh_check() {
 }
 
 # gh_install <name> <token> / gh_uninstall <name>: the VM's copy.
+# limabean-github-git then switches git to https with the token, or back to
+# SSH pushes (VMs created before it existed simply skip that step).
 gh_install() {
   printf '%s\n' "$2" | ssh -o BatchMode=yes "lima-$1" \
-    'umask 077 && mkdir -p ~/.config/limabean && cat > ~/.config/limabean/github-token'
+    'umask 077 && mkdir -p ~/.config/limabean && cat > ~/.config/limabean/github-token &&
+     { ! command -v limabean-github-git >/dev/null || limabean-github-git; }'
 }
-gh_uninstall() { ssh -o BatchMode=yes "lima-$1" 'rm -f ~/.config/limabean/github-token'; }
+gh_uninstall() {
+  ssh -o BatchMode=yes "lima-$1" 'rm -f ~/.config/limabean/github-token &&
+    { ! command -v limabean-github-git >/dev/null || limabean-github-git; }'
+}
 
 # gh_each <install|uninstall> [token]: apply to every running VM; list the
 # stopped ones, which `limabean github sync` covers once they're running.
 gh_each() {
-  local action=$1 token=${2:-} vm stopped=""
+  local action=$1 token=${2:-} vm stopped="" any=0
   for vm in $(limabean_vms); do
     if [ "$(status "$vm")" != Running ]; then stopped="$stopped $vm"; continue; fi
     if [ "$action" = install ]; then gh_install "$vm" "$token"; else gh_uninstall "$vm"; fi
-    ok "$vm"
+    ok "$vm"; any=1
   done
   if [ -n "$stopped" ]; then
-    warn "stopped, so not updated:$stopped (start them, then: limabean github sync)"
+    warn "stopped, so not updated:$stopped"
+    hint "Start them, then: limabean github sync"
+  elif [ $any -eq 0 ]; then
+    hint "No running VMs. New ones get the token automatically."
   fi
   return 0
 }
@@ -255,7 +379,7 @@ EOF
   ) || die "couldn't check $name for unsaved work (use --force to skip the check)"
   if [ -n "$report" ]; then
     bad "$name has work that would be lost:"
-    printf '%s\n' "$report" | sed 's/^/      /'
+    printf '%s\n' "$report" | while read -r line; do hint "$line"; done
     hint "Commit and push it, or pass --force to delete anyway."
     return 1
   fi
@@ -266,31 +390,36 @@ EOF
 cmd_doctor() {
   local failed=0 v ssh_config=$HOME/.ssh/config inc first rc gitdir
 
-  echo "${bold}Lima${reset}"
+  section "Tools"
   if ! command -v limactl >/dev/null; then
     bad "limactl not found"; hint "brew install lima"; failed=1
   else
     v=$(limactl --version | awk '{print $3}')
-    if [ "${v%%.*}" -ge 2 ] 2>/dev/null; then ok "limactl $v"
-    else bad "limactl $v is too old; need 2.0 or newer"; hint "brew upgrade lima"; failed=1; fi
+    if [ "${v%%.*}" -ge 2 ] 2>/dev/null; then ok "lima $v"
+    else bad "lima $v is too old; need 2.0 or newer"; hint "brew upgrade lima"; failed=1; fi
   fi
+  if command -v gum >/dev/null; then ok "gum $(gum --version | awk '{print $3}')"
+  else bad "gum not found; limabean uses it in a terminal"; hint "brew install gum"; failed=1; fi
+  if command -v jq >/dev/null; then ok "jq $(jq --version | sed 's/^jq-//')"
+  elif [ "$CLAUDE_DESKTOP" = yes ]; then bad "jq not found; it's needed for Claude Desktop"; hint "brew install jq"; failed=1
+  else ok "jq not needed (CLAUDE_DESKTOP is off)"; fi
 
-  echo "${bold}SSH config${reset}"
+  section "SSH config" "~/.ssh/config"
   inc=$(grep -n -i -E '^[[:space:]]*Include[[:space:]].*\.lima/\*/ssh\.config' "$ssh_config" 2>/dev/null | head -1 | cut -d: -f1 || true)
   first=$(grep -n -i -E '^[[:space:]]*(Host|Match)[[:space:]]' "$ssh_config" 2>/dev/null | head -1 | cut -d: -f1 || true)
   if [ -z "$inc" ]; then
-    bad "~/.ssh/config doesn't include Lima's host entries"
-    hint "Add this line at the top of ~/.ssh/config (or run: limabean init):" "  Include ~/.lima/*/ssh.config"
+    bad "doesn't include Lima's host entries"
+    hint "Add this line at the top of ~/.ssh/config, or run limabean init:" "  Include ~/.lima/*/ssh.config"
     failed=1
   elif [ -n "$first" ] && [ "$first" -lt "$inc" ]; then
-    bad "the Include on line $inc sits inside the Host/Match block on line $first, so it doesn't apply to lima-<name>"
+    bad "the Include on line $inc sits inside the Host/Match block on line $first, so it doesn't apply"
     hint "Move it to the top of ~/.ssh/config."
     failed=1
   else
     ok "Include ~/.lima/*/ssh.config (line $inc)"
   fi
 
-  echo "${bold}SSH agent${reset} (lets VMs push with your keys)"
+  section "SSH agent" "lets VMs push with your keys"
   rc=0; ssh-add -l >/dev/null 2>&1 || rc=$?
   case $rc in
     0) ok "$(ssh-add -l | wc -l | tr -d ' ') key(s) loaded" ;;
@@ -301,7 +430,7 @@ cmd_doctor() {
     *) bad "no ssh-agent reachable (SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-unset})"; failed=1 ;;
   esac
 
-  echo "${bold}Git config${reset} (GIT_CONFIG_DIR=$GIT_CONFIG_DIR)"
+  section "Git config" "$GIT_CONFIG_DIR"
   gitdir=$(expand "$GIT_CONFIG_DIR")
   if [ -f "$gitdir/config" ] || [ -f "$gitdir/.gitconfig" ]; then
     local f
@@ -309,40 +438,45 @@ cmd_doctor() {
       [ -f "$f" ] && { ok "found ${f/#$HOME/~}"; break; }
     done
   else
-    bad "no config or .gitconfig in $GIT_CONFIG_DIR; VMs won't know your git identity"
+    bad "no config or .gitconfig there; VMs won't know your git identity"
     hint "Run limabean init, or move ~/.gitconfig to ~/.config/git/config."
     failed=1
   fi
 
-  echo "${bold}Claude Desktop${reset} (each VM as an SSH connection)"
+  section "Claude Desktop" "each VM as an SSH connection"
   if [ "$CLAUDE_DESKTOP" != yes ]; then
     ok "off (CLAUDE_DESKTOP in config)"
-  elif ! command -v jq >/dev/null; then
-    bad "jq not found; it's needed to add VMs to ${CLAUDE_SETTINGS/#$HOME/~}"; hint "brew install jq"; failed=1
-  else
+  elif command -v jq >/dev/null; then
     ok "$(jq '[.sshConfigs[]? | select(.id | startswith("limabean-"))] | length' "$CLAUDE_SETTINGS" 2>/dev/null || echo 0) VM(s) registered in ${CLAUDE_SETTINGS/#$HOME/~}"
+  else
+    bad "needs jq (see Tools)"
   fi
 
-  echo "${bold}GitHub token${reset} (gh and the GitHub API in VMs; optional)"
+  section "GitHub token" "optional: gh and the GitHub API in VMs"
   local token
   if ! token=$(gh_token); then
-    warn "none saved (limabean github login)"
+    warn "none saved"; hint "limabean github login"
   elif gh_check "$token"; then
     ok "token for $GH_LOGIN in your Keychain, expires: $GH_EXPIRES"
   else
     bad "the saved token is invalid or expired"; hint "limabean github login"; failed=1
   fi
 
-  echo "${bold}Config${reset}"
-  if [ -f "$CONFIG" ]; then ok "${CONFIG/#$HOME/~}"; else warn "no ${CONFIG/#$HOME/~}; using defaults (run limabean init)"; fi
+  section "AWS" "optional: the aws CLI in VMs"
+  if [ -z "$AWS_DIR" ]; then ok "off (AWS_DIR is empty)"
+  elif [ -d "$(expand "$AWS_DIR")" ]; then ok "$AWS_DIR is mounted read-only in new VMs"
+  else hint "$AWS_DIR doesn't exist, so nothing is mounted"; fi
 
-  echo
-  if [ $failed -eq 0 ]; then echo "${green}All good.${reset}"; else echo "${red}Fix the items above.${reset}"; fi
+  section "Config" "${CONFIG/#$HOME/~}"
+  if [ -f "$CONFIG" ]; then ok "found"; else warn "not created yet; using defaults"; hint "limabean init"; fi
+
+  if [ $failed -eq 0 ]; then box "$(code "All good.") Create a VM with: limabean new <name>"
+  else box "Fix the items marked ✗ above."; fi
   return $failed
 }
 
 cmd_init() {
-  local guess git_dir code_dir ssh_config=$HOME/.ssh/config reply
+  local guess git_dir code_dir ssh_config=$HOME/.ssh/config
 
   # Best guess for the git config directory: where ~/.gitconfig really lives.
   if [ -L "$HOME/.gitconfig" ]; then
@@ -352,11 +486,12 @@ cmd_init() {
     guess=$GIT_CONFIG_DIR
   fi
 
-  echo "limabean setup. Press enter to accept the [default]."
-  read -r -p "Host directory with your git config [$guess]: " git_dir
-  git_dir=${git_dir:-$guess}
-  read -r -p "Where repositories go inside VMs [$CODE_DIR]: " code_dir
-  code_dir=${code_dir:-$CODE_DIR}
+  box "$(code limabean) setup" "Settings go to ${CONFIG/#$HOME/~}. Press enter to keep a value."
+  echo
+  git_dir=$(input "Host directory with your git config" "$guess" "~/.config/git")
+  ok "Git config: $git_dir"
+  code_dir=$(input "Where repositories go inside VMs" "$CODE_DIR" "~/code")
+  ok "Repositories: $code_dir"
 
   mkdir -p "$(dirname "$CONFIG")"
   cat > "$CONFIG" <<EOF
@@ -374,68 +509,101 @@ MEMORY="$MEMORY"
 
 # Add each VM to Claude Desktop as an SSH connection (~/.claude/settings.json).
 CLAUDE_DESKTOP="$CLAUDE_DESKTOP"
+
+# AWS CLI config, mounted read-only at ~/.aws in VMs when it exists. Empty: never.
+AWS_DIR="$AWS_DIR"
 EOF
   # Re-read, so the doctor run below sees the new values.
   # shellcheck disable=SC1090
   . "$CONFIG"
-  info "Wrote ${CONFIG/#$HOME/~}"
+  ok "Saved ${CONFIG/#$HOME/~}"
 
   if ! grep -q -i -E '^[[:space:]]*Include[[:space:]].*\.lima/\*/ssh\.config' "$ssh_config" 2>/dev/null; then
-    read -r -p "Add 'Include ~/.lima/*/ssh.config' to the top of ~/.ssh/config? [y/N] " reply
-    case $reply in
-      [yY]*)
-        mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
-        [ -f "$ssh_config" ] && cp "$ssh_config" "$ssh_config.limabean.bak"
-        { echo "Include ~/.lima/*/ssh.config"; echo; cat "$ssh_config" 2>/dev/null || true; } > "$ssh_config.tmp"
-        mv "$ssh_config.tmp" "$ssh_config"
-        chmod 600 "$ssh_config"
-        info "Updated ~/.ssh/config (backup: ~/.ssh/config.limabean.bak)" ;;
-    esac
+    if ask "Add 'Include ~/.lima/*/ssh.config' to the top of ~/.ssh/config?" yes; then
+      mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+      [ -f "$ssh_config" ] && cp "$ssh_config" "$ssh_config.limabean.bak"
+      { echo "Include ~/.lima/*/ssh.config"; echo; cat "$ssh_config" 2>/dev/null || true; } > "$ssh_config.tmp"
+      mv "$ssh_config.tmp" "$ssh_config"
+      chmod 600 "$ssh_config"
+      ok "Updated ~/.ssh/config (backup: ~/.ssh/config.limabean.bak)"
+    else
+      warn "Skipped the SSH config; VMs won't be reachable as lima-<name> until it's added"
+    fi
   fi
 
-  echo
+  if ! gh_token >/dev/null && can_prompt && ask "Save a GitHub token for gh in VMs now? (you can do it later)"; then
+    echo; cmd_github login
+  fi
+
   cmd_doctor || true
 }
 
 cmd_new() {
-  [ $# -ge 1 ] || die "usage: limabean new <name> [environment]"
-  local name=$1 env=${2:-scratch}
+  local name=${1:-} env=${2:-}
+  if [ -z "$name" ]; then
+    can_prompt || die "usage: limabean new <name> [environment]"
+    name=$(input "Name for the new VM" "" "dev")
+    [ -n "$name" ] || die "a name is required"
+  fi
+  if [ -z "$env" ]; then
+    env=scratch
+    if can_prompt && [ "$(envs | wc -l | tr -d ' ')" -gt 1 ]; then
+      env=$(envs | gum choose --header "Environment:" --selected scratch) || exit 130
+    fi
+  fi
+  case $name in *[!A-Za-z0-9-]*|-*) die "VM names use letters, digits and dashes" ;; esac
   exists "$name" && die "a VM named '$name' already exists"
   claude_prune
-  cmd_doctor >/dev/null 2>&1 || warn "limabean doctor reports problems; the VM will still be created"
+  cmd_doctor >/dev/null 2>&1 || warn "limabean doctor reports problems; creating the VM anyway"
   create "$name" "$env"
   claude_add "$name"
-  echo
-  info "Ready. Connect with: ${bold}ssh lima-$name${reset}  (or: limabean ssh $name)"
-  if [ "$CLAUDE_DESKTOP" = yes ]; then
-    info "In Claude Desktop, pick ${bold}$name (limabean)${reset} under SSH in the environment dropdown."
-  fi
+  [ "$CLAUDE_DESKTOP" = yes ] && ok "Added to Claude Desktop"
+  local lines=("$(code "$name") is ready" "" "ssh lima-$name     or: limabean ssh $name")
+  [ "$CLAUDE_DESKTOP" = yes ] && lines+=("Claude Desktop: SSH → $name (limabean)")
+  box "${lines[@]}"
 }
 
 cmd_ls() {
-  local name status cpus mem env found=0
+  local name status cpus mem env rows="" vms
   claude_prune
-  printf '%-16s %-10s %-12s %-5s %-7s %s\n' NAME STATUS ENV CPUS MEMORY "SSH HOST"
+  vms=$(limabean_vms)
   while read -r name status cpus mem; do
-    limabean_vms | grep -x "$name" >/dev/null || continue
-    found=1
+    printf '%s\n' "$vms" | grep -x "$name" >/dev/null || continue
     env=$(cat "$STATE/$name.env" 2>/dev/null || echo "-")
-    printf '%-16s %-10s %-12s %-5s %-7s %s\n' "$name" "$status" "$env" "$cpus" "$((mem / 1073741824))GiB" "lima-$name"
+    rows="$rows$name	$status	$env	$cpus	$((mem / 1073741824)) GiB	lima-$name
+"
   done < <(limactl list --format '{{.Name}} {{.Status}} {{.CPUs}} {{.Memory}}' 2>/dev/null)
-  [ $found -eq 1 ] || echo "(none yet: limabean new <name>)"
+  if [ -z "$rows" ]; then
+    info "No VMs yet. Create one with: limabean new <name>"
+    return 0
+  fi
+  if [ $INTERACTIVE -eq 1 ]; then
+    printf 'NAME\tSTATUS\tENV\tCPUS\tMEMORY\tSSH HOST\n%s' "$rows" |
+      gum table --print --border rounded --separator $'\t'
+  else
+    printf 'NAME\tSTATUS\tENV\tCPUS\tMEMORY\tSSH HOST\n%s' "$rows" |
+      awk -F'\t' '{ printf "%-16s %-10s %-12s %-5s %-7s %s\n", $1, $2, $3, $4, $5, $6 }'
+  fi
 }
 
 cmd_ssh() {
-  [ $# -ge 1 ] || die "usage: limabean ssh <name> [command…]"
-  local name=$1; shift
+  local name=${1:-}
+  [ $# -gt 0 ] && shift
+  [ -n "$name" ] || name=$(pick_vm "open")
   need_vm "$name"
   ensure_running "$name"
   exec ssh "lima-$name" "$@"
 }
 
 cmd_get() {
-  [ $# -ge 2 ] || die "usage: limabean get <name> [-p] <repo>   (e.g. limabean get dev rossedman/limabean)"
-  local name=$1; shift
+  local name
+  if [ $# -ge 2 ]; then
+    name=$1; shift
+  elif [ $# -eq 1 ] && can_prompt; then
+    name=$(pick_vm "clone $1 into")
+  else
+    die "usage: limabean get <name> [-p] <repo>   (e.g. limabean get dev rossedman/limabean)"
+  fi
   need_vm "$name"
   ensure_running "$name"
   # shellcheck disable=SC2029  # the arguments are meant for ghq in the VM
@@ -443,12 +611,15 @@ cmd_get() {
 }
 
 cmd_stop() {
-  [ $# -ge 1 ] || die "usage: limabean stop <name>"
-  need_vm "$1"
-  limactl stop "$1"
+  local name=${1:-}
+  [ -n "$name" ] || name=$(pick_vm "stop")
+  need_vm "$name"
+  if [ "$(status "$name")" != Running ]; then info "$name is already stopped"; return 0; fi
+  spin "Stopping $name" limactl stop "$name" || die "couldn't stop $name"
+  ok "Stopped $(code "$name")"
 }
 
-# parse_force <args…>: sets FORCE and NAME.
+# parse_force <args…>: sets FORCE and NAME (picked in a terminal if omitted).
 parse_force() {
   FORCE=0 NAME=""
   local a
@@ -459,7 +630,10 @@ parse_force() {
       *) NAME=$a ;;
     esac
   done
-  [ -n "$NAME" ] || die "usage: limabean $CMD <name> [--force]"
+  if [ -z "$NAME" ]; then
+    can_prompt || die "usage: limabean $CMD <name> [--force]"
+    NAME=$(pick_vm "$CMD")
+  fi
 }
 
 cmd_rm() {
@@ -469,16 +643,20 @@ cmd_rm() {
     if claude_has "$NAME" || [ -f "$STATE/$NAME.env" ]; then
       claude_remove "$NAME"
       rm -f "$STATE/$NAME.env"
-      info "No VM named $NAME; removed what was left of it (Claude Desktop entry, saved state)"
+      ok "No VM named $NAME; removed what was left of it (Claude Desktop entry, saved state)"
       return 0
     fi
     die "no VM named '$NAME' (see: limabean ls)"
   fi
-  [ $FORCE -eq 1 ] || check_unsaved "$NAME" || exit 1
-  limactl delete -f "$NAME"
+  if [ $FORCE -eq 0 ]; then
+    check_unsaved "$NAME" || exit 1
+    ok "No unsaved work in $NAME"
+    can_prompt && { ask "Delete $NAME? This can't be undone." || { info "Kept $NAME"; return 0; }; }
+  fi
+  spin "Deleting $NAME" limactl delete -f "$NAME" || die "couldn't delete $NAME"
   rm -f "$STATE/$NAME.env"
   claude_remove "$NAME"
-  info "Deleted $NAME"
+  ok "Deleted $(code "$NAME")"
 }
 
 cmd_rebuild() {
@@ -486,11 +664,14 @@ cmd_rebuild() {
   need_vm "$NAME"
   local env
   env=$(cat "$STATE/$NAME.env" 2>/dev/null || echo scratch)
-  [ $FORCE -eq 1 ] || check_unsaved "$NAME" || exit 1
-  info "Rebuilding $NAME from the current $env template"
-  limactl delete -f "$NAME"
+  if [ $FORCE -eq 0 ]; then
+    check_unsaved "$NAME" || exit 1
+    ok "No unsaved work in $NAME"
+    can_prompt && { ask "Rebuild $NAME from the current $env template? Its disk is erased." || { info "Kept $NAME"; return 0; }; }
+  fi
+  spin "Deleting $NAME" limactl delete -f "$NAME" || die "couldn't delete $NAME"
   create "$NAME" "$env"
-  info "Rebuilt. Repositories were not kept; clone them again with: limabean get $NAME <repo>"
+  box "$(code "$NAME") was rebuilt" "" "Repositories weren't kept. Clone them again with:" "limabean get $NAME <repo>"
 }
 
 cmd_claude() {
@@ -505,7 +686,7 @@ cmd_claude() {
   claude_prune
   for id in $vms; do
     claude_add "$id"
-    info "Registered ${bold}$id (limabean)${reset} → ssh lima-$id"
+    ok "$(code "$id (limabean)") → ssh lima-$id"
   done
   [ -n "$vms" ] || info "No limabean VMs to register."
 }
@@ -527,54 +708,62 @@ cmd_github() {
         die "--with-token reads the token from stdin; pipe it in: … | limabean github login --with-token"
       fi
       if [ $with_token -eq 0 ] && [ -t 0 ]; then
-        echo "Create a fine-grained token limited to the repositories you'll use in VMs:"
-        echo "  https://github.com/settings/personal-access-tokens/new"
-        echo "Give it an expiry and only the permissions you need (for example Contents and"
-        echo "Pull requests: read and write). It's stored in your macOS Keychain."
-        read -r -s -p "Token: " token; echo
+        box "Create a fine-grained token limited to the repositories you'll use in VMs:" \
+          "$(code https://github.com/settings/personal-access-tokens/new)" "" \
+          "Give it an expiry and only the permissions you need, for example" \
+          "Contents and Pull requests: read and write. It's kept in your Keychain."
+        echo
+        if can_prompt; then
+          token=$(gum input --password --header "GitHub token" --placeholder "github_pat_…" --width 72) || exit 130
+        else
+          read -r -s -p "Token: " token; echo
+        fi
       else
         read -r token || true
         token=$(printf '%s' "$token" | tr -d '[:space:]')
       fi
       [ -n "$token" ] || die "no token given"
       gh_check "$token" || die "GitHub rejected that token"
+      ok "Token works for $(code "$GH_LOGIN"), expires: $GH_EXPIRES"
       case $token in
         github_pat_*) ;;
-        *) warn "this isn't a fine-grained token (they start with github_pat_). Classic and gh"
-           hint "tokens usually have broad scopes, and anything in a VM can read it." ;;
+        *) warn "This isn't a fine-grained token (they start with github_pat_)."
+           hint "Classic and gh tokens usually have broad scopes, and anything in a VM can read it." ;;
       esac
       gh_store "$token" || die "couldn't save the token to the Keychain"
-      info "Saved the token for ${bold}$GH_LOGIN${reset} (expires: $GH_EXPIRES) to your Keychain"
-      info "Installing it in running VMs"
+      ok "Saved to your Keychain"
+      section "Installing it in running VMs"
       gh_each install "$token"
       ;;
     sync)
       token=$(gh_token) || die "no GitHub token saved (run: limabean github login)"
-      info "Installing your GitHub token in running VMs"
+      section "Installing your GitHub token in running VMs"
       gh_each install "$token"
       ;;
     status)
       if ! token=$(gh_token); then
-        warn "no GitHub token saved; gh in VMs isn't logged in (limabean github login)"
+        warn "No GitHub token saved; gh in VMs isn't logged in"
+        hint "limabean github login"
         return 0
       fi
-      if gh_check "$token"; then ok "token for $GH_LOGIN, expires: $GH_EXPIRES"
-      else bad "the saved token is invalid or expired (limabean github login)"; fi
+      if gh_check "$token"; then ok "Token for $(code "$GH_LOGIN"), expires: $GH_EXPIRES"
+      else bad "The saved token is invalid or expired"; hint "limabean github login"; fi
       local vm
       for vm in $(limabean_vms); do
         if [ "$(status "$vm")" != Running ]; then
-          printf '      %-16s stopped\n' "$vm"
+          hint "$(printf '%-16s stopped' "$vm")"
         elif ssh -o BatchMode=yes "lima-$vm" test -s .config/limabean/github-token 2>/dev/null; then
-          printf '      %-16s installed\n' "$vm"
+          ok "$(printf '%-16s installed' "$vm")"
         else
-          printf '      %-16s missing (limabean github sync)\n' "$vm"
+          warn "$(printf '%-16s missing (limabean github sync)' "$vm")"
         fi
       done
       ;;
     logout)
       gh_token >/dev/null || die "no GitHub token saved"
       gh_forget || die "couldn't remove the token from the Keychain"
-      info "Removed the token from your Keychain; removing it from running VMs"
+      ok "Removed the token from your Keychain"
+      section "Removing it from running VMs"
       gh_each uninstall
       hint "Revoke it on GitHub too: https://github.com/settings/personal-access-tokens"
       ;;
@@ -583,45 +772,46 @@ cmd_github() {
 }
 
 cmd_help() {
+  local h c
+  h=$bold$c_leaf2 c=$c_leaf
   cat <<EOF
-limabean: disposable Linux dev VMs on macOS, built from Lima templates.
+${bold}${c_leaf}lima${reset}${bold}bean${reset}  disposable Linux dev VMs on macOS, built from Lima templates
 
-Usage: limabean <command> [args]
+${c_dim}Usage:${reset} limabean <command> [args]
 
-Setup
-  init                       save your settings and fix ~/.ssh/config
-  doctor                     check that everything VMs depend on is in place
+${h}Setup${reset}
+  ${c}init${reset}                       save your settings and fix ~/.ssh/config
+  ${c}doctor${reset}                     check that everything VMs depend on is in place
 
-VMs
-  new <name> [env]           create a VM (env: $(envs | tr '\n' ' ' | sed 's/ $//'); default scratch)
-  ls                         list VMs
-  ssh <name> [command…]      open a shell, or run a command (starts the VM if needed)
-  get <name> [-p] <repo>     clone a repository into the VM with ghq (-p: over SSH)
-  stop <name>                stop a VM
-  rebuild <name> [--force]   recreate from the current templates
-  rm <name> [--force]        delete a VM
+${h}VMs${reset}  ${c_dim}(leave out <name> to pick from a list)${reset}
+  ${c}new${reset} [name] [env]           create a VM (env: $(envs | tr '\n' ' ' | sed 's/ $//'); default scratch)
+  ${c}ls${reset}                         list VMs
+  ${c}ssh${reset} [name] [command…]      open a shell, or run a command (starts the VM if needed)
+  ${c}get${reset} [name] [-p] <repo>     clone a repository into the VM with ghq (-p: over SSH)
+  ${c}stop${reset} [name]                stop a VM
+  ${c}rebuild${reset} [name] [--force]   recreate from the current templates
+  ${c}rm${reset} [name] [--force]        delete a VM
 
-GitHub
-  github login [--with-token]
-                             save a GitHub token in your Keychain and install it in VMs
-                             (--with-token: read it from stdin)
-  github status              show the token's account and expiry, and which VMs have it
-  github sync                install the saved token in every running VM
-  github logout              remove the token from the Keychain and VMs
+${h}GitHub${reset}
+  ${c}github login${reset}               save a GitHub token in your Keychain and install it in VMs
+                             (--with-token: read it from stdin instead of prompting)
+  ${c}github status${reset}              show the token's account and expiry, and which VMs have it
+  ${c}github sync${reset}                install the saved token in every running VM
+  ${c}github logout${reset}              remove the token from the Keychain and VMs
 
-Claude Desktop
-  claude sync                add every VM as an SSH connection and remove
-                             deleted ones (new, rm and ls already do this)
+${h}Claude Desktop${reset}
+  ${c}claude sync${reset}                add every VM as an SSH connection and remove deleted ones
+                             (new, rm and ls already do this)
 
-rm and rebuild refuse to run while repositories in the VM have uncommitted,
-stashed or unpushed work; --force skips that check.
-
-Config: ${CONFIG/#$HOME/~}
+${c_dim}rm and rebuild check for uncommitted, stashed or unpushed work and ask before
+deleting; --force skips both. LIMABEAN_PLAIN=1 turns off colors and prompts.
+Config: ${CONFIG/#$HOME/~}${reset}
 EOF
 }
 
 CMD=${1:-help}
 [ $# -gt 0 ] && shift
+case $CMD in help|-h|--help) ;; *) need_gum ;; esac
 case $CMD in
   init) cmd_init "$@" ;;
   doctor) cmd_doctor "$@" ;;

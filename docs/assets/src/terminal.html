@@ -6,26 +6,36 @@
   .bar { height: 40px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: var(--ink-2); position: relative; }
   .bar i { width: 12px; height: 12px; border-radius: 50%; background: #2c4a37; display: block; }
   .bar span { position: absolute; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--dim); }
-  .body { padding: 22px 28px 26px; font-size: 17px; line-height: 1.72; color: var(--mist); white-space: pre; }
-  .p { color: var(--leaf); } .c { color: var(--cream); } .ok { color: var(--leaf-2); }
-  .d { color: var(--dim); } .s { color: var(--sky); } .h { color: var(--cream); font-weight: 700; }
+  .body { padding: 20px 28px 24px; font-size: 16.5px; line-height: 1.62; color: #d6dfd9; white-space: pre; }
+  .p { color: var(--leaf); } .c { color: var(--cream); } .ok { color: var(--leaf); } .l2 { color: var(--leaf-2); }
+  .d { color: var(--dim); } .s { color: var(--sky); } .h { color: var(--leaf); font-weight: 700; }
+  .tight { display: inline-block; line-height: 1.22; margin: 6px 0; }
   .cur { display: inline-block; width: 10px; height: 20px; background: var(--leaf); vertical-align: -4px; }
 </style></head>
 <body>
 <div class="win mono">
   <div class="bar"><i></i><i></i><i></i><span>~ — zsh</span></div>
 <div class="body"><span class="p">$</span> <span class="c">limabean new dev</span>
-<span class="h">==></span> Creating dev from scratch (first boot takes a minute or two)
-<span class="h">==></span> Restarting dev to finish installing updates
-<span class="h">==></span> Ready. Connect with: <span class="ok">ssh lima-dev</span>  (or: limabean ssh dev)
-<span class="h">==></span> In Claude Desktop, pick <span class="ok">dev (limabean)</span> under SSH in the environment dropdown.
+  <span class="ok">✓</span> Created <span class="l2">dev</span> from scratch
+  <span class="ok">✓</span> Mounted ~/.aws read-only at ~/.aws
+  <span class="ok">✓</span> Installed updates and restarted
+  <span class="ok">✓</span> Installed your GitHub token
+  <span class="ok">✓</span> Added to Claude Desktop
+<span class="tight"><span class="ok">╭────────────────────────────────────────────╮</span>
+<span class="ok">│</span>  <span class="l2">dev</span> is ready                              <span class="ok">│</span>
+<span class="ok">│</span>                                            <span class="ok">│</span>
+<span class="ok">│</span>  ssh lima-dev     or: limabean ssh dev     <span class="ok">│</span>
+<span class="ok">│</span>  Claude Desktop: SSH → dev (limabean)      <span class="ok">│</span>
+<span class="ok">╰────────────────────────────────────────────╯</span></span>
 <span class="p">$</span> <span class="c">limabean ls</span>
-<span class="d">NAME     STATUS     ENV        CPUS  MEMORY  SSH HOST</span>
-dev      Running    scratch    4     8GiB    lima-dev
+<span class="tight"><span class="d">╭──────┬─────────┬─────────┬──────┬────────┬──────────╮</span>
+<span class="d">│</span> <span class="h">NAME</span> <span class="d">│</span> <span class="h">STATUS</span>  <span class="d">│</span> <span class="h">ENV</span>     <span class="d">│</span> <span class="h">CPUS</span> <span class="d">│</span> <span class="h">MEMORY</span> <span class="d">│</span> <span class="h">SSH HOST</span> <span class="d">│</span>
+<span class="d">├──────┼─────────┼─────────┼──────┼────────┼──────────┤</span>
+<span class="d">│</span> dev  <span class="d">│</span> Running <span class="d">│</span> scratch <span class="d">│</span> 4    <span class="d">│</span> 8 GiB  <span class="d">│</span> lima-dev <span class="d">│</span>
+<span class="d">╰──────┴─────────┴─────────┴──────┴────────┴──────────╯</span></span>
 <span class="p">$</span> <span class="c">limabean ssh dev</span>
-<span class="ok">dev</span>:<span class="s">~</span> <span class="p">❯</span> <span class="c">ghq get rossedman/limabean &amp;&amp; repo limabean</span>
-<span class="ok">dev</span>:<span class="s">~/c/g/r/limabean</span> <span class="p">(main)</span> <span class="p">❯</span> <span class="c">docker run --rm hello-world | grep Hello</span>
+<span class="l2">dev</span>:<span class="s">~</span> <span class="p">❯</span> <span class="c">docker run --rm hello-world | grep Hello</span>
 Hello from Docker!
-<span class="ok">dev</span>:<span class="s">~/c/g/r/limabean</span> <span class="p">(main)</span> <span class="p">❯</span> <span class="cur"></span></div>
+<span class="l2">dev</span>:<span class="s">~</span> <span class="p">❯</span> <span class="cur"></span></div>
 </div>
 </body></html>

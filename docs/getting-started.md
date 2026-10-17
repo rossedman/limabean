@@ -2,11 +2,12 @@
 
 ## Install
 
-limabean needs macOS, [Lima](https://lima-vm.io) 2.0 or newer, and `jq` (for
-Claude Desktop integration).
+limabean needs macOS, [Lima](https://lima-vm.io) 2.0 or newer,
+[gum](https://github.com/charmbracelet/gum) for its interface, and `jq` (for
+Claude Desktop integration). If gum is missing, limabean offers to install it.
 
 ```bash
-brew install lima jq
+brew install lima gum jq
 git clone https://github.com/rossedman/limabean ~/code/github.com/rossedman/limabean
 ln -s ~/code/github.com/rossedman/limabean/bin/limabean ~/.local/bin/limabean   # any directory on your PATH
 ```
