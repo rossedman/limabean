@@ -7,6 +7,7 @@
 package cli
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -50,6 +51,8 @@ type App struct {
 	// How `ssh` and `get` reach a VM's terminal; tests replace them.
 	execSSH   func(inst lima.Instance, command ...string) error
 	attachSSH func(inst lima.Instance, command ...string) error
+	// How `autostop` drives launchd; tests replace it.
+	launchctl func(ctx context.Context, args ...string) ([]byte, error)
 
 	// Persistent flags.
 	configPath   string
@@ -69,6 +72,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		TemplatesFS: embedded,
 		execSSH:     lima.Exec,
 		attachSSH:   attach,
+		launchctl:   runLaunchctl,
 	}
 }
 
