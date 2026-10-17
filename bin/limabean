@@ -30,6 +30,7 @@ CODE_DIR="~/code"
 CPUS=""
 MEMORY=""
 CLAUDE_DESKTOP="yes"   # register each VM as an SSH connection in Claude Desktop
+AWS_DIR="~/.aws"       # mounted read-only into VMs when it exists; empty: never
 # shellcheck disable=SC1090
 [ -f "$CONFIG" ] && . "$CONFIG"
 
@@ -81,6 +82,12 @@ create() {
     --param "codeDir=$CODE_DIR")
   [ -n "$CPUS" ] && args+=(--cpus "$CPUS")
   [ -n "$MEMORY" ] && args+=(--memory "$MEMORY")
+  # AWS CLI config and credentials, read-only: a writable mount would let the
+  # VM change ~/.aws/config, whose credential_process runs commands on the Mac.
+  if [ -n "$AWS_DIR" ] && [ -d "$(expand "$AWS_DIR")" ]; then
+    args+=(--set ".mounts += [{\"location\": \"$AWS_DIR\", \"mountPoint\": \"{{.Home}}/.aws\", \"writable\": false}]")
+    info "Mounting $AWS_DIR read-only at ~/.aws"
+  fi
   info "Creating $name from $env (first boot takes a minute or two)"
   limactl start "${args[@]}" "$template"
   mkdir -p "$STATE"
@@ -339,6 +346,11 @@ cmd_doctor() {
     bad "the saved token is invalid or expired"; hint "limabean github login"; failed=1
   fi
 
+  echo "${bold}AWS${reset} (optional: the aws CLI in VMs)"
+  if [ -z "$AWS_DIR" ]; then ok "off (AWS_DIR is empty)"
+  elif [ -d "$(expand "$AWS_DIR")" ]; then ok "$AWS_DIR is mounted read-only in new VMs"
+  else hint "$AWS_DIR doesn't exist, so nothing is mounted"; fi
+
   echo "${bold}Config${reset}"
   if [ -f "$CONFIG" ]; then ok "${CONFIG/#$HOME/~}"; else warn "no ${CONFIG/#$HOME/~}; using defaults (run limabean init)"; fi
 
@@ -380,6 +392,9 @@ MEMORY="$MEMORY"
 
 # Add each VM to Claude Desktop as an SSH connection (~/.claude/settings.json).
 CLAUDE_DESKTOP="$CLAUDE_DESKTOP"
+
+# AWS CLI config, mounted read-only at ~/.aws in VMs when it exists. Empty: never.
+AWS_DIR="$AWS_DIR"
 EOF
   # Re-read, so the doctor run below sees the new values.
   # shellcheck disable=SC1090

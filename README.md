@@ -16,9 +16,9 @@ copying them in, and appears in Claude Desktop as an SSH connection.
 - **One command per VM.** `limabean new dev` is ready in about a minute.
 - **Batteries included.** Docker Engine, Go, Python, Kubernetes tooling,
   Terraform and 30+ CLI tools, pinned with mise.
-- **Keys stay on your Mac.** Pushes go through ssh-agent forwarding, and your
-  git config is mounted read-only. A scoped GitHub token for `gh` lives in your
-  Keychain.
+- **Keys stay on your Mac.** SSH keys stay in your agent, a scoped GitHub
+  token lives in your Keychain, and your git and AWS config are mounted
+  read-only.
 - **Built for Claude.** Every VM is registered as an SSH connection in Claude
   Desktop.
 - **Safe to throw away.** `rm` and `rebuild` refuse to run while you have

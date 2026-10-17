@@ -34,6 +34,7 @@ CODE_DIR="~/code"                # where ghq clones inside VMs
 CPUS=""                          # empty: template default (4)
 MEMORY=""                        # GiB; empty: template default (8)
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
+AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
 ```
 
 Changes apply to new VMs, and to existing ones after `limabean rebuild`.

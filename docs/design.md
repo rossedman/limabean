@@ -259,6 +259,11 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   `limabean-github-git` writes `~/.config/limabean/github.gitconfig`: with a
   token, `insteadOf` rules send GitHub SSH remotes over https; without one,
   `pushInsteadOf` sends https pushes over SSH.
+- **D10 AWS. Decided: mount `~/.aws` read-only when it exists.** A writable
+  mount would let the VM edit `~/.aws/config`, whose `credential_process` runs
+  commands on the Mac. Read-only means SSO logins happen on the Mac. limabean
+  adds the mount at creation (`--set .mounts += …`) only when the directory
+  exists, so the templates stay host-independent.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

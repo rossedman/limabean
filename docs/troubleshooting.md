@@ -10,6 +10,7 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | `gh` in a VM says you're not logged in | No token is saved, or the VM missed it while stopped: `limabean github status`, then `limabean github login` or `sync`. |
 | `gh` or `limabean doctor` reports a bad credential | The token expired or was revoked. Create a new one and run `limabean github login`. |
 | `git push` fails in a Claude Desktop session (`Permission denied (publickey)`) | Claude sessions have no forwarded ssh-agent. Save a token with `limabean github login`; git then pushes over https. VMs created before this need `limabean rebuild`. |
+| `aws` in a VM can't refresh an SSO session | `~/.aws` is read-only in VMs. Run `aws sso login` on your Mac. |
 | A new VM doesn't appear in Claude Desktop | Restart Claude Desktop, or run `limabean claude sync`. |
 | `limabean new` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
 | `rm` or `rebuild` refuses to run | A repository under `~/code` has unpushed work, listed in the output. Push it, or pass `--force`. |

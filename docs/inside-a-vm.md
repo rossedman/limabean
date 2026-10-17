@@ -74,5 +74,18 @@ installed. With one, everything goes over https with the token, so it works
 in Claude Desktop sessions too. Without one, repositories are fetched over
 https and pushed over SSH through your forwarded agent.
 
+## AWS
+
+If `~/.aws` exists on your Mac, it's mounted read-only at `~/.aws` in new
+VMs, so the `aws` CLI uses your profiles. It's read-only because a writable
+mount would let the VM change `~/.aws/config`, and its `credential_process`
+setting runs commands on your Mac. That means:
+
+- run `aws sso login` on the Mac; VMs see the refreshed session
+- anything in the VM, including Claude, can use these credentials, so prefer
+  profiles with limited permissions
+- set `AWS_DIR=""` in `~/.config/limabean/config` to stop mounting it, or point
+  it at a different directory
+
 The global [`.editorconfig`](../templates/files/editorconfig) applies unless a
 project has its own.
