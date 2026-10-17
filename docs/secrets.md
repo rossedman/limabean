@@ -83,3 +83,13 @@ it needs:
 
 `limabean rm` deletes a VM's own secrets file, and any Keychain items limabean
 created for it that nothing else uses. Shared secrets are kept.
+
+## Secrets for projects
+
+A repository's [`.limabean.yaml`](projects.md#secrets) can list the secrets
+its VM needs, by name only. Set each up once on your Mac, for the project's
+VM or for every VM, and `limabean up` gives the VM the ones it finds:
+
+```bash
+limabean secrets set OPENAI_API_KEY op://Work/OpenAI/credential --vm myapp
+```

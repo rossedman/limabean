@@ -20,8 +20,11 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// FileName is the project file's name.
+// FileName is the project file's name; FileNames are the names it's found
+// by.
 const FileName = ".limabean.yaml"
+
+var FileNames = []string{FileName, ".limabean.yml"}
 
 // File is a .limabean.yaml.
 type File struct {
@@ -50,13 +53,21 @@ func Find(dir string) (string, error) {
 		return "", err
 	}
 	for {
-		p := filepath.Join(dir, FileName)
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+		var found []string
+		for _, name := range FileNames {
+			if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+				found = append(found, filepath.Join(dir, name))
+			}
+		}
+		switch len(found) {
+		case 1:
+			return found[0], nil
+		case 2:
+			return "", fmt.Errorf("%s has both %s and %s; keep one", dir, FileNames[0], FileNames[1])
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("no %s here or in a parent directory (see: limabean up --help)", FileName)
+			return "", fmt.Errorf("no %s (or .yml) here or in a parent directory (see: limabean up --help)", FileName)
 		}
 		dir = parent
 	}
