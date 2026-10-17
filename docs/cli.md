@@ -12,12 +12,13 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
-| `limabean stop [name]` | Stops a VM |
+| `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
+| `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment and secrets |
 | `limabean rm [name]` | Deletes a VM, its Claude Desktop entry and its own secrets |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
-| `limabean claude sync` | Registers every VM in Claude Desktop and removes deleted ones |
+| `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
 | `limabean completion <shell>` | Prints a tab-completion script for bash, zsh, fish or PowerShell |
 | `limabean version` | Prints the version |
 

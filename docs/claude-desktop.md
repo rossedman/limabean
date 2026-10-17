@@ -1,7 +1,10 @@
 # Claude Desktop
 
 `limabean new` registers every VM in the Claude desktop app as an SSH
-connection, and `limabean rm` removes it. In the prompt box's environment
+connection, and `limabean rm` removes it. Only running VMs are listed:
+Claude Desktop shows an error for a connection it can't reach, so
+`limabean stop` removes the entry and `limabean start` (or `ssh`/`get`, which
+start a stopped VM) adds it back. In the prompt box's environment
 dropdown, pick **SSH → `<name> (limabean)`** and open a directory under
 `~/code`. Commands Claude runs use the VM's tools and can't touch files on your
 Mac.
@@ -25,7 +28,8 @@ alias:
   settings are left alone.
 - The file isn't changed if it isn't valid JSON. It is written in place, so
   permissions and symlinks survive.
-- A VM deleted with `limactl delete` loses its entry the next time you run
+- A VM deleted with `limactl delete`, or stopped or started with `limactl`
+  or by a Mac restart, has its entry fixed the next time you run
   `limabean ls` or `limabean new`. `limabean rm <name>` cleans it up too.
 - `limabean claude sync` reconciles everything at once.
 - Restart Claude Desktop if a new VM doesn't appear.

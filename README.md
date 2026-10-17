@@ -66,7 +66,7 @@ Prebuilt binaries for Apple Silicon and Intel are on the
 | `limabean ssh <name> [cmd]` | Open a shell or run a command |
 | `limabean get <name> <repo>` | Clone a repository into the VM with ghq |
 | `limabean rebuild <name>` | Recreate from the current templates |
-| `limabean stop` / `rm <name>` | Stop or delete a VM |
+| `limabean start` / `stop` / `rm <name>` | Start, stop or delete a VM |
 | `limabean secrets set NAME [ref]` | Give VMs an API key or setting |
 | `limabean github login` | Give VMs a GitHub token for `gh` and the API |
 | `limabean claude sync` | Sync VMs with Claude Desktop |
