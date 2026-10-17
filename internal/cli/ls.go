@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -9,8 +10,20 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// lsEntry is one VM in ls --json.
+type lsEntry struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	Env       string `json:"env"`
+	CPUs      int    `json:"cpus"`
+	MemoryGiB int64  `json:"memoryGiB"`
+	Secrets   int    `json:"secrets"`
+	SSHHost   string `json:"sshHost"`
+}
+
 func newLsCmd(a *App) *cobra.Command {
-	return &cobra.Command{
+	var asJSON bool
+	cmd := &cobra.Command{
 		Use:     "ls",
 		Aliases: []string{"list"},
 		Short:   "List your VMs",
@@ -19,18 +32,43 @@ they were built from, size, how many secrets they get, and the SSH host to
 connect to (ssh lima-<name>).
 
 Other Lima instances aren't shown. ls also tidies up after VMs deleted with
-"limactl delete": their Claude Desktop entries and saved state are removed.`,
+"limactl delete": their Claude Desktop entries and saved state are removed.
+
+With --json it prints a JSON array instead, one object per VM, and notes
+about tidying up go to stderr. An environment that isn't known is "".`,
 		Example: `  limabean ls
 
   # Plain columns, for scripts
-  limabean ls --plain | awk 'NR > 1 { print $1 }'`,
+  limabean ls --plain | awk 'NR > 1 { print $1 }'
+
+  # JSON, for scripts: the names of running VMs
+  limabean ls --json | jq -r '.[] | select(.status == "Running") | .name'`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
+			out := a.UI.Out
+			if asJSON {
+				// Keep stdout for the JSON.
+				a.UI.Out = a.UI.Err
+				defer func() { a.UI.Out = out }()
+			}
 			a.prune(ctx)
 			list, err := a.vms(ctx)
 			if err != nil {
 				return err
+			}
+			if asJSON {
+				entries := make([]lsEntry, 0, len(list))
+				for _, inst := range list {
+					refs, _ := secrets.Load(a.Cfg.Dir(), inst.Name)
+					entries = append(entries, lsEntry{
+						Name: inst.Name, Status: inst.Status, Env: a.envOf(inst.Name), CPUs: inst.CPUs,
+						MemoryGiB: inst.MemoryGiB(), Secrets: len(refs), SSHHost: "lima-" + inst.Name,
+					})
+				}
+				enc := json.NewEncoder(out)
+				enc.SetIndent("", "  ")
+				return enc.Encode(entries)
 			}
 			if len(list) == 0 {
 				a.UI.Info("No VMs yet. Create one with: limabean new <name>")
@@ -52,4 +90,6 @@ Other Lima instances aren't shown. ls also tidies up after VMs deleted with
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print a JSON array, for scripts")
+	return cmd
 }

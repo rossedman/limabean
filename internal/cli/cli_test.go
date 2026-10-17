@@ -434,6 +434,51 @@ func TestLsAndPrune(t *testing.T) {
 	}
 }
 
+func TestLsJSON(t *testing.T) {
+	h := newHarness(t)
+	var stdout, stderr bytes.Buffer
+	ls := func() []map[string]any {
+		t.Helper()
+		stdout.Reset()
+		u := ui.NewPlain(&stdout)
+		u.Err = &stderr
+		if _, err := h.runUI(u, &stdout, "", "ls", "--json"); err != nil {
+			t.Fatal(err)
+		}
+		var got []map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+			t.Fatalf("stdout isn't JSON: %v\n%s", err, stdout.String())
+		}
+		return got
+	}
+	if got := ls(); got == nil || len(got) != 0 {
+		t.Fatalf("no VMs should print [], got %v", got)
+	}
+
+	h.must("", "new", "dev")
+	h.must("", "secrets", "set", "OWN", "plain", "--vm", "dev", "--no-sync")
+	h.world.vms["other"] = "Stopped"
+	if err := (claude.Settings{Path: h.claude}).Add("ghost"); err != nil {
+		t.Fatal(err)
+	}
+	got := ls()
+	if len(got) != 2 {
+		t.Fatalf("want 2 VMs, got %v", got)
+	}
+	want := map[string]any{"name": "dev", "status": "Running", "env": "scratch", "cpus": 4.0, "memoryGiB": 8.0, "secrets": 1.0, "sshHost": "lima-dev"}
+	for k, v := range want {
+		if got[0][k] != v {
+			t.Errorf("dev %s = %v, want %v", k, got[0][k], v)
+		}
+	}
+	if got[1]["name"] != "other" || got[1]["env"] != "" {
+		t.Errorf("other: %v", got[1])
+	}
+	if !strings.Contains(stderr.String(), "Removed ghost from Claude Desktop") {
+		t.Errorf("tidy-up notes should go to stderr, got %q", stderr.String())
+	}
+}
+
 func TestDoctorPlain(t *testing.T) {
 	h := newHarness(t)
 	h.must("", "secrets", "set", "BROKEN", "keychain:missing", "--no-sync")
