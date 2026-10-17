@@ -1,0 +1,26 @@
+/* Shared look for the README graphics. Rendered to PNG by ../render.sh. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=block');
+
+:root {
+  --ink: #0d1912;        /* background */
+  --ink-2: #13241a;      /* raised panels */
+  --ink-3: #1b3224;      /* borders, inner panels */
+  --leaf: #8fd16a;       /* primary green */
+  --leaf-2: #b9e69a;     /* light green */
+  --leaf-3: #5aa63b;     /* deep green */
+  --cream: #f2f7ec;      /* headings */
+  --mist: #a9bfae;       /* body text */
+  --dim: #6f8a77;        /* secondary text */
+  --amber: #f0c36a;      /* accents */
+  --sky: #7cc4e8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; }
+body {
+  font-family: Inter, sans-serif;
+  color: var(--cream);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-ligatures: none; font-feature-settings: 'calt' 0, 'liga' 0; }

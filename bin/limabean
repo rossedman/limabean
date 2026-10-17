@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # limabean: create and manage dev VMs from the Lima templates in this repo.
-# Thin wrapper around limactl; see README.md. Works with macOS's bash 3.2.
+# Thin wrapper around limactl; see docs/cli.md. Works with macOS's bash 3.2.
 # Paths like "~/code" are kept unexpanded on purpose: Lima expands them.
 # shellcheck disable=SC2088
 set -euo pipefail
@@ -85,6 +85,13 @@ create() {
   limactl start "${args[@]}" "$template"
   mkdir -p "$STATE"
   echo "$env" > "$STATE/$name.env"
+  # The first boot upgrades every package (features/apt-upgrade.sh). Some
+  # updates, like a new kernel, only take effect after a restart.
+  if ssh -o BatchMode=yes "lima-$name" test -f /var/run/reboot-required 2>/dev/null; then
+    info "Restarting $name to finish installing updates"
+    limactl stop "$name" >/dev/null 2>&1
+    limactl start --tty=false "$name" 2>&1 | grep -E 'READY|level=(error|fatal)' || true
+  fi
 }
 
 # --- Claude Desktop SSH connections -------------------------------------------

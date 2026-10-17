@@ -7,7 +7,7 @@ base:
 param:
   # Host directory with your git config, mounted read-only into every VM.
   # The default is git's own XDG location. If yours lives elsewhere (for
-  # example a dotfiles repo), override it; see README.md.
+  # example a dotfiles repo), override it; see docs/getting-started.md.
   gitConfigDir: "~/.config/git"
   # Where ghq clones repositories inside the VM, e.g.
   # ~/code/github.com/<owner>/<repo>.
@@ -21,6 +21,8 @@ mounts:
 provision:
 - mode: dependency
   file: ./features/zsh-install.sh
+- mode: system
+  file: ./features/apt-upgrade.sh
 - mode: system
   file: ./features/apt-common.sh
 - mode: system

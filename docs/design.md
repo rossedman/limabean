@@ -1,4 +1,7 @@
-# limabean — spec (draft)
+# Design notes
+
+The decisions behind limabean, with the trade-offs considered. For usage, see
+the [README](../README.md) and the other pages in this folder.
 
 Reproducible Lima VMs that act as personal dev environments, one per purpose,
 usable by anyone on macOS. Claude, or any SSH client, connects to them over SSH
@@ -19,7 +22,7 @@ decision.
    or Ansible unless they clearly earn their place.
 6. It isn't tied to one person's machine. Host-specific values are template
    params with sensible defaults, and host prerequisites are documented in
-   README.md.
+   [getting started](getting-started.md).
 
 ## Non-goals
 
@@ -30,7 +33,7 @@ decision.
 
 ## Host prerequisites
 
-These are documented for users in README.md:
+These are documented for users in [getting started](getting-started.md):
 
 | Prerequisite | Why |
 |---|---|
@@ -136,7 +139,7 @@ settled first.
 ## Wrapper CLI: `bin/limabean`
 
 A single bash script (bash 3.2-compatible, so macOS's stock `/bin/bash` runs
-it) that wraps `limactl`. The README has the command reference. Design points:
+it) that wraps `limactl`. [cli.md](cli.md) has the command reference. Design points:
 
 - **Config file instead of Lima params.** `~/.config/limabean/config` (sourced
   shell: `GIT_CONFIG_DIR`, `CODE_DIR`, `CPUS`, `MEMORY`) is passed to
@@ -228,6 +231,14 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   ecosystem, custom BuildKit frontends, or kind's default provider. The VM user
   owns `docker.socket` through a systemd `SocketUser` drop-in, because a docker
   group added during first boot doesn't reach Lima's already-open SSH session.
+- **D6 Package updates. Decided: full upgrade on first boot.**
+  `features/apt-upgrade.sh` runs `apt-get full-upgrade` once, systemd
+  included, and runs `systemctl daemon-reexec` so PID 1 uses the new systemd.
+  `needrestart` is suspended during provisioning. When
+  `/var/run/reboot-required` exists (a new kernel, say), `limabean new`
+  restarts the VM before handing it over. Later boots skip the upgrade, so
+  restarts stay fast; `rebuild` is how a VM gets newer packages. Packages held
+  back by Ubuntu's phased updates stay held, which is intended.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

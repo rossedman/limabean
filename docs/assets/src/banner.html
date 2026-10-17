@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="brand.css">
+<style>
+  body {
+    background:
+      radial-gradient(900px 420px at 12% 30%, rgba(143,209,106,0.16), transparent 70%),
+      radial-gradient(700px 400px at 92% 110%, rgba(124,196,232,0.10), transparent 70%),
+      var(--ink);
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(143,209,106,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(143,209,106,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: linear-gradient(90deg, rgba(0,0,0,0.9), rgba(0,0,0,0.2));
+  }
+  .wrap { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 72px; gap: 44px; }
+  .logo { width: 190px; height: 190px; flex: none; filter: drop-shadow(0 18px 30px rgba(0,0,0,0.45)); }
+  .text { flex: 1; }
+  h1 { font-size: 104px; font-weight: 800; letter-spacing: -4px; line-height: 0.95; }
+  h1 span { color: var(--leaf); }
+  p { margin-top: 18px; font-size: 26px; white-space: nowrap; line-height: 1.35; color: var(--mist); max-width: 620px; }
+  p b { color: var(--cream); font-weight: 600; }
+  .term {
+    width: 420px; flex: none; border-radius: 14px; background: #08110c;
+    border: 1px solid var(--ink-3); box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .bar { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--ink-2); }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; background: #2c4a37; display: block; }
+  .body { padding: 18px 20px 20px; font-size: 16.5px; line-height: 1.75; color: var(--mist); }
+  .p { color: var(--leaf); }
+  .c { color: var(--cream); }
+  .ok { color: var(--leaf-2); }
+  .d { color: var(--dim); }
+</style></head>
+<body>
+  <div class="grid"></div>
+  <div class="wrap">
+    <img class="logo" src="bean.svg" alt="">
+    <div class="text">
+      <h1>lima<span>bean</span></h1>
+      <p>Disposable Linux dev VMs for macOS,<br><b>ready for SSH and Claude.</b></p>
+    </div>
+    <div class="term mono">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="body">
+        <div><span class="p">$</span> <span class="c">limabean new dev</span></div>
+        <div class="d">==> Creating dev from scratch</div>
+        <div class="ok">==> Ready: ssh lima-dev</div>
+        <div><span class="p">$</span> <span class="c">ssh lima-dev</span></div>
+        <div><span class="ok">dev</span><span class="d">:</span><span style="color:var(--sky)">~/code</span> <span class="p">❯</span> <span class="c">docker compose up</span></div>
+      </div>
+    </div>
+  </div>
+</body></html>

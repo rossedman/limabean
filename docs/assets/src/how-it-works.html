@@ -1,0 +1,88 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="brand.css">
+<style>
+  body { background: radial-gradient(1000px 500px at 50% 0%, rgba(143,209,106,0.08), transparent 70%), var(--ink); }
+  .label { position: absolute; font-size: 15px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--leaf); }
+  .panel { position: absolute; top: 96px; bottom: 44px; border-radius: 22px; background: var(--ink-2); border: 1px solid var(--ink-3); }
+  .mac { left: 44px; width: 440px; }
+  .vm  { left: 796px; width: 440px; }
+  .panel h2 { position: absolute; top: 26px; left: 30px; font-size: 26px; font-weight: 700; }
+  .panel h2 small { font-weight: 500; color: var(--dim); font-size: 18px; margin-left: 8px; }
+
+  .row { position: absolute; left: 24px; right: 24px; height: 92px; border-radius: 14px; background: var(--ink); border: 1px solid var(--ink-3);
+         display: flex; align-items: center; gap: 16px; padding: 0 18px; }
+  .ico { width: 48px; height: 48px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 20px; font-weight: 800;
+         background: rgba(143,209,106,0.12); color: var(--leaf); border: 1px solid rgba(143,209,106,0.25); }
+  .ico.amber { background: rgba(240,195,106,0.12); color: var(--amber); border-color: rgba(240,195,106,0.3); }
+  .ico.sky { background: rgba(124,196,232,0.12); color: var(--sky); border-color: rgba(124,196,232,0.3); }
+  .row b { display: block; font-size: 19px; font-weight: 600; }
+  .row span { display: block; margin-top: 3px; font-size: 15px; color: var(--mist); }
+  .row .mono { font-size: 17px; }
+
+  .layer { position: absolute; left: 24px; right: 24px; border-radius: 14px; padding: 16px 20px; }
+  .layer b { font-size: 18px; font-weight: 700; }
+  .layer .mono { font-size: 14.5px; color: var(--dim); margin-left: 8px; font-weight: 500; }
+  .layer p { margin-top: 8px; font-size: 15px; color: var(--mist); line-height: 1.5; }
+  .chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { font-size: 13.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: rgba(143,209,106,0.12); color: var(--leaf-2); }
+  .env  { top: 84px; background: var(--ink); border: 1px dashed rgba(143,209,106,0.45); }
+  .base { top: 186px; background: rgba(143,209,106,0.10); border: 1px solid rgba(143,209,106,0.35); }
+  .os   { top: 350px; background: var(--ink); border: 1px solid var(--ink-3); }
+  .code { top: 452px; padding: 13px 20px; background: transparent; border: 1px dashed var(--ink-3);
+          display: flex; align-items: baseline; gap: 14px; white-space: nowrap; }
+  .code b.mono { color: var(--sky); font-size: 16px; margin-left: 0; }
+  .code span { font-size: 15px; color: var(--mist); }
+
+  svg.wires { position: absolute; inset: 0; }
+  .wl { font-size: 15px; font-weight: 600; fill: var(--cream); }
+  .ws { font-size: 13px; fill: var(--dim); }
+</style></head>
+<body>
+  <div class="label" style="left:46px; top:44px">How it works</div>
+
+  <div class="panel mac">
+    <h2>Your Mac</h2>
+    <div class="row" style="top:84px"><div class="ico">❯</div><div><b class="mono">limabean</b><span>creates, lists and rebuilds VMs</span></div></div>
+    <div class="row" style="top:188px"><div class="ico sky">✳</div><div><b>Claude Desktop</b><span>an SSH connection for every VM</span></div></div>
+    <div class="row" style="top:292px"><div class="ico amber">⚿</div><div><b>ssh-agent</b><span>your keys never leave the Mac</span></div></div>
+    <div class="row" style="top:396px"><div class="ico">{ }</div><div><b>Git config</b><span>identity, aliases, ignore rules</span></div></div>
+  </div>
+
+  <div class="panel vm">
+    <h2>Lima VM <small class="mono">lima-dev</small></h2>
+    <div class="layer env"><b>Environment</b><span class="mono">scratch.yaml</span>
+      <p>Per-VM extras on top of the base</p></div>
+    <div class="layer base"><b>Base layer</b><span class="mono">layer-base.yaml</span>
+      <div class="chips">
+        <span class="chip">Docker + buildx</span><span class="chip">Go</span><span class="chip">Python · uv</span>
+        <span class="chip">kubectl · kind · helm</span><span class="chip">Terraform</span><span class="chip">zsh</span>
+        <span class="chip">ghq → ~/code</span><span class="chip">pinned with mise</span>
+      </div></div>
+    <div class="layer os"><b>OS layer</b><span class="mono">layer-os.yaml</span>
+      <p>Ubuntu 24.04 · fully updated on first boot</p></div>
+    <div class="layer code"><b class="mono">~/code</b><span>your repos, pushed to remotes</span></div>
+  </div>
+
+  <svg class="wires" viewBox="0 0 1280 660">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#8fd16a"/></marker>
+      <marker id="am" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#f0c36a"/></marker>
+      <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#a9bfae"/></marker>
+    </defs>
+    <!-- ssh: CLI and Claude Desktop to the VM -->
+    <path d="M470 226 C 620 226, 640 300, 794 300" fill="none" stroke="#8fd16a" stroke-width="2.5" marker-end="url(#a)"/>
+    <path d="M470 330 C 620 330, 640 300, 794 300" fill="none" stroke="#8fd16a" stroke-width="2.5"/>
+    <text x="548" y="284" text-anchor="middle" class="wl mono">ssh lima-dev</text>
+    <!-- agent forwarding -->
+    <path d="M470 434 C 640 434, 640 480, 794 480" fill="none" stroke="#f0c36a" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#am)"/>
+    <text x="634" y="425" text-anchor="middle" class="wl">agent forwarding</text>
+    <text x="634" y="500" text-anchor="middle" class="ws">git push signs with your keys</text>
+    <!-- read-only git config mount -->
+    <path d="M470 538 C 640 538, 640 520, 794 520" fill="none" stroke="#a9bfae" stroke-width="2.5" marker-end="url(#ag)"/>
+    <text x="634" y="560" text-anchor="middle" class="wl">read-only mount</text>
+    <text x="634" y="582" text-anchor="middle" class="ws">your git identity in every VM</text>
+  </svg>
+</body></html>

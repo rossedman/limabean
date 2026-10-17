@@ -36,7 +36,7 @@ template=$(first .gitcommit.txt commit-template.txt)
 } > ~/.gitconfig
 
 if [ -z "$config" ]; then
-  echo >&2 "limabean: no git config found in the gitConfigDir mount; see README.md"
+  echo >&2 "limabean: no git config found in the gitConfigDir mount; see docs/getting-started.md"
 fi
 
 # GitHub host keys from its TLS-verified API, so the first push doesn't stop
