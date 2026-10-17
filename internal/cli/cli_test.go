@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -50,6 +51,7 @@ type fakeWorld struct {
 	failDiskDelete bool
 	failClone      bool            // snapshot copies fail
 	failLimaClone  bool            // limactl clone fails
+	rejectClone    bool            // limactl clone copies the VM, then rejects its settings
 	oldVMs         map[string]bool // VMs created before network policies
 	failNetwork    bool            // applying a network policy fails
 	reboot         bool            // the first boot left /var/run/reboot-required
@@ -61,6 +63,11 @@ type fakeWorld struct {
 	neverBoots     bool            // every start succeeds without booting
 	diskGiB        map[string]int  // VM → its system disk's size
 }
+
+// limaMountOverwrite matches a --set that sets a param and then writes a
+// path over the location of a mount, which Lima rejects: the mount was where
+// the param was used.
+var limaMountOverwrite = regexp.MustCompile(`\.param\.(\w+) = .*\(\.mounts\[\] \| select\([^)]*\) \| \.location\) =`)
 
 func newFakeWorld() *fakeWorld {
 	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}, diskGiB: map[string]int{}}
@@ -125,6 +132,20 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			}
 			src, dst := args[len(args)-2], args[len(args)-1]
 			w.vms[dst] = "Stopped"
+			if w.rejectClone {
+				return []byte(`level=fatal msg="field ` + "`memory`" + ` is invalid"`), errors.New("exit status 1")
+			}
+			// Like Lima, which copies first and then validates: every param
+			// must still be used. A --set that writes a path over a mount's
+			// {{.Param.…}} location leaves that param unused.
+			for i, a := range args {
+				if i == 0 || args[i-1] != "--set" {
+					continue
+				}
+				if m := limaMountOverwrite.FindStringSubmatch(a); m != nil {
+					return []byte(fmt.Sprintf("level=fatal msg=\"field `param` key `%s` is not used in any provision, probe, copyToHost, or portForward\"", m[1])), errors.New("exit status 1")
+				}
+			}
 			if slices.Contains(args, "--start") {
 				if !w.bootless {
 					w.vms[dst] = "Running"
