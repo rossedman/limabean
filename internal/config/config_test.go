@@ -39,6 +39,9 @@ func TestLoadBashConfig(t *testing.T) {
 	if c.AWSDir != "~/.aws" {
 		t.Errorf("AWS_DIR default = %q (missing from older configs)", c.AWSDir)
 	}
+	if c.IDE != "code" {
+		t.Errorf("IDE default = %q (missing from older configs)", c.IDE)
+	}
 }
 
 func TestDefaultsWhenMissing(t *testing.T) {
@@ -77,7 +80,7 @@ func TestBadCPUs(t *testing.T) {
 
 func TestSaveRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "config")
-	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: ""}
+	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor"}
 	if err := want.Save(); err != nil {
 		t.Fatal(err)
 	}

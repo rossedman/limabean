@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,6 +88,112 @@ func TestSSHAndGet(t *testing.T) {
 	}
 	if _, err := h.run("", "get", "nope", "acme/x"); err == nil {
 		t.Error("get into a missing VM should fail")
+	}
+}
+
+func TestCode(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Stopped"
+	h.world.ghq = "/home/me.linux/code/github.com/rossedman/limabean\n" +
+		"/home/me.linux/code/github.com/rossedman/limabean-docs\n" +
+		"/home/me.linux/code/github.com/acme/limabean\n"
+
+	out := h.must("", "code", "dev")
+	if !h.world.called("limactl start --tty=false dev") || !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code") {
+		t.Fatalf("code should start the VM, then open ~/code: %v", h.world.calls)
+	}
+	if !strings.Contains(out, "doesn't include Lima's host entries") {
+		t.Errorf("no warning about the missing Include:\n%s", out)
+	}
+
+	// A full match wins over a longer name; an owner/repo picks between owners.
+	h.writeSSHConfig("Include ~/.lima/*/ssh.config\n")
+	out = h.must("", "code", "dev", "rossedman/limabean", "--ide", "cursor")
+	if !h.world.called("editor cursor --remote ssh-remote+lima-dev /home/me.linux/code/github.com/rossedman/limabean") {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+	if strings.Contains(out, "Include") {
+		t.Errorf("warned with the Include in place:\n%s", out)
+	}
+	h.must("", "code", "dev", "https://github.com/acme/limabean.git")
+	if !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code/github.com/acme/limabean") {
+		t.Fatalf("a URL should match its clone: %v", h.world.calls)
+	}
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "ghq list -p 'github.com/acme/limabean'") {
+		t.Errorf("ghq should get the URL as host/owner/repo: %v", h.world.calls)
+	}
+	h.must("", "code", "dev", "/srv/app")
+	if !h.world.called("editor code --remote ssh-remote+lima-dev /srv/app") {
+		t.Fatalf("an absolute path is used as is: %v", h.world.calls)
+	}
+
+	// Two full matches: an error in plain mode, a picker in a terminal.
+	h.world.calls = nil
+	if _, err := h.run("", "code", "dev", "limabean"); err == nil || !strings.Contains(err.Error(), "matches several") {
+		t.Errorf("ambiguous in plain mode: %v", err)
+	}
+	if _, err := h.runTTY([]string{ui.Down, ui.Enter}, "code", "dev", "limabean"); err != nil {
+		t.Fatal(err)
+	}
+	if !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code/github.com/acme/limabean") {
+		t.Fatalf("picker: %v", h.world.calls)
+	}
+
+	// One argument that isn't a VM is a repository; with one VM, it's picked.
+	h.world.calls = nil
+	if _, err := h.runTTY(nil, "code", "rossedman/limabean"); err != nil {
+		t.Fatal(err)
+	}
+	if !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code/github.com/rossedman/limabean") {
+		t.Fatalf("one argument as a repository: %v", h.world.calls)
+	}
+
+	h.world.ghq = ""
+	if _, err := h.run("", "code", "dev", "nothing"); err == nil || !strings.Contains(err.Error(), "limabean get dev nothing") {
+		t.Errorf("no match should suggest get: %v", err)
+	}
+	if _, err := h.run("", "code", "nope", "x"); err == nil {
+		t.Error("code in a missing VM should fail")
+	}
+	h.world.sshFail = true
+	if _, err := h.run("", "code", "dev"); err == nil {
+		t.Error("code should fail when the VM can't be reached")
+	}
+	if _, err := h.run("", "code", "dev", "x"); err == nil {
+		t.Error("code should fail when ghq can't be run")
+	}
+}
+
+func TestCodeHelpers(t *testing.T) {
+	for in, want := range map[string]string{"~": `"$HOME"`, "~/code": `"$HOME"/'code'`, "/abs dir": `'/abs dir'`} {
+		if got := homeQuote(in); got != want {
+			t.Errorf("homeQuote(%q) = %s, want %s", in, got, want)
+		}
+	}
+	for in, want := range map[string]string{
+		"limabean":                               "limabean",
+		"rossedman/limabean/":                    "rossedman/limabean",
+		"https://github.com/acme/limabean.git":   "github.com/acme/limabean",
+		"ssh://git@github.com/acme/limabean.git": "github.com/acme/limabean",
+		"git@github.com:acme/limabean.git":       "github.com/acme/limabean",
+	} {
+		if got := repoQuery(in); got != want {
+			t.Errorf("repoQuery(%q) = %q, want %q", in, got, want)
+		}
+	}
+	t.Setenv("PATH", t.TempDir())
+	for ide, want := range map[string]string{"code": "Install 'code'", "cursor": "Install 'cursor'", "zed": "zed isn't on your PATH"} {
+		if err := openEditor(context.Background(), ide); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("openEditor(%s): %v", ide, err)
+		}
+	}
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "code"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	if err := openEditor(context.Background(), "code", "--remote", "ssh-remote+lima-dev", "/x"); err != nil {
+		t.Errorf("openEditor with code on PATH: %v", err)
 	}
 }
 

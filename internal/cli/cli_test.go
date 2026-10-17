@@ -29,6 +29,7 @@ type fakeWorld struct {
 	sshStdin map[string]string // VM → last stdin written over ssh
 	keychain map[string]string
 	unsaved  string // what the unsaved-work check prints
+	ghq      string // what ghq list -p prints in every VM
 
 	failStart bool // limactl start fails, with output
 	reboot    bool // the first boot left /var/run/reboot-required
@@ -95,6 +96,10 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
+		case strings.HasPrefix(remote, "ghq list -p "):
+			return []byte(w.ghq), nil
+		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
+			return []byte("/home/me.linux/code\n"), nil
 		case strings.Contains(remote, "grep -q"):
 			if strings.Contains(w.sshStdin[vm], "export "+strings.Split(strings.Split(remote, "'^export ")[1], "=")[0]+"=") {
 				return nil, nil
@@ -196,6 +201,10 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 	}
 	a.attachSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "attach ssh "+inst.Name+" "+strings.Join(command, " "))
+		return nil
+	}
+	a.openEditor = func(_ context.Context, ide string, args ...string) error {
+		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
 		return nil
 	}
 	a.Lima = &lima.Client{Runner: h.world}
