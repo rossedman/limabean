@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="skin" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#d3f3ad"/>
+      <stop offset="0.5" stop-color="#93d46c"/>
+      <stop offset="1" stop-color="#4c9632"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g transform="rotate(-16 100 100)">
+    <!-- kidney-shaped lima bean: two lobes, a gentle dip along the top edge -->
+    <path d="M18 108 C14 64 50 38 84 48 C95 51 105 57 116 54 C152 42 188 66 186 106
+             C184 150 144 174 100 172 C56 170 22 150 18 108 Z" fill="url(#skin)"/>
+    <!-- hilum: the seed scar in the dip -->
+    <path d="M82 62 C94 71 108 71 120 62" fill="none" stroke="#3c7a25" stroke-width="5"
+          stroke-linecap="round" opacity="0.6"/>
+    <!-- highlight -->
+    <path d="M128 66 C152 62 170 76 174 96" fill="none" stroke="url(#shine)" stroke-width="9"
+          stroke-linecap="round" opacity="0.9"/>
+  </g>
+  <!-- terminal prompt, kept upright -->
+  <path d="M70 100 L96 118 L70 136" fill="none" stroke="#0d1912" stroke-width="13"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="106" y="128" width="42" height="13" rx="6.5" fill="#0d1912"/>
+</svg>

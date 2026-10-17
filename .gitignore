@@ -37,3 +37,6 @@ dist/
 
 # go test -coverprofile
 coverage.out
+
+# mkdocs build output
+/site/
