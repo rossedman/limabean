@@ -69,6 +69,7 @@ func TestImagesMakeNewVMsCopies(t *testing.T) {
 	calls = strings.Join(h.world.calls, "\n")
 	for _, want := range []string{
 		"limactl clone --tty=false",
+		`.param.gitConfigDir = "~/.config/git"`,
 		`.param.networkDir = "` + filepath.Join(h.dir, "network", "api") + `"`,
 		`.param.codeDisk = "` + codeDiskName("api") + `"`,
 		`.additionalDisks += [{"name": "` + codeDiskName("api") + `"`,
@@ -283,5 +284,39 @@ func TestNewDisk(t *testing.T) {
 	h.must("", "new", "small", "--disk", "8")
 	if h.world.called("limactl clone") || !h.world.called("limactl start --name=small") {
 		t.Errorf("a smaller disk than the image's can't be a copy: %v", h.world.calls)
+	}
+}
+
+// A copy of an image sets only params: the image's mounts keep their
+// {{.Param.…}} locations. Writing paths into the mounts left gitConfigDir
+// and networkDir unused, which Lima rejects, so every VM made from an image,
+// sandboxes included, failed to create, and the half-made copy kept the
+// image's open network.
+func TestImageCopyKeepsParamsUsed(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_IMAGES", "yes")
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "images", "build")
+
+	h.world.calls = nil
+	out, err := h.run("", "new", "box", "--allow", "github", "--locked")
+	if err != nil {
+		t.Fatalf("a sandbox from an image: %v\n%s", err, out)
+	}
+	calls := strings.Join(h.world.calls, "\n")
+	if !h.world.called("limactl clone") || strings.Contains(calls, ".location)") {
+		t.Errorf("a copy should only set params, not mount locations:\n%s", calls)
+	}
+	if h.world.vms["box"] != "Running" || !strings.Contains(calls, "lima-box sudo -n systemctl start limabean-network.service") {
+		t.Errorf("the sandbox should run with its policy applied:\n%s", calls)
+	}
+
+	// A copy Lima rejects after copying is deleted, not left stopped.
+	h.world.rejectClone = true
+	if _, err := h.run("", "new", "bad", "--allow", "github", "--locked"); err == nil {
+		t.Fatal("a rejected copy should fail")
+	}
+	if _, ok := h.world.vms["bad"]; ok || !h.world.called("limactl delete --force bad") {
+		t.Errorf("a rejected copy should be deleted: %v", h.world.vms)
 	}
 }
