@@ -92,6 +92,12 @@ create() {
     limactl stop "$name" >/dev/null 2>&1
     limactl start --tty=false "$name" 2>&1 | grep -E 'READY|level=(error|fatal)' || true
   fi
+  local token
+  if token=$(gh_token); then
+    gh_install "$name" "$token" && info "Installed your GitHub token (limabean github)"
+  else
+    hint "No GitHub token saved, so gh in the VM isn't logged in (limabean github login)."
+  fi
 }
 
 # --- Claude Desktop SSH connections -------------------------------------------
@@ -171,6 +177,59 @@ claude_prune() {
     name=$(basename "$f" .env)
     printf '%s\n' "$vms" | grep -x "$name" >/dev/null || rm -f "$f"
   done
+}
+
+# --- GitHub token ------------------------------------------------------------
+# A GitHub token kept in the macOS Keychain and copied into each VM at
+# ~/.config/limabean/github-token (mode 600), which env.sh exports as
+# GITHUB_TOKEN for gh, git over https, the GitHub API and mise. It never goes
+# into a Lima template, since those are stored in plain text under ~/.lima.
+# The token is passed on stdin, never as an argument, so it stays out of `ps`.
+KEYCHAIN_SERVICE=${LIMABEAN_KEYCHAIN_SERVICE:-limabean-github-token}
+
+gh_token() { security find-generic-password -a "$USER" -s "$KEYCHAIN_SERVICE" -w 2>/dev/null; }
+
+gh_store() {
+  # `security -i` reads the command from stdin.
+  printf 'add-generic-password -U -a %s -s %s -w %s\n' "$USER" "$KEYCHAIN_SERVICE" "$1" |
+    security -i >/dev/null 2>&1 && [ "$(gh_token)" = "$1" ]
+}
+
+gh_forget() { security delete-generic-password -a "$USER" -s "$KEYCHAIN_SERVICE" >/dev/null 2>&1; }
+
+# gh_check <token>: sets GH_LOGIN and GH_EXPIRES ("never" if it doesn't
+# expire), or fails if GitHub rejects the token.
+gh_check() {
+  local headers body
+  headers=$(mktemp)
+  body=$(printf 'Authorization: Bearer %s\n' "$1" |
+    curl -sSf -H @- -D "$headers" https://api.github.com/user 2>/dev/null) || { rm -f "$headers"; return 1; }
+  GH_LOGIN=$(printf '%s' "$body" | sed -n 's/.*"login": *"\([^"]*\)".*/\1/p' | head -1)
+  GH_EXPIRES=$(grep -i '^github-authentication-token-expiration:' "$headers" | cut -d' ' -f2 | tr -d '\r')
+  GH_EXPIRES=${GH_EXPIRES:-never}
+  rm -f "$headers"
+}
+
+# gh_install <name> <token> / gh_uninstall <name>: the VM's copy.
+gh_install() {
+  printf '%s\n' "$2" | ssh -o BatchMode=yes "lima-$1" \
+    'umask 077 && mkdir -p ~/.config/limabean && cat > ~/.config/limabean/github-token'
+}
+gh_uninstall() { ssh -o BatchMode=yes "lima-$1" 'rm -f ~/.config/limabean/github-token'; }
+
+# gh_each <install|uninstall> [token]: apply to every running VM; list the
+# stopped ones, which `limabean github sync` covers once they're running.
+gh_each() {
+  local action=$1 token=${2:-} vm stopped=""
+  for vm in $(limabean_vms); do
+    if [ "$(status "$vm")" != Running ]; then stopped="$stopped $vm"; continue; fi
+    if [ "$action" = install ]; then gh_install "$vm" "$token"; else gh_uninstall "$vm"; fi
+    ok "$vm"
+  done
+  if [ -n "$stopped" ]; then
+    warn "stopped, so not updated:$stopped (start them, then: limabean github sync)"
+  fi
+  return 0
 }
 
 # check_unsaved <name>: list git repos under the VM's code dir with
@@ -262,6 +321,16 @@ cmd_doctor() {
     bad "jq not found; it's needed to add VMs to ${CLAUDE_SETTINGS/#$HOME/~}"; hint "brew install jq"; failed=1
   else
     ok "$(jq '[.sshConfigs[]? | select(.id | startswith("limabean-"))] | length' "$CLAUDE_SETTINGS" 2>/dev/null || echo 0) VM(s) registered in ${CLAUDE_SETTINGS/#$HOME/~}"
+  fi
+
+  echo "${bold}GitHub token${reset} (gh and the GitHub API in VMs; optional)"
+  local token
+  if ! token=$(gh_token); then
+    warn "none saved (limabean github login)"
+  elif gh_check "$token"; then
+    ok "token for $GH_LOGIN in your Keychain, expires: $GH_EXPIRES"
+  else
+    bad "the saved token is invalid or expired"; hint "limabean github login"; failed=1
   fi
 
   echo "${bold}Config${reset}"
@@ -441,6 +510,65 @@ cmd_claude() {
   [ -n "$vms" ] || info "No limabean VMs to register."
 }
 
+cmd_github() {
+  local token
+  case ${1:-} in
+    login)
+      if [ -t 0 ]; then
+        echo "Create a fine-grained token limited to the repositories you'll use in VMs:"
+        echo "  https://github.com/settings/personal-access-tokens/new"
+        echo "Give it an expiry and only the permissions you need (for example Contents and"
+        echo "Pull requests: read and write). It's stored in your macOS Keychain."
+        read -r -s -p "Token: " token; echo
+      else
+        read -r token   # e.g. from a password manager: … | limabean github login
+      fi
+      [ -n "$token" ] || die "no token given"
+      gh_check "$token" || die "GitHub rejected that token"
+      case $token in
+        github_pat_*) ;;
+        *) warn "this isn't a fine-grained token (they start with github_pat_). Classic and gh"
+           hint "tokens usually have broad scopes, and anything in a VM can read it." ;;
+      esac
+      gh_store "$token" || die "couldn't save the token to the Keychain"
+      info "Saved the token for ${bold}$GH_LOGIN${reset} (expires: $GH_EXPIRES) to your Keychain"
+      info "Installing it in running VMs"
+      gh_each install "$token"
+      ;;
+    sync)
+      token=$(gh_token) || die "no GitHub token saved (run: limabean github login)"
+      info "Installing your GitHub token in running VMs"
+      gh_each install "$token"
+      ;;
+    status)
+      if ! token=$(gh_token); then
+        warn "no GitHub token saved; gh in VMs isn't logged in (limabean github login)"
+        return 0
+      fi
+      if gh_check "$token"; then ok "token for $GH_LOGIN, expires: $GH_EXPIRES"
+      else bad "the saved token is invalid or expired (limabean github login)"; fi
+      local vm
+      for vm in $(limabean_vms); do
+        if [ "$(status "$vm")" != Running ]; then
+          printf '      %-16s stopped\n' "$vm"
+        elif ssh -o BatchMode=yes "lima-$vm" test -s .config/limabean/github-token 2>/dev/null; then
+          printf '      %-16s installed\n' "$vm"
+        else
+          printf '      %-16s missing (limabean github sync)\n' "$vm"
+        fi
+      done
+      ;;
+    logout)
+      gh_token >/dev/null || die "no GitHub token saved"
+      gh_forget || die "couldn't remove the token from the Keychain"
+      info "Removed the token from your Keychain; removing it from running VMs"
+      gh_each uninstall
+      hint "Revoke it on GitHub too: https://github.com/settings/personal-access-tokens"
+      ;;
+    *) die "usage: limabean github login|status|sync|logout" ;;
+  esac
+}
+
 cmd_help() {
   cat <<EOF
 limabean: disposable Linux dev VMs on macOS, built from Lima templates.
@@ -459,6 +587,12 @@ VMs
   stop <name>                stop a VM
   rebuild <name> [--force]   recreate from the current templates
   rm <name> [--force]        delete a VM
+
+GitHub
+  github login               save a GitHub token in your Keychain and install it in VMs
+  github status              show the token's account and expiry, and which VMs have it
+  github sync                install the saved token in every running VM
+  github logout              remove the token from the Keychain and VMs
 
 Claude Desktop
   claude sync                add every VM as an SSH connection and remove
@@ -484,6 +618,7 @@ case $CMD in
   rm|delete) cmd_rm "$@" ;;
   rebuild) cmd_rebuild "$@" ;;
   claude) cmd_claude "$@" ;;
+  github) cmd_github "$@" ;;
   help|-h|--help) cmd_help ;;
   *) die "unknown command '$CMD' (see: limabean help)" ;;
 esac

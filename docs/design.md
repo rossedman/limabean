@@ -239,6 +239,20 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   restarts the VM before handing it over. Later boots skip the upgrade, so
   restarts stay fast; `rebuild` is how a VM gets newer packages. Packages held
   back by Ubuntu's phased updates stay held, which is intended.
+- **D7 GitHub token. Decided: a scoped token in the macOS Keychain, copied in
+  by limabean.** Copying the host's `gh auth token` would hand every VM the
+  host's broadest credential, typically `repo`, `workflow` and `read:org`. It
+  would also pick the wrong host when `gh` defaults to GitHub Enterprise, and
+  go stale when the host re-authenticates. Per-VM `gh auth login` is
+  repeated after every rebuild. So `limabean github login` stores one
+  fine-grained token in the Keychain and writes it to
+  `~/.config/limabean/github-token` (mode 600) in each VM, where `env.sh`
+  exports `GITHUB_TOKEN`. It never goes into a template, because those are
+  plain text under `~/.lima`. It's passed on stdin, never in argv. git uses
+  `gh auth git-credential` for `https://github.com`. A token served on demand
+  from the Mac over a forwarded socket was considered and rejected: any
+  process in the VM could still request it, so it adds moving parts without
+  real protection.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

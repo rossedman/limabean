@@ -91,5 +91,8 @@ limabean ssh dev ssh -T git@github.com # should greet you by your GitHub usernam
 limabean get dev owner/repo            # clone into ~/code/github.com/owner/repo
 ```
 
-Next: [the CLI](cli.md), [what's inside a VM](inside-a-vm.md) and
-[Claude Desktop](claude-desktop.md).
+For `gh` and the GitHub API inside VMs, add a scoped token once with
+`limabean github login`; see [GitHub access](github.md).
+
+Next: [the CLI](cli.md), [what's inside a VM](inside-a-vm.md),
+[GitHub access](github.md) and [Claude Desktop](claude-desktop.md).

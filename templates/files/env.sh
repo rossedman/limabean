@@ -20,6 +20,13 @@ for d in "$HOME/.local/share/mise/shims" "$PYTHONUSERBASE/bin" "$GOBIN"; do
 done
 export PATH
 
+# GitHub token copied in by `limabean github` (see docs/github.md). gh, git
+# over https, mise and other tools read GITHUB_TOKEN. `read` keeps shell
+# startup free of extra processes.
+if [ -r "$HOME/.config/limabean/github-token" ]; then
+  read -r GITHUB_TOKEN < "$HOME/.config/limabean/github-token" && export GITHUB_TOKEN
+fi
+
 export EDITOR=vim
 # bat (also git's pager): use the terminal's own 16-color palette instead of a
 # fixed theme, so highlighting matches your terminal's color scheme.
