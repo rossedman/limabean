@@ -415,6 +415,88 @@ func TestCodeHelpers(t *testing.T) {
 	}
 }
 
+func TestCodeDisk(t *testing.T) {
+	h := newHarness(t)
+	disk := codeDiskName("dev")
+	if len("lima-"+disk) > 16 || codeDiskName("a-very-long-vm-name-indeed") == disk {
+		t.Fatalf("code disk names must fit an ext4 label and differ per VM: %s", disk)
+	}
+
+	out := h.must("", "new", "dev")
+	if !h.world.disks[disk] || !strings.Contains(out, "~/code is on its own disk") {
+		t.Fatalf("new should create a code disk:\n%s", out)
+	}
+	if !h.world.called("limactl disk create "+disk+" --size 50GiB --format raw") ||
+		!strings.Contains(strings.Join(h.world.calls, "\n"), `--param codeDisk=`+disk) ||
+		!strings.Contains(strings.Join(h.world.calls, "\n"), `.additionalDisks += [{"name": "`+disk+`", "format": true, "fsType": "ext4"}]`) {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+
+	// Rebuild keeps the disk: no unsaved-work check, a clean shutdown
+	// before the delete, and the same disk attached again.
+	h.world.unsaved = "~/code/github.com/me/app: unpushed commits\n"
+	h.world.calls = nil
+	out = h.must("", "rebuild", "dev")
+	if !strings.Contains(out, "Repositories in ~/code were kept") || strings.Contains(out, "would be lost") {
+		t.Fatalf("rebuild with a code disk:\n%s", out)
+	}
+	calls := strings.Join(h.world.calls, "\n")
+	if stop, del := strings.Index(calls, "limactl stop dev"), strings.Index(calls, "limactl delete --force dev"); stop < 0 || stop > del {
+		t.Fatalf("rebuild should stop the VM before deleting it: %v", h.world.calls)
+	}
+	if h.world.called("limactl disk create") || !strings.Contains(calls, "--param codeDisk="+disk) {
+		t.Fatalf("rebuild should reuse the disk: %v", h.world.calls)
+	}
+
+	// A disk is reattached even with CODE_DISK turned off since.
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.world.calls = nil
+	h.must("", "rebuild", "dev", "--force")
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "--param codeDisk="+disk) {
+		t.Fatalf("an existing disk should be kept: %v", h.world.calls)
+	}
+
+	// rm checks for unsaved work (the disk goes too), then deletes the disk.
+	if _, err := h.run("", "rm", "dev"); err == nil {
+		t.Fatal("rm should stop at unsaved work, code disk or not")
+	}
+	h.world.unsaved = ""
+	if out := h.must("", "rm", "dev"); !strings.Contains(out, "Deleted dev's code disk") || h.world.disks[disk] {
+		t.Fatalf("rm should delete the code disk:\n%s", out)
+	}
+
+	// Without CODE_DISK, new VMs have none and rebuild checks for unsaved work.
+	h.must("", "new", "plain")
+	if h.world.disks[codeDiskName("plain")] {
+		t.Fatal("CODE_DISK empty still made a disk")
+	}
+	h.world.unsaved = "~/code/x: stashes\n"
+	if out, err := h.run("", "rebuild", "plain"); err == nil || !strings.Contains(out, "would be lost") {
+		t.Fatalf("rebuild without a code disk should check for unsaved work: %v\n%s", err, out)
+	}
+
+	// A disk left by a VM deleted with limactl is cleaned up by rm.
+	h.world.disks[codeDiskName("ghost")] = true
+	if out := h.must("", "rm", "ghost"); !strings.Contains(out, "Deleted ghost's code disk") {
+		t.Fatalf("rm of a VM that's gone:\n%s", out)
+	}
+	h.world.disks[codeDiskName("stuck")] = true
+	h.world.failDiskDelete = true
+	if out := h.must("", "rm", "stuck"); !strings.Contains(out, "limactl disk delete "+codeDiskName("stuck")) {
+		t.Fatalf("a disk that won't delete should say how:\n%s", out)
+	}
+
+	h.world.failDiskCreate = true
+	t.Setenv("LIMABEAN_CODE_DISK", "20")
+	if _, err := h.run("", "new", "broken"); err == nil {
+		t.Error("new should fail when the code disk can't be created")
+	}
+	h.world.failDiskList = true
+	if _, err := h.run("", "new", "broken2"); err == nil {
+		t.Error("new should fail when Lima can't list disks")
+	}
+}
+
 func TestStartFailureShowsLimaOutput(t *testing.T) {
 	h := newHarness(t)
 	h.world.failStart = true
@@ -437,6 +519,7 @@ func TestNewRestartsForUpdatesAndMountsAWS(t *testing.T) {
 	}
 	t.Setenv("LIMABEAN_AWS_DIR", aws)
 	t.Setenv("LIMABEAN_CLAUDE_DESKTOP", "no")
+	t.Setenv("LIMABEAN_CODE_DISK", "")
 	out := h.must("", "new", "dev")
 	for _, want := range []string{"Installed updates and restarted", "Mounted " + aws, "No secrets set up"} {
 		if !strings.Contains(out, want) {
@@ -471,6 +554,7 @@ func TestNewWhenSecretsFail(t *testing.T) {
 
 func TestRebuild(t *testing.T) {
 	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "") // without a code disk; see TestCodeDisk
 	h.must("", "new", "dev", "--secret", "OWN=kept")
 	h.world.calls = nil
 	out := h.must("", "rebuild", "dev")

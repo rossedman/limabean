@@ -15,8 +15,8 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code, Cursor or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](#idle-vms-are-stopped-automatically) |
-| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment and secrets |
-| `limabean rm [name]` | Deletes a VM, its Claude Desktop entry and its own secrets |
+| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, secrets and, on its own disk, `~/code` |
+| `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets |
 | `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
@@ -40,10 +40,16 @@ are errors, and questions take their defaults.
 
 ## Unsaved work is protected
 
-`rm` and `rebuild` first check every git repository under `~/code` in the
-VM. If any has uncommitted changes, stashes or commits not pushed to a
-remote, they stop and list what they found. Then, in a terminal, they ask
-before deleting. `--force` skips both.
+`~/code` is on a disk of its own (`CODE_DISK`, 50 GiB by default and
+allocated as it fills), so `rebuild` erases the system and keeps your
+repositories. It shuts the VM down cleanly first, so everything written
+reaches the disk. `rm` deletes the disk with the VM.
+
+`rm`, and `rebuild` for a VM without a code disk (one created with
+`CODE_DISK` empty, or before limabean had it), first check every git
+repository under `~/code`. If any has uncommitted changes, stashes or
+commits not pushed to a remote, they stop and list what they found. Then,
+in a terminal, they ask before deleting. `--force` skips both.
 
 ## Idle VMs are stopped automatically
 
@@ -74,6 +80,7 @@ flag where one exists, which take priority:
 ```bash
 GIT_CONFIG_DIR="~/.config/git"   # host directory mounted read-only into VMs
 CODE_DIR="~/code"                # where ghq clones inside VMs
+CODE_DISK="50"                   # GiB of the disk CODE_DIR lives on, kept by rebuild; empty: none
 CPUS=""                          # empty: template default (4); flag: new --cpus
 MEMORY=""                        # GiB; empty: template default (8); flag: new --memory
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop

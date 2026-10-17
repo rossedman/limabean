@@ -17,4 +17,4 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | macOS says limabean "cannot be opened" after downloading | The binary is quarantined: `xattr -d com.apple.quarantine ~/.local/bin/limabean`. |
 | A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean start <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
 | `limabean new` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
-| `rm` or `rebuild` refuses to run | A repository under `~/code` has unpushed work, listed in the output. Push it, or pass `--force`. |
+| `rm` or `rebuild` refuses to run | A repository under `~/code` has unpushed work, listed in the output. Push it, or pass `--force`. (`rebuild` only checks VMs without a code disk, whose `~/code` it would erase.) |

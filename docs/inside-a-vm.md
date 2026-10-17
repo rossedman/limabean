@@ -70,6 +70,8 @@ or not, so `ssh lima-dev <cmd>` sees the same tools as a login shell.
 ## Repositories
 
 [ghq](https://github.com/x-motemen/ghq) clones into `~/code/<host>/<owner>/<repo>`.
+`~/code` is a separate disk (a Lima disk named `code-<hash>`, mounted over
+it at boot), so it survives `limabean rebuild`; `df -h ~/code` shows it.
 How git reaches GitHub depends on whether a [GitHub token](github.md) is
 installed. With one, everything goes over https with the token, so it works
 in Claude Desktop sessions too. Without one, repositories are fetched over

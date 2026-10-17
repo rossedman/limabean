@@ -16,12 +16,14 @@ func newRebuildCmd(a *App) *cobra.Command {
 the templates as they are now. This is how changes to templates, tools,
 shell config or limabean itself reach an existing VM.
 
-The VM's disk is erased, so repositories in ~/code are lost; clone them
-again with "limabean get". Its secrets, Claude Desktop entry and settings
-are kept and reinstalled.
+The VM's disk is erased. ~/code is kept when it's on its own disk, which
+VMs created with the CODE_DISK setting on (the default) have; otherwise
+repositories are lost and need cloning again with "limabean get". Its
+secrets, Claude Desktop entry and settings are kept and reinstalled.
 
-Like rm, rebuild first checks for uncommitted, stashed or unpushed work and,
-in a terminal, asks you to confirm. --force skips both.`,
+Without a code disk, rebuild first checks for uncommitted, stashed or
+unpushed work, like rm. In a terminal it asks you to confirm. --force skips
+both.`,
 		Example: `  limabean rebuild dev
 
   # Pick the VM from a list
@@ -45,16 +47,21 @@ in a terminal, asks you to confirm. --force skips both.`,
 			if env == "" {
 				env = "scratch"
 			}
+			keepsCode := a.hasCodeDisk(ctx, name)
 			if !force {
-				clean, err := a.checkUnsaved(ctx, inst)
-				if err != nil {
-					return err
-				}
-				if !clean {
-					return errSilent
+				question := fmt.Sprintf("Rebuild %s from the current %s template? %s is kept; the rest of its disk is erased.", name, env, a.Cfg.CodeDir)
+				if !keepsCode {
+					clean, err := a.checkUnsaved(ctx, inst)
+					if err != nil {
+						return err
+					}
+					if !clean {
+						return errSilent
+					}
+					question = fmt.Sprintf("Rebuild %s from the current %s template? Its disk is erased.", name, env)
 				}
 				if a.UI.Prompting {
-					yes, err := a.UI.Confirm(fmt.Sprintf("Rebuild %s from the current %s template? Its disk is erased.", name, env), false)
+					yes, err := a.UI.Confirm(question, false)
 					if err != nil {
 						return err
 					}
@@ -62,6 +69,15 @@ in a terminal, asks you to confirm. --force skips both.`,
 						a.UI.Info("Kept %s", name)
 						return nil
 					}
+				}
+			}
+			// delete --force kills a running VM; shut it down first so
+			// everything written to the code disk reaches it.
+			if keepsCode && inst.Running() {
+				if err := a.limaStep(ctx, "Stopping "+name, func(ctx context.Context) ([]byte, error) {
+					return a.Lima.Stop(ctx, name)
+				}); err != nil {
+					return err
 				}
 			}
 			if err := a.limaStep(ctx, "Deleting "+name, func(ctx context.Context) ([]byte, error) {
@@ -72,7 +88,11 @@ in a terminal, asks you to confirm. --force skips both.`,
 			if err := a.create(ctx, createOptions{Name: name, Env: env}); err != nil {
 				return err
 			}
-			a.UI.Box(a.UI.Code(name)+" was rebuilt", "", "Repositories weren't kept. Clone them again with:", "limabean get "+name+" <repo>")
+			if keepsCode {
+				a.UI.Box(a.UI.Code(name)+" was rebuilt", "", "Repositories in "+a.Cfg.CodeDir+" were kept.")
+			} else {
+				a.UI.Box(a.UI.Code(name)+" was rebuilt", "", "Repositories weren't kept. Clone them again with:", "limabean get "+name+" <repo>")
+			}
 			return nil
 		},
 	}

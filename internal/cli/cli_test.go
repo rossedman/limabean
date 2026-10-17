@@ -36,12 +36,17 @@ type fakeWorld struct {
 
 	failStart bool // limactl start fails, with output
 	failStop  bool // limactl stop fails
-	reboot    bool // the first boot left /var/run/reboot-required
-	sshFail   bool // every ssh call fails
+
+	disks          map[string]bool // Lima disks
+	failDiskList   bool
+	failDiskCreate bool
+	failDiskDelete bool
+	reboot         bool // the first boot left /var/run/reboot-required
+	sshFail        bool // every ssh call fails
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}}
 }
 
 func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -86,6 +91,28 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			w.vms[args[1]] = "Stopped"
 		case "delete":
 			delete(w.vms, args[len(args)-1])
+		case "disk":
+			switch args[1] {
+			case "list":
+				if w.failDiskList {
+					return nil, errors.New("exit status 1")
+				}
+				var b strings.Builder
+				for d := range w.disks {
+					fmt.Fprintf(&b, `{"name":%q,"format":"raw"}`+"\n", d)
+				}
+				return []byte(b.String()), nil
+			case "create":
+				if w.failDiskCreate {
+					return []byte("disk create failed"), errors.New("exit status 1")
+				}
+				w.disks[args[2]] = true
+			case "delete":
+				if w.failDiskDelete {
+					return []byte("disk is in use"), errors.New("exit status 1")
+				}
+				delete(w.disks, args[2])
+			}
 		}
 		return nil, nil
 	case "ssh":

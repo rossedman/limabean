@@ -96,3 +96,29 @@ func TestSSHArgsInteractive(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestDisks(t *testing.T) {
+	f := &fakeRunner{out: map[string]string{"disk": `{"name":"code-abc123","size":53687091200,"format":"raw","dir":"/h/.lima/_disks/code-abc123","instance":"","instanceDir":"","mountPoint":"/mnt/lima-code-abc123"}
+time="x" level=warning msg="not JSON"
+{"name":"data","size":1}
+`}}
+	c := &Client{Runner: f}
+	ctx := context.Background()
+	for name, want := range map[string]bool{"code-abc123": true, "data": true, "code-abc": false} {
+		if got, err := c.DiskExists(ctx, name); err != nil || got != want {
+			t.Errorf("DiskExists(%s) = %v, %v", name, got, err)
+		}
+	}
+	_, _ = c.DiskCreate(ctx, "code-abc123", "50GiB")
+	_, _ = c.DiskDelete(ctx, "code-abc123")
+	got := []string{}
+	for _, call := range f.calls[len(f.calls)-2:] {
+		got = append(got, strings.Join(call, " "))
+	}
+	if want := "limactl disk create code-abc123 --size 50GiB --format raw\nlimactl disk delete code-abc123"; strings.Join(got, "\n") != want {
+		t.Fatalf("calls:\n%s", strings.Join(got, "\n"))
+	}
+	if _, err := (&Client{Runner: errRunner{}}).DiskExists(ctx, "x"); err == nil {
+		t.Error("DiskExists should fail when limactl does")
+	}
+}
