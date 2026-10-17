@@ -1,6 +1,6 @@
 # Tools every environment gets, pinned so rebuilds are reproducible.
 # To upgrade: change a version here, then rebuild the VM.
-# (`mise latest <tool>` inside a VM shows the newest version.)
+# `limabean bump` updates every pin within its major version.
 [tools]
 # shell
 ripgrep = "15.2.0"

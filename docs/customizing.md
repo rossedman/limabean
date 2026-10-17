@@ -16,7 +16,7 @@ templates/
 
 | To… | Edit |
 |---|---|
-| Add or upgrade a CLI tool | [`mise/base.toml`](../templates/mise/base.toml). Pin a version; `mise latest <tool>` in a VM shows the newest. |
+| Add or upgrade a CLI tool | [`mise/base.toml`](../templates/mise/base.toml). Pin a version; `limabean bump` upgrades every pin within its major (`--major` for more), and a monthly workflow (`bump.yml`) opens a PR with the same. |
 | Add a system package | `packages=(…)` in [`features/apt-common.sh`](../templates/features/apt-common.sh) |
 | Change the prompt, aliases or shell options | [`files/zshrc`](../templates/files/zshrc) |
 | Add an environment variable for every shell | [`files/env.sh`](../templates/files/env.sh) |
