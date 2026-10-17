@@ -39,8 +39,8 @@ func TestLoadBashConfig(t *testing.T) {
 	if c.AWSDir != "~/.aws" {
 		t.Errorf("AWS_DIR default = %q (missing from older configs)", c.AWSDir)
 	}
-	if c.IDE != "code" {
-		t.Errorf("IDE default = %q (missing from older configs)", c.IDE)
+	if c.IDE != "" {
+		t.Errorf("IDE default = %q, want empty: the first editor installed", c.IDE)
 	}
 	if c.CodeDisk != 50 {
 		t.Errorf("CODE_DISK default = %d (missing from older configs)", c.CodeDisk)

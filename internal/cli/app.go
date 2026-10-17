@@ -54,7 +54,7 @@ type App struct {
 	// How `autostop` drives launchd; tests replace it.
 	launchctl func(ctx context.Context, args ...string) ([]byte, error)
 	// How `code` starts the editor; tests replace it.
-	openEditor func(ctx context.Context, ide string, args ...string) error
+	openEditor func(ctx context.Context, path string, args ...string) error
 	// How snapshots copy disks; tests replace it.
 	cloneFile func(ctx context.Context, src, dst string) error
 	// How `bump` asks mise for versions on the Mac; tests replace it.

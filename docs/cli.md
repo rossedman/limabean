@@ -17,7 +17,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
 | `limabean cp <src>… <dst>` | Copies files between the Mac and VMs; VM paths are `<vm>:<path>`, `-r` for directories |
-| `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code, Cursor or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
+| `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code (or Insiders), Cursor, Windsurf, VSCodium or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
 | `limabean ports [name]` | Lists the TCP ports programs in the VM listen on and whether each reaches your Mac's localhost; `--json` for scripts |
 | `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
@@ -69,11 +69,16 @@ CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Des
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
 PACKS="go,python,node,kubernetes,infra,containers,db"   # packs new VMs get; flag: new --with/--without
 IMAGES="yes"                     # copy new VMs from a provisioned image; no: provision each one
-IDE="code"                       # editor limabean code opens: code, cursor, …; flag: code --ide
+IDE=""                           # editor limabean code opens: code, code-insiders, cursor, windsurf, codium, …;
+                                 # empty: the first installed; flag: code --ide
 ```
 
 Changes apply to new VMs, and to existing ones after `limabean rebuild`.
 IDE is the exception: it only affects `limabean code`, so it applies at once.
+`limabean code` finds an editor on your PATH or inside its app in
+`/Applications`, so VS Code's "Install 'code' command in PATH" isn't needed.
+If the IDE you set isn't installed, it opens the first editor that is and
+says how to make that the default.
 
 Global flags:
 

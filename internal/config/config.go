@@ -47,7 +47,7 @@ type Config struct {
 	Disk          int    // GiB of the system disk; 0: template default
 	ClaudeDesktop bool   // register VMs as SSH connections in Claude Desktop
 	AWSDir        string // mounted read-only at ~/.aws in VMs; "": never
-	IDE           string // editor command for `limabean code`, e.g. code or cursor
+	IDE           string // editor for `limabean code`, e.g. code-insiders; "": the first installed
 	CodeDisk      int    // GiB of the disk holding CodeDir in new VMs; 0: none
 	Packs         string // packs new VMs get besides core, comma-separated
 	Images        bool   // create VMs by cloning a cached, provisioned image
@@ -72,7 +72,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyDisk, "")
 	v.SetDefault(KeyClaudeDesktop, "yes")
 	v.SetDefault(KeyAWSDir, "~/.aws")
-	v.SetDefault(KeyIDE, "code")
+	v.SetDefault(KeyIDE, "")
 	v.SetDefault(KeyCodeDisk, "50")
 	v.SetDefault(KeyPacks, DefaultPacks)
 	v.SetDefault(KeyImages, "yes")
@@ -193,8 +193,9 @@ CLAUDE_DESKTOP=%q
 # AWS CLI config, mounted read-only at ~/.aws in VMs when it exists. Empty: never.
 AWS_DIR=%q
 
-# Editor that limabean code opens VMs in: code (VS Code), cursor, or another
-# editor with VS Code's --remote flag.
+# Editor that limabean code opens VMs in: code (VS Code), code-insiders,
+# cursor, windsurf, codium, or another editor with VS Code's --remote flag.
+# Empty: the first of those that's installed.
 IDE=%q
 
 # Packs of tools new VMs get besides core (limabean packs lists them);

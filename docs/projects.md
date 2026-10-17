@@ -64,7 +64,7 @@ set up again.
 ```bash
 limabean up                      # start it, wherever you are in the checkout
 limabean ssh myapp               # a shell
-limabean code myapp              # VS Code or Cursor, over SSH
+limabean code myapp              # VS Code, Cursor or another editor, over SSH
 limabean stop myapp              # or let autostop do it
 ```
 

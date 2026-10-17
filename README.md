@@ -117,7 +117,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
 | `limabean cp <src> <dst>` | Copy files between your Mac and a VM (`dev:path`) |
-| `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code or Cursor |
+| `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code, Cursor, Windsurf or VSCodium |
 | `limabean ports [name]` | List the ports a VM forwards to your Mac |
 | `limabean open [name] [port]` | Open a forwarded port in your browser |
 | `limabean start [name]` | Start a stopped VM |
