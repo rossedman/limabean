@@ -23,8 +23,9 @@ copying them in, and appears in Claude Desktop as an SSH connection.
   1Password, environment variables or commands, chosen when you create a VM.
 - **Built for Claude.** Every VM is registered as an SSH connection in Claude
   Desktop.
-- **Safe to throw away.** `rm` and `rebuild` refuse to run while you have
-  unpushed work.
+- **Safe to throw away.** `~/code` lives on its own disk, so `rebuild`
+  keeps your repositories, and `rm` refuses to run while you have unpushed
+  work.
 - **Plain Lima underneath.** Templates are ordinary YAML and shell, and
   `limactl` always works.
 
@@ -80,9 +81,10 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean ports [name]` | List the ports a VM forwards to your Mac |
 | `limabean open [name] [port]` | Open a forwarded port in your browser |
 | `limabean start [name]` | Start a stopped VM |
-| `limabean stop [name]` | Stop a running VM |
-| `limabean rebuild [name]` | Recreate a VM from the current templates |
+| `limabean stop [name]` | Stop a running VM, or with `--idle 2h` every VM nobody is using |
+| `limabean rebuild [name]` | Recreate a VM from the current templates, keeping `~/code` |
 | `limabean rm [name]` | Delete a VM |
+| `limabean autostop on\|off\|status` | Stop idle VMs automatically in the background |
 
 **Secrets and access**
 

@@ -15,7 +15,8 @@ decision.
 
 1. Defining a new environment means writing about 10 lines of YAML.
 2. Each tool, dotfile or setting is defined in exactly one place.
-3. VMs can be thrown away. Rebuilding one is one command and nothing is lost.
+3. VMs can be thrown away. Rebuilding one is one command and nothing is lost:
+   `~/code` is on its own disk.
 4. Claude, running on the Mac, can reach any environment over SSH by a stable
    host name.
 5. It works with Lima as it ships (2.0 or newer). No extra layers such as Nix
@@ -148,8 +149,9 @@ carried over unchanged:
 - **`doctor` turns silent failures into explicit ones**: a missing or
   misplaced `Include`, an empty ssh-agent, a missing git config, broken
   secret references.
-- **`rm` and `rebuild` guard unsaved work** in `~/code` (uncommitted changes,
-  stashes, commits on no remote). `--force` skips the check.
+- **`rm` guards unsaved work** in `~/code` (uncommitted changes, stashes,
+  commits on no remote), and so does `rebuild` for a VM without a code disk.
+  `--force` skips the check.
 - **Claude Desktop registration** in `~/.claude/settings.json` `sshConfigs`,
   touching only `limabean-` ids, keeping other keys and their order, leaving
   invalid JSON alone, and writing in place so symlinks survive.
@@ -203,9 +205,23 @@ the alias keeps working when the VM's SSH port changes.
 | B. Mount `~/code` writable | Same files as the host, survives rebuilds | Claude in the VM can change host files. virtiofs is slower for node_modules and similar |
 | C. Per-VM extra disk (`limactl disk create`) at `~/code` | Survives rebuilds, still isolated | One more thing to manage |
 
-**Decided: A.** Code is cloned into `~/code` inside the VM with ghq
-(`~/code/<host>/<owner>/<repo>`; the `codeDir` param). C (persistent disk)
-and an opt-in `--mount` can come later if rebuilds start to hurt.
+**Decided: A, then C.** Code is cloned into `~/code` inside the VM with ghq
+(`~/code/<host>/<owner>/<repo>`; the `codeDir` param), and since re-cloning
+after every rebuild hurt, it lives on a per-VM Lima disk:
+
+- `limabean new` creates `code-<6 hex of sha256(vm)>` (`CODE_DISK` GiB,
+  raw and sparse) and attaches it with `--set .additionalDisks` and the
+  `codeDisk` param. `rebuild` reattaches the same disk; `rm` deletes it.
+- Lima formats a disk on any boot that can't find the label
+  `lima-<name>`, and ext4 labels hold 16 bytes. A name over 11 characters
+  would be truncated and the disk erased on every boot, hence the hash.
+- Lima mounts the disk at `/mnt/lima-<name>`, which isn't configurable, so
+  `features/code-disk.sh` (system, every boot) bind-mounts it over
+  `codeDir` before the user scripts run.
+- `limactl delete --force` kills a running VM, so `rebuild` stops it first
+  and pending writes reach the disk.
+
+An opt-in `--mount` of a host directory (B) is still open.
 
 ## Other decisions to make
 
@@ -277,8 +293,12 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   resolves them on the Mac and writes `export` lines (mode 600) into each VM.
   The GitHub token is one of these secrets. Values never reach argv or a Lima
   template.
-- **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
-  needed. It's the default on Apple Silicon.
+- **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
+  `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
+  `linux/amd64` containers run on Apple Silicon without a prefix (Lima
+  registers it with the `F` flag, which Docker needs). On Intel Macs Lima
+  logs that Rosetta is unavailable and boots normally. QEMU user-mode
+  emulation was the alternative: slower, and one more package to install.
 
 ## Environments
 
@@ -300,8 +320,8 @@ heavy extras most VMs don't need.
 2. A second environment, to exercise per-environment mise TOML files.
 3. ✅ The CLI: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
    `rebuild` and `rm`, with the unsaved-work guard.
-4. Dotfiles (`features/dotfiles.sh`). Code-location option C (persistent
-   disk) if rebuilds become painful.
-5. `limabean bump` (rewrite pinned versions in `base.toml`), CI (`limactl
-   tmpl validate` + shellcheck), and a persistent `~/code` disk so rebuilds
-   keep repositories.
+4. Dotfiles (`features/dotfiles.sh`). ✅ Code-location option C (persistent
+   disk).
+5. `limabean bump` (rewrite pinned versions in `base.toml`), ✅ CI (`limactl
+   tmpl validate` + shellcheck), and ✅ a persistent `~/code` disk so
+   rebuilds keep repositories.

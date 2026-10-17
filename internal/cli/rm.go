@@ -13,9 +13,10 @@ func newRmCmd(a *App) *cobra.Command {
 		Use:     "rm [name]",
 		Aliases: []string{"delete"},
 		Short:   "Delete a VM",
-		Long: `Delete a VM and everything limabean keeps for it: its Claude Desktop entry,
-its saved environment, its own secrets file (secrets.<name>.env) and the
-Keychain items limabean created for those secrets. Shared secrets are kept.
+		Long: `Delete a VM and everything limabean keeps for it: the disk its ~/code is
+on, its Claude Desktop entry, its saved environment, its own secrets file
+(secrets.<name>.env) and the Keychain items limabean created for those
+secrets. Shared secrets are kept.
 
 Before deleting, rm checks every git repository under ~/code in the VM. If
 any has uncommitted changes, stashes or commits that aren't on a remote, it
@@ -44,10 +45,10 @@ what's left of it.`,
 				return err
 			}
 			if !ok {
-				if a.envOf(name) == "" && !a.hasLeftovers(name) {
+				if a.envOf(name) == "" && !a.hasLeftovers(ctx, name) {
 					return fmt.Errorf("no VM named %q (see: limabean ls)", name)
 				}
-				a.forget(name)
+				a.forget(ctx, name)
 				a.UI.OK("No VM named %s; removed what was left of it", name)
 				return nil
 			}
@@ -75,7 +76,7 @@ what's left of it.`,
 			}); err != nil {
 				return err
 			}
-			a.forget(name)
+			a.forget(ctx, name)
 			a.UI.OK("Deleted %s", a.UI.Code(name))
 			return nil
 		},

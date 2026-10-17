@@ -81,13 +81,13 @@
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/robot-happy-outline.svg" %}</div>
-          <h3>Built for Claude</h3>
-          <p>Each running VM shows up in Claude Desktop as an SSH connection. Claude works with the VM's tools and can't touch files on your Mac.</p>
+          <h3>Built for Claude and your editor</h3>
+          <p>Each running VM shows up in Claude Desktop as an SSH connection, and <code>limabean code</code> opens it in VS Code or Cursor. Either way, work happens with the VM's tools and can't touch files on your Mac.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/delete-restore.svg" %}</div>
           <h3>Safe to throw away</h3>
-          <p><code>rm</code> and <code>rebuild</code> refuse to run while you have unpushed work, so a disposable VM never takes your commits with it.</p>
+          <p><code>~/code</code> lives on its own disk, so <code>rebuild</code> keeps your repositories, and <code>rm</code> refuses to run while you have unpushed work.</p>
         </article>
       </div>
     </div>
@@ -156,13 +156,15 @@
           <h3>VMs</h3>
           <dl>
             <dt>new</dt><dd>Create a VM, choosing its secrets</dd>
-            <dt>ls</dt><dd>List VMs</dd>
+            <dt>ls</dt><dd>List VMs, or print JSON with <code>--json</code></dd>
             <dt>ssh</dt><dd>Open a shell, starting the VM if needed</dd>
             <dt>get</dt><dd>Clone a repository into the VM with ghq</dd>
+            <dt>code</dt><dd>Open the VM or a repo in VS Code or Cursor</dd>
             <dt>start / stop</dt><dd>Start or stop a VM</dd>
             <dt>ports / open</dt><dd>See forwarded ports, open one in the browser</dd>
-            <dt>rebuild</dt><dd>Recreate from the current templates</dd>
+            <dt>rebuild</dt><dd>Recreate from the current templates, keeping <code>~/code</code></dd>
             <dt>rm</dt><dd>Delete a VM</dd>
+            <dt>autostop on</dt><dd>Stop VMs nobody has used for a while</dd>
           </dl>
         </div>
         <div class="lb-cmdgroup">

@@ -16,9 +16,10 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean ports [name]` | Lists the TCP ports programs in the VM listen on and whether each reaches your Mac's localhost; `--json` for scripts |
 | `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
-| `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again |
-| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment and secrets |
-| `limabean rm [name]` | Deletes a VM, its Claude Desktop entry and its own secrets |
+| `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](#idle-vms-are-stopped-automatically) |
+| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, secrets and, on its own disk, `~/code` |
+| `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets |
+| `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
 | `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
@@ -41,10 +42,36 @@ are errors, and questions take their defaults.
 
 ## Unsaved work is protected
 
-`rm` and `rebuild` first check every git repository under `~/code` in the
-VM. If any has uncommitted changes, stashes or commits not pushed to a
-remote, they stop and list what they found. Then, in a terminal, they ask
-before deleting. `--force` skips both.
+`~/code` is on a disk of its own (`CODE_DISK`, 50 GiB by default and
+allocated as it fills), so `rebuild` erases the system and keeps your
+repositories. It shuts the VM down cleanly first, so everything written
+reaches the disk. `rm` deletes the disk with the VM.
+
+`rm`, and `rebuild` for a VM without a code disk (one created with
+`CODE_DISK` empty, or before limabean had it), first check every git
+repository under `~/code`. If any has uncommitted changes, stashes or
+commits not pushed to a remote, they stop and list what they found. Then,
+in a terminal, they ask before deleting. `--force` skips both.
+
+## Idle VMs are stopped automatically
+
+`limabean autostop on` installs a launchd agent that runs
+`limabean stop --idle 2h` every 10 minutes (`--after` changes the limit), so a
+VM you've forgotten about stops holding memory and battery. Its disk is kept,
+and `ssh`, `code` or `start` brings it back. A VM counts as in use while:
+
+- a terminal in it (a shell, tmux, `limabean ssh`) had input or output
+  within the limit. A detached tmux pane that is printing counts; one that
+  sits silent doesn't.
+- Claude Desktop, VS Code or Cursor is connected to it.
+- its 5-minute load average is 1 or more, as during a build or with busy
+  containers.
+- it started less than the limit ago.
+
+Quiet background work, such as idle containers or a long command run over
+`ssh` without a terminal, doesn't keep a VM running. Run
+`limabean stop --idle 2h --dry-run` to see what would stop and why the
+rest are kept. The agent's output is in `~/Library/Logs/limabean-autostop.log`.
 
 ## Settings
 
@@ -55,6 +82,7 @@ flag where one exists, which take priority:
 ```bash
 GIT_CONFIG_DIR="~/.config/git"   # host directory mounted read-only into VMs
 CODE_DIR="~/code"                # where ghq clones inside VMs
+CODE_DISK="50"                   # GiB of the disk CODE_DIR lives on, kept by rebuild; empty: none
 CPUS=""                          # empty: template default (4); flag: new --cpus
 MEMORY=""                        # GiB; empty: template default (8); flag: new --memory
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop

@@ -20,6 +20,12 @@ under `~/code` and push it to a remote.
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   venv and skopeo.
+- **Rosetta** on Apple Silicon, so x86_64 Linux programs run as they are:
+  a downloaded `amd64` binary, or `docker run --platform linux/amd64 …` for
+  an image with no arm64 build. It's slower than native, so prefer arm64
+  images when they exist. Intel Macs run x86_64 natively and skip it.
+  If creating a VM stops at `Installing rosetta...`, run
+  `softwareupdate --install-rosetta` on the Mac.
 
 ## Ports
 
@@ -80,6 +86,8 @@ or not, so `ssh lima-dev <cmd>` sees the same tools as a login shell.
 ## Repositories
 
 [ghq](https://github.com/x-motemen/ghq) clones into `~/code/<host>/<owner>/<repo>`.
+`~/code` is a separate disk (a Lima disk named `code-<hash>`, mounted over
+it at boot), so it survives `limabean rebuild`; `df -h ~/code` shows it.
 How git reaches GitHub depends on whether a [GitHub token](github.md) is
 installed. With one, everything goes over https with the token, so it works
 in Claude Desktop sessions too. Without one, repositories are fetched over

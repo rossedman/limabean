@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -10,6 +15,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/rossedman/limabean/internal/claude"
 	"github.com/rossedman/limabean/internal/lima"
@@ -42,6 +48,218 @@ func TestStop(t *testing.T) {
 	if _, err := h.run("", "stop"); err == nil || !strings.Contains(err.Error(), "name a VM") {
 		t.Errorf("stop without a name in plain mode: %v", err)
 	}
+}
+
+func TestStopIdle(t *testing.T) {
+	h := newHarness(t)
+	for _, n := range []string{"busy", "fresh", "idle", "off", "quiet"} {
+		h.world.vms[n] = "Running"
+	}
+	h.world.vms["off"] = "Stopped"
+	const now = 1_800_000_000
+	at := func(ago time.Duration, busy string) string {
+		return fmt.Sprintf("%d %d %s\n", now, now-int64(ago.Seconds()), busy)
+	}
+	h.world.activity["busy"] = at(5*time.Hour, "an editor is connected")
+	h.world.activity["fresh"] = at(20*time.Minute, "")
+	h.world.activity["idle"] = at(3*time.Hour+7*time.Minute, "")
+	h.world.activity["quiet"] = "garbage"
+	if err := (claude.Settings{Path: h.claude}).Add("idle"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := h.run("", "stop", "--idle", "2h", "--dry-run")
+	if !errors.Is(err, errSilent) {
+		t.Fatalf("a VM that couldn't be checked should fail the run: %v", err)
+	}
+	for _, want := range []string{
+		"busy is in use: an editor is connected",
+		"fresh was used 20m ago",
+		"idle has been idle for 3h07m, so it would stop",
+		"quiet: couldn't tell whether it's in use",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("dry run missing %q:\n%s", want, out)
+		}
+	}
+	if h.world.called("limactl stop") {
+		t.Fatalf("--dry-run stopped something: %v", h.world.calls)
+	}
+
+	h.world.activity["quiet"] = at(10*time.Hour, "")
+	out = h.must("", "stop", "--idle", "2h")
+	if h.world.vms["idle"] != "Stopped" || h.world.vms["quiet"] != "Stopped" || h.world.vms["busy"] != "Running" || h.world.vms["fresh"] != "Running" {
+		t.Fatalf("stopped the wrong VMs: %v\n%s", h.world.vms, out)
+	}
+	if !strings.Contains(out, "Stopped idle") {
+		t.Errorf("out:\n%s", out)
+	}
+	if names, _ := (claude.Settings{Path: h.claude}).VMs(); len(names) != 0 {
+		t.Errorf("a stopped VM kept its Claude entry: %v", names)
+	}
+
+	// One VM by name.
+	if out := h.must("", "stop", "fresh", "--idle", "10m"); h.world.vms["fresh"] != "Stopped" {
+		t.Fatalf("named VM: %v\n%s", h.world.vms, out)
+	}
+	if out := h.must("", "stop", "off", "--idle", "10m"); !strings.Contains(out, "off is already stopped") {
+		t.Errorf("out:\n%s", out)
+	}
+	h.world.vms["busy"] = "Stopped"
+	if out := h.must("", "stop", "--idle", "2h"); !strings.Contains(out, "No VMs are running") {
+		t.Errorf("out:\n%s", out)
+	}
+
+	for _, args := range [][]string{{"stop", "--dry-run"}, {"stop", "--idle", "30s"}, {"stop", "nope", "--idle", "1h"}} {
+		if _, err := h.run("", args...); err == nil {
+			t.Errorf("limabean %v should fail", args)
+		}
+	}
+	h.world.vms["busy"] = "Running"
+	h.world.activity["busy"] = at(3*time.Hour, "")
+	h.world.failStop = true
+	if _, err := h.run("", "stop", "--idle", "1h"); err == nil {
+		t.Error("a VM that won't stop should fail the run")
+	}
+}
+
+func TestAutostop(t *testing.T) {
+	h := newHarness(t)
+	plist := filepath.Join(h.home(), "Library", "LaunchAgents", autostopLabel+".plist")
+	if out := h.must("", "autostop", "status"); !strings.Contains(out, "Autostop is off") {
+		t.Fatalf("status before on:\n%s", out)
+	}
+	if _, err := h.run("", "autostop", "on"); err == nil || !strings.Contains(err.Error(), "limactl isn't on your PATH") {
+		t.Fatalf("on without limactl: %v", err)
+	}
+	bin := filepath.Join(h.home(), "lima", "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "limactl"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	if _, err := h.run("", "autostop", "on", "--after", "5m"); err == nil {
+		t.Error("--after shorter than the check interval should fail")
+	}
+	out := h.must("", "autostop", "on", "--after", "90m")
+	if !strings.Contains(out, "nobody has used for 1h30m are stopped (checked every 10m)") || !h.world.agentLoaded {
+		t.Fatalf("on:\n%s", out)
+	}
+	body, err := os.ReadFile(plist)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"<string>--idle</string>\n    <string>1h30m</string>", "<string>--plain</string>", "<string>--config</string>", "<string>" + bin + ":", "<integer>600</integer>", "limabean-autostop.log"} {
+		if !strings.Contains(string(body), want) {
+			t.Errorf("plist missing %q:\n%s", want, body)
+		}
+	}
+	dec := xml.NewDecoder(bytes.NewReader(body))
+	dec.Strict, dec.Entity = true, xml.HTMLEntity
+	for {
+		if _, err := dec.Token(); err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatalf("the plist isn't well-formed XML: %v", err)
+		}
+	}
+
+	// Again with a new limit: the loaded agent is replaced.
+	h.world.calls = nil
+	h.must("", "autostop", "on")
+	if !h.world.called("launchctl bootout gui/") || !h.world.called("launchctl bootstrap gui/") || autostopAfter(mustRead(t, plist)) != "2h" {
+		t.Fatalf("on again: %v", h.world.calls)
+	}
+	if out := h.must("", "autostop", "status"); !strings.Contains(out, "nobody has used for 2h are stopped") {
+		t.Fatalf("status:\n%s", out)
+	}
+	h.world.agentLoaded = false
+	if out, err := h.run("", "autostop", "status"); err == nil || !strings.Contains(out, "installed but not loaded") {
+		t.Fatalf("status when unloaded: %v\n%s", err, out)
+	}
+	h.world.agentLoaded = true
+	if out := h.must("", "autostop", "off"); !strings.Contains(out, "Autostop is off") || h.world.agentLoaded {
+		t.Fatalf("off:\n%s", out)
+	}
+	if _, err := os.Stat(plist); !os.IsNotExist(err) {
+		t.Errorf("off left the plist: %v", err)
+	}
+	if out := h.must("", "autostop", "off"); !strings.Contains(out, "already off") {
+		t.Errorf("second off:\n%s", out)
+	}
+}
+
+func TestAutostopHelpers(t *testing.T) {
+	for d, want := range map[time.Duration]string{2 * time.Hour: "2h", 90 * time.Minute: "1h30m", 45 * time.Minute: "45m", 30 * time.Second: "30s"} {
+		if got := shortDuration(d); got != want {
+			t.Errorf("shortDuration(%v) = %s, want %s", d, got, want)
+		}
+	}
+	for d, want := range map[time.Duration]string{30 * time.Second: "under a minute", 45 * time.Minute: "45m", 125 * time.Minute: "2h05m"} {
+		if got := roughDuration(d); got != want {
+			t.Errorf("roughDuration(%v) = %s, want %s", d, got, want)
+		}
+	}
+	if !strings.Contains(string(renderPlist([]string{"/a&b/limabean"}, "/x", time.Minute)), "<string>/a&amp;b/limabean</string>") {
+		t.Error("plist values aren't escaped")
+	}
+	if autostopAfter([]byte("<plist/>")) != "" {
+		t.Error("a plist without --idle has no limit")
+	}
+}
+
+func TestAutostopFindsItself(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &App{}
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	if got := a.selfPath(); got != exe {
+		t.Errorf("without limabean on PATH: %s, want %s", got, exe)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "limabean"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.selfPath(); got != exe {
+		t.Errorf("another limabean on PATH: %s, want %s", got, exe)
+	}
+	link := t.TempDir()
+	if err := os.Symlink(exe, filepath.Join(link, "limabean")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", link)
+	if got := a.selfPath(); got != filepath.Join(link, "limabean") {
+		t.Errorf("a link to this binary on PATH: %s", got)
+	}
+	// A service that doesn't exist: an error from launchctl, or no launchctl.
+	if _, err := runLaunchctl(context.Background(), "print", "gui/0/"+autostopLabel+".test-missing"); err == nil {
+		t.Error("printing a missing launchd service should fail")
+	}
+}
+
+func TestIdleStateBadOutput(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	for _, bad := range []string{"", "12", "now later"} {
+		h.world.activity["dev"] = bad
+		if out, err := h.run("", "stop", "--idle", "1h"); err == nil || !strings.Contains(out, "unexpected output") {
+			t.Errorf("activity %q: %v\n%s", bad, err, out)
+		}
+	}
+}
+
+func mustRead(t *testing.T, path string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
 
 func TestPickerAndSingleVM(t *testing.T) {
@@ -200,6 +418,88 @@ func TestCodeHelpers(t *testing.T) {
 	}
 }
 
+func TestCodeDisk(t *testing.T) {
+	h := newHarness(t)
+	disk := codeDiskName("dev")
+	if len("lima-"+disk) > 16 || codeDiskName("a-very-long-vm-name-indeed") == disk {
+		t.Fatalf("code disk names must fit an ext4 label and differ per VM: %s", disk)
+	}
+
+	out := h.must("", "new", "dev")
+	if !h.world.disks[disk] || !strings.Contains(out, "~/code is on its own disk") {
+		t.Fatalf("new should create a code disk:\n%s", out)
+	}
+	if !h.world.called("limactl disk create "+disk+" --size 50GiB --format raw") ||
+		!strings.Contains(strings.Join(h.world.calls, "\n"), `--param codeDisk=`+disk) ||
+		!strings.Contains(strings.Join(h.world.calls, "\n"), `.additionalDisks += [{"name": "`+disk+`", "format": true, "fsType": "ext4"}]`) {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+
+	// Rebuild keeps the disk: no unsaved-work check, a clean shutdown
+	// before the delete, and the same disk attached again.
+	h.world.unsaved = "~/code/github.com/me/app: unpushed commits\n"
+	h.world.calls = nil
+	out = h.must("", "rebuild", "dev")
+	if !strings.Contains(out, "Repositories in ~/code were kept") || strings.Contains(out, "would be lost") {
+		t.Fatalf("rebuild with a code disk:\n%s", out)
+	}
+	calls := strings.Join(h.world.calls, "\n")
+	if stop, del := strings.Index(calls, "limactl stop dev"), strings.Index(calls, "limactl delete --force dev"); stop < 0 || stop > del {
+		t.Fatalf("rebuild should stop the VM before deleting it: %v", h.world.calls)
+	}
+	if h.world.called("limactl disk create") || !strings.Contains(calls, "--param codeDisk="+disk) {
+		t.Fatalf("rebuild should reuse the disk: %v", h.world.calls)
+	}
+
+	// A disk is reattached even with CODE_DISK turned off since.
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.world.calls = nil
+	h.must("", "rebuild", "dev", "--force")
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "--param codeDisk="+disk) {
+		t.Fatalf("an existing disk should be kept: %v", h.world.calls)
+	}
+
+	// rm checks for unsaved work (the disk goes too), then deletes the disk.
+	if _, err := h.run("", "rm", "dev"); err == nil {
+		t.Fatal("rm should stop at unsaved work, code disk or not")
+	}
+	h.world.unsaved = ""
+	if out := h.must("", "rm", "dev"); !strings.Contains(out, "Deleted dev's code disk") || h.world.disks[disk] {
+		t.Fatalf("rm should delete the code disk:\n%s", out)
+	}
+
+	// Without CODE_DISK, new VMs have none and rebuild checks for unsaved work.
+	h.must("", "new", "plain")
+	if h.world.disks[codeDiskName("plain")] {
+		t.Fatal("CODE_DISK empty still made a disk")
+	}
+	h.world.unsaved = "~/code/x: stashes\n"
+	if out, err := h.run("", "rebuild", "plain"); err == nil || !strings.Contains(out, "would be lost") {
+		t.Fatalf("rebuild without a code disk should check for unsaved work: %v\n%s", err, out)
+	}
+
+	// A disk left by a VM deleted with limactl is cleaned up by rm.
+	h.world.disks[codeDiskName("ghost")] = true
+	if out := h.must("", "rm", "ghost"); !strings.Contains(out, "Deleted ghost's code disk") {
+		t.Fatalf("rm of a VM that's gone:\n%s", out)
+	}
+	h.world.disks[codeDiskName("stuck")] = true
+	h.world.failDiskDelete = true
+	if out := h.must("", "rm", "stuck"); !strings.Contains(out, "limactl disk delete "+codeDiskName("stuck")) {
+		t.Fatalf("a disk that won't delete should say how:\n%s", out)
+	}
+
+	h.world.failDiskCreate = true
+	t.Setenv("LIMABEAN_CODE_DISK", "20")
+	if _, err := h.run("", "new", "broken"); err == nil {
+		t.Error("new should fail when the code disk can't be created")
+	}
+	h.world.failDiskList = true
+	if _, err := h.run("", "new", "broken2"); err == nil {
+		t.Error("new should fail when Lima can't list disks")
+	}
+}
+
 // Real `ss -ltnpH` output, plus IPv6 lines.
 const ssOutput = `LISTEN 0      128    127.0.0.53:5353  0.0.0.0:* users:(("python3",pid=1917,fd=3))
 LISTEN 0      5       127.0.0.1:8766  0.0.0.0:* users:(("python3",pid=1913,fd=3))
@@ -332,6 +632,7 @@ func TestNewRestartsForUpdatesAndMountsAWS(t *testing.T) {
 	}
 	t.Setenv("LIMABEAN_AWS_DIR", aws)
 	t.Setenv("LIMABEAN_CLAUDE_DESKTOP", "no")
+	t.Setenv("LIMABEAN_CODE_DISK", "")
 	out := h.must("", "new", "dev")
 	for _, want := range []string{"Installed updates and restarted", "Mounted " + aws, "No secrets set up"} {
 		if !strings.Contains(out, want) {
@@ -366,6 +667,7 @@ func TestNewWhenSecretsFail(t *testing.T) {
 
 func TestRebuild(t *testing.T) {
 	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "") // without a code disk; see TestCodeDisk
 	h.must("", "new", "dev", "--secret", "OWN=kept")
 	h.world.calls = nil
 	out := h.must("", "rebuild", "dev")
