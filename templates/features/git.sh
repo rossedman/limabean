@@ -12,7 +12,9 @@ code_dir="${PARAM_codeDir/#\~/$HOME}"
 mkdir -p "$code_dir"
 
 # First file that exists, out of the names git uses for each role.
-first() { for f in "$@"; do [ -f "$host_git/$f" ] && { echo "$host_git/$f"; return; }; done; }
+# It prints nothing, and still succeeds, when none exists: under set -e a
+# failing $(first …) would otherwise end the script.
+first() { for f in "$@"; do [ -f "$host_git/$f" ] && { echo "$host_git/$f"; return 0; }; done; return 0; }
 config=$(first config .gitconfig)
 ignore=$(first ignore .gitignore)
 template=$(first .gitcommit.txt commit-template.txt)
