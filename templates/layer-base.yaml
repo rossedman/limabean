@@ -67,29 +67,6 @@ provision:
   path: /usr/local/bin/limabean-github-git
   file: ./files/limabean-github-git
   permissions: 755
-# The limabean mod for Claude Code (claude/limabean), which env.sh points
-# Claude Code at: it tells Claude which VM it's in and what it may reach.
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/.claude-plugin/plugin.json
-  file: ./claude/limabean/.claude-plugin/plugin.json
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/hooks/hooks.json
-  file: ./claude/limabean/hooks/hooks.json
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/hooks/register.tsx
-  file: ./claude/limabean/hooks/register.tsx
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/hooks/facts.ts
-  file: ./claude/limabean/hooks/facts.ts
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/types/index.d.ts
-  file: ./claude/limabean/types/index.d.ts
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/fixtures/inside.json
-  file: ./claude/limabean/fixtures/inside.json
-- mode: data
-  path: /usr/local/share/limabean/claude/limabean/fixtures/mac.json
-  file: ./claude/limabean/fixtures/mac.json
 - mode: data
   path: "{{.Home}}/.zshenv"
   content: |

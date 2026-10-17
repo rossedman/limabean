@@ -1,8 +1,0 @@
-{
-  "name": "agent",
-  "allow": ["anthropic.com", "claude.ai", "claude.com", "github.com", "githubusercontent.com", "npmjs.org"],
-  "locked": true,
-  "learning": false,
-  "packs": ["claude", "node"],
-  "codeDir": "~/code"
-}

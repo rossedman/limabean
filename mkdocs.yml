@@ -23,7 +23,6 @@ nav:
   - Claude:
       - Claude and MCP: mcp.md
       - Claude Desktop SSH connections: claude-desktop.md
-      - The Claude Code mod: claude-mod.md
   - Guides:
       - Sandboxes: network.md
       - Rebuilds, clones and snapshots: lifecycle.md

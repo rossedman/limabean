@@ -59,9 +59,7 @@ limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing te
 ```
 
 With [`limabean run --rm`](lifecycle.md#throwaway-vms), the VM is gone when
-the task is done. Claude Code in a VM loads the [limabean mod](claude-mod.md)
-by itself: it tells Claude the VM's allowlist and whether it's locked, so it
-doesn't waste turns on hosts it can't reach.
+the task is done.
 
 ## Changing the defaults
 
