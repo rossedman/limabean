@@ -13,6 +13,8 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
 | `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code, Cursor or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
+| `limabean ports [name]` | Lists the TCP ports programs in the VM listen on and whether each reaches your Mac's localhost; `--json` for scripts |
+| `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment and secrets |

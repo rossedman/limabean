@@ -30,6 +30,9 @@ type fakeWorld struct {
 	keychain map[string]string
 	unsaved  string // what the unsaved-work check prints
 	ghq      string // what ghq list -p prints in every VM
+	ss       string // what ss -ltnpH prints in every VM
+
+	macPorts map[int]bool // ports that answer on the Mac's localhost
 
 	failStart bool // limactl start fails, with output
 	reboot    bool // the first boot left /var/run/reboot-required
@@ -37,7 +40,7 @@ type fakeWorld struct {
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, macPorts: map[int]bool{}}
 }
 
 func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -96,6 +99,8 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
+		case remote == "ss -ltnpH":
+			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
 			return []byte(w.ghq), nil
 		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
@@ -205,6 +210,11 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 	}
 	a.openEditor = func(_ context.Context, ide string, args ...string) error {
 		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
+		return nil
+	}
+	a.macListens = func(port int) bool { return h.world.macPorts[port] }
+	a.openURL = func(_ context.Context, url string) error {
+		h.world.calls = append(h.world.calls, "open "+url)
 		return nil
 	}
 	a.Lima = &lima.Client{Runner: h.world}

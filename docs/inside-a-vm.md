@@ -21,6 +21,16 @@ under `~/code` and push it to a remote.
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   venv and skopeo.
 
+## Ports
+
+Lima forwards every TCP port a program opens on localhost or on all
+addresses in the VM to the same port on your Mac's localhost. A dev server
+on port 3000, or a container started with `-p 8080:80`, is at
+`http://localhost:3000` or `http://localhost:8080` on the Mac.
+`limabean ports dev` lists them and shows which reach the Mac (a port a Mac
+program already uses doesn't), and `limabean open dev 3000` opens one in
+your browser.
+
 ## Updates
 
 The first boot runs a full `apt-get full-upgrade`, systemd included, and
