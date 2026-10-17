@@ -29,6 +29,10 @@ template=$(first .gitcommit.txt commit-template.txt)
   # push over SSH so the forwarded agent authenticates it.
   printf '[url "git@github.com:"]\n  pushInsteadOf = https://github.com/\n'
   [ -n "$config" ] && printf '[include]\n  path = %s\n' "$config"
+  # https access to GitHub (private clones, `ghq get` without -p) through gh,
+  # which uses the GITHUB_TOKEN from `limabean github`. Set after the host
+  # config so a macOS-only helper there (osxkeychain) doesn't apply.
+  printf '[credential "https://github.com"]\n  helper =\n  helper = !gh auth git-credential\n'
   printf '[core]\n  editor = vim\n'
   [ -n "$ignore" ] && printf '  excludesfile = %s\n' "$ignore"
   [ -n "$template" ] && printf '[commit]\n  template = %s\n' "$template"

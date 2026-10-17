@@ -64,12 +64,14 @@ or not, so `ssh lima-dev <cmd>` sees the same tools as a login shell.
 | `GOPATH` / `GOBIN` | `~/go` / `~/go/bin` |
 | `PYTHONUSERBASE` | `~/.local`, where `pip install --user`, `uv tool install` and pipx put scripts (`~/.local/bin`) |
 | `PATH` | `$GOBIN`, `~/.local/bin`, mise shims, then the system |
+| `GITHUB_TOKEN` | the token from [`limabean github login`](github.md), if one is saved |
 
 ## Repositories
 
 [ghq](https://github.com/x-motemen/ghq) clones into `~/code/<host>/<owner>/<repo>`.
 GitHub repositories are fetched over https and pushed over SSH through your
-forwarded agent. Use `ghq get -p` to clone a private repository over SSH.
+forwarded agent. Private repositories clone over https with the token from
+[`limabean github login`](github.md), or over SSH with `ghq get -p`.
 
 The global [`.editorconfig`](../templates/files/editorconfig) applies unless a
 project has its own.
