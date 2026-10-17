@@ -14,18 +14,20 @@ limabean ships a mod for Claude Code: a plugin that knows where Claude runs.
 
 ## Requirements
 
-A recent Claude Code: mods are an early-access feature, and this one is
-built and tested against **Claude Code 2.1.302**. Older versions can't load
-it, and lack `/plugin configure` (older than 2.1.275, marketplace installs
-don't work in one step either). Check and update with:
+The latest Claude Code: mods are an early-access feature that changes
+between releases. This one was built against Claude Code 2.1.301, the
+newest release at the time, and tested with a 2.1.302 build. Much older
+versions, such as 2.1.85, can't load it and have no `/plugin configure`
+(before 2.1.275, marketplace installs don't work in one step either).
+Check and update with:
 
 ```bash
 claude --version
 claude update        # or: brew upgrade --cask claude-code, or npm install -g @anthropic-ai/claude-code@latest
 ```
 
-VMs with the [`claude` pack](packs.md#claude-code-in-a-vm) have a version
-that runs it.
+VMs with the [`claude` pack](packs.md#claude-code-in-a-vm) get 2.1.301, and
+`limabean bump` keeps the pack on the newest release.
 
 ## In a VM: nothing to install
 
