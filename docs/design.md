@@ -293,8 +293,12 @@ An opt-in `--mount` of a host directory (B) is still open.
   resolves them on the Mac and writes `export` lines (mode 600) into each VM.
   The GitHub token is one of these secrets. Values never reach argv or a Lima
   template.
-- **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
-  needed. It's the default on Apple Silicon.
+- **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
+  `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
+  `linux/amd64` containers run on Apple Silicon without a prefix (Lima
+  registers it with the `F` flag, which Docker needs). On Intel Macs Lima
+  logs that Rosetta is unavailable and boots normally. QEMU user-mode
+  emulation was the alternative: slower, and one more package to install.
 
 ## Environments
 

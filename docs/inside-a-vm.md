@@ -20,6 +20,12 @@ under `~/code` and push it to a remote.
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   venv and skopeo.
+- **Rosetta** on Apple Silicon, so x86_64 Linux programs run as they are:
+  a downloaded `amd64` binary, or `docker run --platform linux/amd64 …` for
+  an image with no arm64 build. It's slower than native, so prefer arm64
+  images when they exist. Intel Macs run x86_64 natively and skip it.
+  If creating a VM stops at `Installing rosetta...`, run
+  `softwareupdate --install-rosetta` on the Mac.
 
 ## Updates
 
