@@ -12,6 +12,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
+| `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code, Cursor or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment and secrets |
@@ -56,9 +57,11 @@ CPUS=""                          # empty: template default (4); flag: new --cpus
 MEMORY=""                        # GiB; empty: template default (8); flag: new --memory
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
+IDE="code"                       # editor limabean code opens: code, cursor, …; flag: code --ide
 ```
 
 Changes apply to new VMs, and to existing ones after `limabean rebuild`.
+IDE is the exception: it only affects `limabean code`, so it applies at once.
 
 Global flags:
 

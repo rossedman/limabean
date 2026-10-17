@@ -76,6 +76,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean ls` | List VMs |
 | `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
+| `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code or Cursor |
 | `limabean start [name]` | Start a stopped VM |
 | `limabean stop [name]` | Stop a running VM |
 | `limabean rebuild [name]` | Recreate a VM from the current templates |
