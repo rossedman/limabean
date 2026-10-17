@@ -13,15 +13,14 @@ remote.
   plugins. BuildKit is the default builder, so custom Dockerfile syntaxes
   (`# syntax=docker/dockerfile:1`) work. Your user owns the socket, so `docker`
   needs no sudo, and kind and testcontainers work as they do on a Mac.
-- **mise**, with every version pinned in
-  [`templates/mise/base.toml`](https://github.com/rossedman/limabean/blob/main/templates/mise/base.toml): go, goreleaser,
-  golangci-lint, uv, kubectl, helm, kind, k9s, terraform, aws-cli, cosign,
-  syft, grype, ripgrep, fd, fzf, bat, gh, ghq, yq, direnv, glow, gum,
-  shellcheck and svu. Use `mise use python@3.12` or `mise use terraform@1.9`
-  for other versions.
+- **mise**, with the tools of the VM's [packs](packs.md), every version
+  pinned. By default: Go, Node, Kubernetes, Terraform and AWS, container and
+  database clients, and core shell tools (ripgrep, fd, fzf, bat, delta,
+  lazygit, gh, ghq, just, …). Rust, Java, Ruby and more are a `--with` away.
+  Use `mise use node@22` or `mise use terraform@1.9` for other versions.
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
-  venv and skopeo.
+  and venv.
 - **Rosetta** on Apple Silicon, so x86_64 Linux programs run as they are:
   a downloaded `amd64` binary, or `docker run --platform linux/amd64 …` for
   an image with no arm64 build. It's slower than native, so prefer arm64

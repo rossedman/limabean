@@ -1,0 +1,6 @@
+# Go: the toolchain, goreleaser and golangci-lint.
+[tools]
+go = "1.27.2"
+goreleaser = "2.18.3"
+golangci-lint = "2.14.0"
+"go:github.com/posener/complete/v2/gocomplete" = "2.1.0"   # completion for `go` (see zshrc)

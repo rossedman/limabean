@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install mise and the tools listed in /etc/limabean/mise/*.toml (PATH is set
+# Install mise and the tools of the VM's packs, /etc/limabean/mise/*.toml (PATH is set
 # by files/env.sh). Runs as the VM user on every boot.
 set -eux -o pipefail
 

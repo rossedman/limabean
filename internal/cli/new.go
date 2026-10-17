@@ -14,7 +14,7 @@ import (
 )
 
 func newNewCmd(a *App) *cobra.Command {
-	var secretFlags, allowFlags []string
+	var secretFlags, allowFlags, withPacks, withoutPacks []string
 	var locked bool
 	cmd := &cobra.Command{
 		Use:     "new [name] [environment]",
@@ -51,6 +51,9 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 
   # Bigger than the template default
   limabean new k8s --cpus 8 --memory 16
+
+  # The default packs, plus Rust and Java, without Kubernetes
+  limabean new api --with rust,java --without kubernetes
 
   # An agent sandbox: GitHub and PyPI only, and no way to undo that
   limabean new agent --allow github --allow python --locked`,
@@ -102,6 +105,11 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 					return err
 				}
 			}
+			packs, err := a.resolvePacks(templates.SplitList(a.Cfg.Packs), withPacks, withoutPacks)
+			if err != nil {
+				return err
+			}
+			o.Packs = packs
 			if len(allowFlags) > 0 || locked {
 				domains, err := expandAllow(allowFlags)
 				if err != nil {
@@ -126,6 +134,8 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	}
 	f := cmd.Flags()
 	f.StringArrayVar(&secretFlags, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
+	f.StringSliceVar(&withPacks, "with", nil, "add these packs to the defaults, e.g. rust,java (see: limabean packs)")
+	f.StringSliceVar(&withoutPacks, "without", nil, "leave these packs out, e.g. kubernetes")
 	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
 	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
 	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 4)")

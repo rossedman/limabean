@@ -56,9 +56,12 @@ var netPresets = map[string][]string{
 	"claude": {"anthropic.com", "claude.ai", "claude.com"},
 	"docker": {"docker.io", "docker.com"},
 	"github": {"github.com", "githubusercontent.com", "githubassets.com", "ghcr.io"},
+	"java":   {"maven.org", "apache.org", "gradle.org", "gradle-dn.com"},
 	"go":     {"go.dev", "golang.org", "proxy.golang.org", "sum.golang.org"},
 	"npm":    {"npmjs.org", "npmjs.com", "yarnpkg.com"},
 	"python": {"pypi.org", "pythonhosted.org"},
+	"ruby":   {"rubygems.org", "ruby-lang.org"},
+	"rust":   {"crates.io", "rust-lang.org"},
 	"ubuntu": {"ubuntu.com"},
 }
 

@@ -13,14 +13,15 @@ import (
 
 // lsEntry is one VM in ls --json.
 type lsEntry struct {
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Env       string `json:"env"`
-	CPUs      int    `json:"cpus"`
-	MemoryGiB int64  `json:"memoryGiB"`
-	Secrets   int    `json:"secrets"`
-	SSHHost   string `json:"sshHost"`
-	Network   string `json:"network"` // e.g. "open", "3 domain(s), locked"
+	Name      string   `json:"name"`
+	Status    string   `json:"status"`
+	Env       string   `json:"env"`
+	CPUs      int      `json:"cpus"`
+	MemoryGiB int64    `json:"memoryGiB"`
+	Secrets   int      `json:"secrets"`
+	SSHHost   string   `json:"sshHost"`
+	Network   string   `json:"network"` // e.g. "open", "3 domain(s), locked"
+	Packs     []string `json:"packs"`   // besides core; null if it was made before packs
 }
 
 func newLsCmd(a *App) *cobra.Command {
@@ -67,6 +68,7 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 						Name: inst.Name, Status: inst.Status, Env: a.envOf(inst.Name), CPUs: inst.CPUs,
 						MemoryGiB: inst.MemoryGiB(), Secrets: len(refs), SSHHost: "lima-" + inst.Name,
 						Network: a.networkSummary(inst),
+						Packs:   a.packsOrNil(inst.Name),
 					})
 				}
 				enc := json.NewEncoder(out)
@@ -104,4 +106,16 @@ func (a *App) networkSummary(inst lima.Instance) string {
 		return "open"
 	}
 	return p.summary()
+}
+
+// packsOrNil is a VM's packs for ls --json: [] for none, null if unknown.
+func (a *App) packsOrNil(name string) []string {
+	packs, known := a.packsOf(name)
+	if !known {
+		return nil
+	}
+	if packs == nil {
+		packs = []string{}
+	}
+	return packs
 }

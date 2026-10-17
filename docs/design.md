@@ -53,33 +53,22 @@ templates/
   layer-os.yaml       # layer 1: Ubuntu 26.04 LTS, CPU/mem/disk, ssh agent forwarding, zsh
   layer-base.yaml     # layer 2: base: layer-os + apt + Docker + mise tools + git + zsh + editorconfig
   scratch.yaml        # layer 3: base: layer-base, nothing else (throwaway sandbox)
-  go.yaml             #          base: layer-base + mise/go.toml
-  python.yaml  k8s.yaml  ...
   features/           # idempotent shell scripts, one per capability
     zsh-install.sh  apt-common.sh  mise.sh  completions.sh  git.sh  docker.sh  shell.sh
   files/              # static files written into the VM (zshrc, env.sh, editorconfig)
-  mise/               # tool versions; base.toml + one per environment
-    base.toml  go.toml  python.toml
+  packs/              # tool packs: <pack>.toml (pinned mise tools) + optional <pack>.apt
+    core.toml  go.toml  node.toml  rust.toml  ...
 cmd/, internal/         the limabean CLI (Go; see go-cli.md)
 ```
 
 Everything sits under `templates/` because Lima rejects relative paths that
 contain `..` and base templates whose file names start with `_`.
 
-An environment template stays tiny. It only ships its mise TOML:
-
-```yaml
-# templates/go.yaml
-base:
-- ./layer-base.yaml
-cpus: 6
-provision:
-- mode: data
-  path: /etc/limabean/mise/go.toml
-  file: ./mise/go.toml
-```
-
-and the base layer carries everything that is shared:
+Languages and tools come in [packs](packs.md), chosen per VM rather than per
+environment. `limabean new` adds each pack beyond `core` with
+`--set '.provision += [{"mode": "data", "path": "/etc/limabean/mise/50-<pack>.toml", "content": …}]'`,
+so an environment template stays tiny and any environment can have any
+pack. The base layer carries everything that is shared:
 
 ```yaml
 # templates/layer-base.yaml
@@ -89,8 +78,10 @@ provision:
 - mode: system
   file: ./features/apt-common.sh
 - mode: data
-  path: /etc/limabean/mise/00-base.toml
-  file: ./mise/base.toml
+  path: /etc/limabean/mise/00-core.toml
+  file: ./packs/core.toml
+- mode: system
+  file: ./features/packs-apt.sh     # apt packages of the VM's packs, /etc/limabean/apt/*.list
 - mode: user
   file: ./features/mise.sh          # installs mise, links /etc/limabean/mise/*.toml, mise install
 ```
@@ -100,9 +91,9 @@ provision:
 - **Feature scripts plus thin YAML.** Logic lives in plain shell scripts. The
   YAML only says which features an environment gets. Adding a tool to every
   environment means editing one file.
-- **mise for toolchains (decided).** Each environment gets its own declarative
-  `mise/<env>.toml` with pinned versions, so upgrading Go is a one-line diff.
-  apt covers only system packages.
+- **mise for toolchains (decided).** Each pack is a declarative
+  `packs/<pack>.toml` with pinned versions, so upgrading Go is a one-line diff.
+  apt covers system packages: the shared ones, and a pack's `.apt` list.
 - **Nothing from the host is mounted.** `file:` references are embedded into
   the instance when it is created, and `mode: data` writes are guaranteed to
   happen before any provisioning script runs. That means provision order
@@ -192,7 +183,7 @@ the alias keeps working when the VM's SSH port changes.
   that `[include]`s the first config it finds there (`config` or `.gitconfig`),
   then overrides values that only make sense on the host (`core.editor`) and
   points `excludesfile` and `commit.template` at files in the mount. Edits on the Mac apply at once. `bat`
-  comes from `mise/base.toml` because the host config uses it as the pager.
+  comes from `packs/core.toml` because the host config uses it as the pager.
 - **GitHub host keys** are written to `known_hosts` from
   `api.github.com/meta` (fetched over TLS), so the first push doesn't stop at a
   prompt.
@@ -362,12 +353,13 @@ heavy extras most VMs don't need.
 
 1. ✅ `layer-os.yaml` + `layer-base.yaml` + the `apt-common`, `mise`, `git` and
    `docker`/`shell` features, plus the global editorconfig. `scratch` boots, and `ssh lima-scratch` has every tool.
-2. A second environment, to exercise per-environment mise TOML files.
+2. ✅ Tool packs (`--with`/`--without`, `PACKS`) instead of per-environment
+   mise TOML files.
 3. ✅ The CLI: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
    `rebuild` and `rm`, with the unsaved-work guard.
 4. Dotfiles (`features/dotfiles.sh`). ✅ Code-location option C (persistent
    disk).
-5. ✅ `limabean bump` (rewrite pinned versions in `base.toml`, monthly in
+5. ✅ `limabean bump` (rewrite pinned versions in `packs/*.toml`, monthly in
    `bump.yml`), ✅ CI (`limactl
    tmpl validate` + shellcheck), and ✅ a persistent `~/code` disk so
    rebuilds keep repositories.

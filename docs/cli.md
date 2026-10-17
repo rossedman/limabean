@@ -8,8 +8,9 @@ help: `limabean <command> --help` explains it and shows examples.
 |---|---|
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
-| `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/mise/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
-| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--allow` and `--locked` set its [network policy](network.md) |
+| `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
+| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--with` and `--without` change its [packs](packs.md); `--allow` and `--locked` set its [network policy](network.md) |
+| `limabean packs` | Lists the [packs](packs.md) of tools a VM can get and which new VMs get by default; `--json` for scripts |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
@@ -18,7 +19,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](lifecycle.md#idle-vms-stop-by-themselves) |
-| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, secrets and, on its own disk, `~/code` |
+| `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, packs (`--with`/`--without` change them), secrets and, on its own disk, `~/code` |
 | `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets |
 | `limabean snapshot save\|ls\|restore\|rm` | Saves a VM's disks, `~/code` included, and [rolls back](lifecycle.md#snapshots) to them |
 | `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent ([details](lifecycle.md#idle-vms-stop-by-themselves)) |
@@ -59,6 +60,7 @@ CPUS=""                          # empty: template default (4); flag: new --cpus
 MEMORY=""                        # GiB; empty: template default (8); flag: new --memory
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
+PACKS="go,python,node,kubernetes,infra,containers,db"   # packs new VMs get; flag: new --with/--without
 IDE="code"                       # editor limabean code opens: code, cursor, …; flag: code --ide
 ```
 

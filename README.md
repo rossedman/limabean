@@ -18,8 +18,9 @@ Claude Desktop as an SSH connection.
 **Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
 
 - **One command per VM.** `limabean new dev` is ready in about a minute.
-- **Batteries included.** Docker Engine, Go, Python, Kubernetes tooling,
-  Terraform and 30+ CLI tools, pinned with mise.
+- **Batteries included, in packs.** Docker, Go, Python, Node, Kubernetes,
+  Terraform and 30+ CLI tools by default, every version pinned; add Rust,
+  Java, Ruby and more with `--with`.
 - **Keys stay on your Mac.** SSH keys stay in your agent, a scoped GitHub
   token lives in your Keychain, and your git and AWS config are mounted
   read-only.
@@ -96,13 +97,14 @@ Leave out a VM name and you pick one from a list. Every command has
 |---|---|
 | `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token |
 | `limabean doctor` | Check everything VMs depend on |
-| `limabean bump` | Update the pinned tool versions in `templates/mise/*.toml` |
+| `limabean bump` | Update the pinned tool versions in `templates/packs/*.toml` |
 
 **VMs**
 
 | Command | What it does |
 |---|---|
-| `limabean new [name] [env]` | Create a VM, choosing its secrets |
+| `limabean new [name] [env]` | Create a VM, choosing its secrets; `--with rust` adds a pack |
+| `limabean packs` | List the tool packs and which VMs get by default |
 | `limabean ls` | List VMs, or print them as JSON with `--json` |
 | `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |

@@ -32,8 +32,11 @@ Presets name common sets:
 | `docker` | docker.io, docker.com |
 | `github` | github.com, githubusercontent.com, githubassets.com, ghcr.io |
 | `go` | go.dev, golang.org, proxy.golang.org, sum.golang.org |
+| `java` | maven.org, apache.org, gradle.org, gradle-dn.com |
 | `npm` | npmjs.org, npmjs.com, yarnpkg.com |
 | `python` | pypi.org, pythonhosted.org |
+| `ruby` | rubygems.org, ruby-lang.org |
+| `rust` | crates.io, rust-lang.org |
 | `ubuntu` | ubuntu.com |
 
 `ntp.ubuntu.com` is always allowed alongside an allowlist, for the clock.

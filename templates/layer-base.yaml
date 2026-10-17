@@ -1,6 +1,7 @@
 # Layer 2: everything every environment gets.
-# Environments add tools by shipping a mise TOML to /etc/limabean/mise/
-# (see scratch.yaml / go.yaml); features/mise.sh installs whatever is there.
+# Tools come in packs (templates/packs/): core is always here, and limabean
+# adds the others a VM gets as mise TOMLs in /etc/limabean/mise/ and apt
+# lists in /etc/limabean/apt/. features/mise.sh and packs-apt.sh install them.
 base:
 - ./layer-os.yaml
 
@@ -36,6 +37,8 @@ provision:
 - mode: system
   file: ./features/apt-common.sh
 - mode: system
+  file: ./features/packs-apt.sh
+- mode: system
   file: ./features/docker.sh
 - mode: system
   file: ./features/code-disk.sh
@@ -46,8 +49,8 @@ provision:
 - mode: system
   file: ./features/network.sh
 - mode: data
-  path: /etc/limabean/mise/00-base.toml
-  file: ./mise/base.toml
+  path: /etc/limabean/mise/00-core.toml
+  file: ./packs/core.toml
 - mode: data
   path: "{{.Home}}/.editorconfig"
   file: ./files/editorconfig

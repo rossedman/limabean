@@ -9,7 +9,6 @@ packages=(
   zsh zsh-autosuggestions zsh-syntax-highlighting
   git-extras git-quick-stats speedtest-cli
   python3 python3-pip python3-venv
-  skopeo
 )
 
 missing=()

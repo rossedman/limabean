@@ -5,10 +5,13 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/templates"
 )
 
 func newRebuildCmd(a *App) *cobra.Command {
 	var force bool
+	var withPacks, withoutPacks []string
 	cmd := &cobra.Command{
 		Use:   "rebuild [name]",
 		Short: "Recreate a VM from the current templates",
@@ -29,6 +32,9 @@ both.`,
   # Pick the VM from a list
   limabean rebuild
 
+  # Add Rust, drop Kubernetes
+  limabean rebuild dev --with rust --without kubernetes
+
   # No checks, no questions
   limabean rebuild dev --force`,
 		Args:              cobra.MaximumNArgs(1),
@@ -46,6 +52,15 @@ both.`,
 			env := a.envOf(name)
 			if env == "" {
 				env = "scratch"
+			}
+			// VMs made before packs get the defaults.
+			base, known := a.packsOf(name)
+			if !known {
+				base = templates.SplitList(a.Cfg.Packs)
+			}
+			packs, err := a.resolvePacks(base, withPacks, withoutPacks)
+			if err != nil {
+				return err
 			}
 			keepsCode := a.hasCodeDisk(ctx, name)
 			if !force {
@@ -85,7 +100,7 @@ both.`,
 			}); err != nil {
 				return err
 			}
-			if err := a.create(ctx, createOptions{Name: name, Env: env}); err != nil {
+			if err := a.create(ctx, createOptions{Name: name, Env: env, Packs: packs}); err != nil {
 				return err
 			}
 			if keepsCode {
@@ -97,5 +112,7 @@ both.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip the unsaved-work check and the confirmation")
+	cmd.Flags().StringSliceVar(&withPacks, "with", nil, "add these packs, e.g. rust")
+	cmd.Flags().StringSliceVar(&withoutPacks, "without", nil, "remove these packs")
 	return cmd
 }

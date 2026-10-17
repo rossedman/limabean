@@ -45,6 +45,9 @@ func TestLoadBashConfig(t *testing.T) {
 	if c.CodeDisk != 50 {
 		t.Errorf("CODE_DISK default = %d (missing from older configs)", c.CodeDisk)
 	}
+	if c.Packs != DefaultPacks {
+		t.Errorf("PACKS default = %q (missing from older configs)", c.Packs)
+	}
 }
 
 func TestDefaultsWhenMissing(t *testing.T) {
@@ -83,7 +86,7 @@ func TestBadCPUs(t *testing.T) {
 
 func TestSaveRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "config")
-	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor", CodeDisk: 0}
+	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor", CodeDisk: 0, Packs: "go,rust"}
 	if err := want.Save(); err != nil {
 		t.Fatal(err)
 	}

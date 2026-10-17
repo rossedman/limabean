@@ -27,6 +27,7 @@ nav:
       - Sandboxes: network.md
       - Rebuilds, snapshots and autostop: lifecycle.md
       - Inside a VM: inside-a-vm.md
+      - Packs: packs.md
       - Secrets: secrets.md
       - GitHub access: github.md
       - Customizing: customizing.md

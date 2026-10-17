@@ -56,31 +56,60 @@ func TestRewriteKeepsLayout(t *testing.T) {
 	}
 }
 
-// The real base.toml parses, and rewriting with its own versions is a no-op.
-func TestRealBaseTOML(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("..", "..", "templates", "mise", "base.toml"))
-	if err != nil {
-		t.Fatal(err)
+// The real packs parse, pin versions bump can follow, and rewriting with
+// their own versions is a no-op.
+func TestRealPacks(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "templates", "packs", "*.toml"))
+	if err != nil || len(files) < 10 {
+		t.Fatalf("packs: %v %v", files, err)
 	}
-	src := string(b)
-	pins := Parse(src)
-	if len(pins) < 20 {
-		t.Fatalf("only %d pins in base.toml", len(pins))
-	}
-	same := map[string]string{}
-	for _, p := range pins {
-		if Series(p.Version) == "" {
-			t.Errorf("%s: version %q isn't numeric", p.Tool, p.Version)
+	total := 0
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
 		}
-		same[p.Tool] = p.Version
+		src := string(b)
+		same := map[string]string{}
+		for _, p := range Parse(src) {
+			if Series(p.Version) == "" {
+				t.Errorf("%s %s: version %q has no series bump can follow", filepath.Base(f), p.Tool, p.Version)
+			}
+			same[p.Tool] = p.Version
+			total++
+		}
+		if Rewrite(src, same) != src {
+			t.Errorf("%s: rewriting with the same versions changed the file", f)
+		}
 	}
-	if Rewrite(src, same) != src {
-		t.Error("rewriting with the same versions changed the file")
+	if total < 40 {
+		t.Errorf("only %d pins across the packs", total)
+	}
+}
+
+func TestPrefixedVersions(t *testing.T) {
+	v := "temurin-25.0.4+101.0.LTS"
+	if Prefix(v) != "temurin" || Series(v) != "temurin-25" || Prefix("25.0.1") != "" {
+		t.Errorf("Prefix/Series of %s: %q %q", v, Prefix(v), Series(v))
+	}
+	for _, c := range []struct {
+		a, b string
+		want bool
+	}{
+		{"temurin-25.0.5+11", "temurin-25.0.4+101.0.LTS", true},
+		{"temurin-25.0.4+101.0.LTS", "temurin-25.0.4+100", true},
+		{"temurin-25.0.4+101", "temurin-25.0.4+101", false},
+		{"temurin-27.0.0+35", "temurin-25.0.4+101.0.LTS", true},
+		{"zulu-25.0.1", "temurin-25.0.1", true}, // different vendors: ordered, never equal
+	} {
+		if got := Newer(c.a, c.b); got != c.want {
+			t.Errorf("Newer(%s, %s) = %v", c.a, c.b, got)
+		}
 	}
 }
 
 func TestSeries(t *testing.T) {
-	for v, want := range map[string]string{"4.3.1": "4", "v1.27.2": "1", "0.26.1": "0.26", "0": "0", "latest": "", "": ""} {
+	for v, want := range map[string]string{"4.3.1": "4", "v1.27.2": "1", "0.26.1": "0.26", "0": "0", "latest": "", "": "", "21+35": "21"} {
 		if got := Series(v); got != want {
 			t.Errorf("Series(%q) = %q, want %q", v, got, want)
 		}

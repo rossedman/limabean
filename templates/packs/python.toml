@@ -1,0 +1,5 @@
+# Python: uv for projects and tools, and ruff. The interpreter comes from apt;
+# other versions: `mise use python@<v>`, which replaces pyenv.
+[tools]
+uv = "0.13.1"
+ruff = "0.17.1"

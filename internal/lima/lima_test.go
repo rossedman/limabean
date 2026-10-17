@@ -27,7 +27,7 @@ func (f *fakeRunner) Output(_ context.Context, stdin io.Reader, _ bool, name str
 	return nil, nil
 }
 
-const listJSON = `{"name":"dev","status":"Running","dir":"/h/.lima/dev","cpus":4,"memory":8589934592,"sshConfigFile":"/h/.lima/dev/ssh.config","config":{"mounts":[{"mountPoint":"/mnt/host/limabean"}],"provision":[{"mode":"data","path":"/etc/limabean/mise/00-base.toml"}]}}
+const listJSON = `{"name":"dev","status":"Running","dir":"/h/.lima/dev","cpus":4,"memory":8589934592,"sshConfigFile":"/h/.lima/dev/ssh.config","config":{"mounts":[{"mountPoint":"/mnt/host/limabean"}],"provision":[{"mode":"data","path":"/etc/limabean/mise/00-core.toml"}]}}
 {"name":"other","status":"Stopped","dir":"/h/.lima/other","cpus":2,"memory":4294967296,"sshConfigFile":"/h/.lima/other/ssh.config","config":{}}
 time="2026-10-16T19:00:00-05:00" level=warning msg="noise that isn't JSON"
 `

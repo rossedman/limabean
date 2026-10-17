@@ -82,7 +82,7 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				if w.oldVMs[n] {
 					mounts = ""
 				}
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n, mounts)
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n, mounts)
 			}
 			return []byte(b.String()), nil
 		case "start":
