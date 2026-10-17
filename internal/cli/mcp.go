@@ -66,10 +66,12 @@ type (
 		Name string `json:"name" jsonschema:"the VM's name, as list_vms shows it"`
 	}
 	mcpCreate struct {
-		Name   string `json:"name" jsonschema:"name for the new VM: letters, digits and dashes"`
-		Env    string `json:"env,omitempty" jsonschema:"environment template; default scratch"`
-		CPUs   int    `json:"cpus,omitempty" jsonschema:"CPUs; default the template's"`
-		Memory int    `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's"`
+		Name   string   `json:"name" jsonschema:"name for the new VM: letters, digits and dashes"`
+		Env    string   `json:"env,omitempty" jsonschema:"environment template; default scratch"`
+		CPUs   int      `json:"cpus,omitempty" jsonschema:"CPUs; default the template's"`
+		Memory int      `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's"`
+		Allow  []string `json:"allow,omitempty" jsonschema:"only let the VM reach these domains (and subdomains) or presets: claude, docker, github, go, npm, python, ubuntu"`
+		Locked bool     `json:"locked,omitempty" jsonschema:"take sudo and Docker away from the VM's user, so the allowlist can't be turned off from inside"`
 	}
 	mcpRun struct {
 		Name    string `json:"name" jsonschema:"the VM to run in; it must be running"`
@@ -119,7 +121,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 			return cli(ctx, "ls", "--json")
 		})
-	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more.", false, &no),
+	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass allow (and locked) to make a sandbox that can only reach what the task needs.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpCreate) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name, in.Env); err != nil {
 				return nil, nil, err
@@ -133,6 +135,17 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			if in.Memory > 0 {
 				args = append(args, "--memory", strconv.Itoa(in.Memory))
+			}
+			// Validated here, and passed as --allow=<value> so nothing reads
+			// as a flag of its own.
+			if _, err := expandAllow(in.Allow); err != nil {
+				return nil, nil, err
+			}
+			for _, d := range in.Allow {
+				args = append(args, "--allow="+d)
+			}
+			if in.Locked {
+				args = append(args, "--locked")
 			}
 			args = append(args, "--", in.Name)
 			if in.Env != "" {

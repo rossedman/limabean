@@ -1,0 +1,261 @@
+#!/bin/bash
+# limabean-network: apply this VM's network policy. Runs as root, at boot
+# (features/network.sh) and when limabean changes the policy
+# (systemctl start limabean-network, which a locked VM's user may still run).
+#
+# The policy is written on the Mac (~/.config/limabean/network/<vm>/) and
+# mounted read-only at /mnt/host/limabean, so nothing in the VM can change
+# it. network.conf holds lines of:
+#   allow <domain>   the domain and its subdomains may be reached
+#   locked           the VM user loses sudo and Docker, so can't undo this
+# With no allow lines the network is open.
+#
+# How the allowlist holds: dnsmasq answers only allowed domains (anything
+# else is NXDOMAIN, so DNS can't carry data out either) and adds the
+# addresses it returns to nftables sets; nftables drops every other packet
+# leaving the VM or its containers, and only dnsmasq may reach the upstream
+# DNS server.
+set -euo pipefail
+
+conf=${LIMABEAN_NETWORK_CONF:-/mnt/host/limabean/network.conf}
+run=${LIMABEAN_NETWORK_RUN:-/run/limabean-network}
+resolv=${LIMABEAN_NETWORK_RESOLV:-/etc/resolv.conf}
+dns_user=limabean-dns
+dns_addr=127.0.0.2
+docker_dns=172.17.0.1
+domain_re='^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'
+
+mkdir -p "$run"
+
+# Without the Mac's policy, change nothing: "no file" must not read as
+# "open and unlocked" just because the mount isn't up yet.
+if [ -z "${LIMABEAN_NETWORK_CONF:-}" ] && ! mountpoint -q /mnt/host/limabean; then
+  echo "limabean-network: /mnt/host/limabean isn't mounted; leaving the network as it is" >&2
+  exit 1
+fi
+
+# --- the policy ----------------------------------------------------------
+
+allowed=()
+locked=no
+if [ -r "$conf" ]; then
+  while read -r word arg _; do
+    case "$word" in
+      allow)
+        if [[ $arg =~ $domain_re ]]; then
+          allowed+=("${arg,,}")
+        else
+          echo "limabean-network: ignoring invalid domain ${arg@Q}" >&2
+        fi
+        ;;
+      locked) locked=yes ;;
+    esac
+  done < "$conf"
+fi
+
+# The clock needs NTP whatever else is allowed.
+if [ "${#allowed[@]}" -gt 0 ]; then
+  allowed+=(ntp.ubuntu.com)
+fi
+
+# --- DNS -----------------------------------------------------------------
+
+# The DNS servers the VM was given, before limabean pointed it at dnsmasq.
+upstreams() {
+  if [ -n "${LIMABEAN_NETWORK_UPSTREAM:-}" ]; then
+    echo "$LIMABEAN_NETWORK_UPSTREAM"
+  elif [ -r /run/systemd/resolve/resolv.conf ]; then
+    awk '$1 == "nameserver" { print $2 }' /run/systemd/resolve/resolv.conf
+  fi
+}
+
+start_dns() {
+  local f=$run/dnsmasq.conf upstream d
+  mapfile -t upstream < <(upstreams)
+  if [ "${#upstream[@]}" -eq 0 ]; then
+    echo "limabean-network: no upstream DNS server found" >&2
+    exit 1
+  fi
+  printf '%s\n' "${upstream[@]}" > "$run/upstream"
+  {
+    echo "# Written by limabean-network."
+    echo "user=$dns_user"
+    echo "pid-file=$run/dnsmasq.pid"
+    echo "listen-address=$dns_addr"
+    echo "listen-address=$docker_dns"
+    echo "bind-dynamic"
+    echo "no-resolv"
+    echo "no-hosts"
+    echo "cache-size=1000"
+    echo "address=/#/"
+    for d in "${allowed[@]}"; do
+      for u in "${upstream[@]}"; do echo "server=/$d/$u"; done
+      echo "nftset=/$d/4#inet#limabean#allow4,6#inet#limabean#allow6"
+    done
+  } > "$f.new"
+  mv "$f.new" "$f"
+  stop_dns
+  dnsmasq --conf-file="$f"
+  # Programs (and systemd-resolved, which is cut off from the upstream
+  # server below) resolve through dnsmasq.
+  if [ -L "$resolv" ] && [ ! -e "$run/resolv.link" ]; then
+    readlink "$resolv" > "$run/resolv.link"
+  fi
+  rm -f "$resolv"
+  printf 'nameserver %s\noptions edns0 trust-ad\n' "$dns_addr" > "$resolv"
+}
+
+stop_dns() {
+  if [ -s "$run/dnsmasq.pid" ]; then
+    kill "$(cat "$run/dnsmasq.pid")" 2>/dev/null || true
+    rm -f "$run/dnsmasq.pid"
+  fi
+}
+
+restore_dns() {
+  stop_dns
+  if [ -s "$run/resolv.link" ]; then
+    rm -f "$resolv"
+    ln -s "$(cat "$run/resolv.link")" "$resolv"
+    rm -f "$run/resolv.link"
+  fi
+}
+
+# Containers resolve through dnsmasq too, on the docker0 address.
+docker_dns() {
+  local want=$1 f=/etc/docker/daemon.json cur new
+  if [ -n "${LIMABEAN_NETWORK_SKIP_DOCKER:-}" ] || ! command -v dockerd >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ "$want" = off ] && [ ! -e "$f" ]; then
+    return 0
+  fi
+  cur=$(cat "$f" 2>/dev/null || echo '{}')
+  if [ "$want" = on ]; then
+    new=$(jq --arg ip "$docker_dns" '.dns = [$ip]' <<<"$cur")
+  else
+    new=$(jq 'del(.dns)' <<<"$cur")
+  fi
+  if [ "$(jq -S . <<<"$cur")" != "$(jq -S . <<<"$new")" ]; then
+    mkdir -p "$(dirname "$f")"
+    echo "$new" > "$f"
+    systemctl restart docker.service || true
+  fi
+}
+
+# --- the firewall --------------------------------------------------------
+
+firewall_on() {
+  local dns4=() dns6=() u
+  while read -r u; do
+    if [[ $u == *:* ]]; then dns6+=("$u"); else dns4+=("$u"); fi
+  done < "$run/upstream"
+  local el4="" el6=""
+  if [ "${#dns4[@]}" -gt 0 ]; then el4="elements = { $(IFS=,; echo "${dns4[*]}") }"; fi
+  if [ "${#dns6[@]}" -gt 0 ]; then el6="elements = { $(IFS=,; echo "${dns6[*]}") }"; fi
+  nft -f - <<EOF
+table inet limabean
+delete table inet limabean
+table inet limabean {
+  set allow4 { type ipv4_addr; }
+  set allow6 { type ipv6_addr; }
+  set dns4 { type ipv4_addr; $el4 }
+  set dns6 { type ipv6_addr; $el6 }
+
+  chain output {
+    type filter hook output priority filter; policy drop;
+    oif "lo" accept
+    ct state established,related accept
+    meta skuid "$dns_user" ip daddr @dns4 meta l4proto { tcp, udp } th dport 53 accept
+    meta skuid "$dns_user" ip6 daddr @dns6 meta l4proto { tcp, udp } th dport 53 accept
+    oifname "docker0" accept
+    oifname "br-*" accept
+    udp dport 67 accept
+    icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit } accept
+    ip daddr @allow4 accept
+    ip6 daddr @allow6 accept
+    counter reject with icmpx type admin-prohibited
+  }
+
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+    ct state established,related accept
+    oifname "docker0" accept
+    oifname "br-*" accept
+    ip daddr @allow4 accept
+    ip6 daddr @allow6 accept
+    counter reject with icmpx type admin-prohibited
+  }
+}
+EOF
+}
+
+firewall_off() {
+  nft delete table inet limabean 2>/dev/null || true
+}
+
+# --- the lock ------------------------------------------------------------
+
+lock_file=/etc/sudoers.d/zz-limabean-lock
+cloud_sudoers=/etc/sudoers.d/90-cloud-init-users
+
+lock() {
+  local user=$1 g
+  # Lima's host agent reads its params with sudo cat on every start; the
+  # user may also re-apply this policy, which only reads the Mac's copy.
+  printf '%s\n' \
+    "# Written by limabean-network: this VM is locked." \
+    "$user ALL=(root) NOPASSWD: /usr/bin/cat /mnt/lima-cidata/param.env" \
+    "$user ALL=(root) NOPASSWD: /usr/bin/systemctl start limabean-network.service" \
+    > "$lock_file.new"
+  chmod 440 "$lock_file.new"
+  visudo -cqf "$lock_file.new"
+  mv "$lock_file.new" "$lock_file"
+  # sudo uses the last matching rule, so cloud-init's NOPASSWD:ALL must go;
+  # sudo skips files whose names contain a dot. cloud-init may write it
+  # again on boot, so this runs on every boot.
+  if [ -e "$cloud_sudoers" ]; then
+    mv "$cloud_sudoers" "$cloud_sudoers.limabean-locked"
+  fi
+  for g in sudo admin docker lxd; do
+    gpasswd -d "$user" "$g" >/dev/null 2>&1 || true
+  done
+  if [ -e /etc/systemd/system/docker.socket.d/limabean.conf ]; then
+    rm -f /etc/systemd/system/docker.socket.d/limabean.conf
+    systemctl daemon-reload
+    systemctl restart docker.socket docker.service || true
+  fi
+  touch "$run/locked"
+}
+
+unlock() {
+  if [ -e "$cloud_sudoers.limabean-locked" ]; then
+    mv "$cloud_sudoers.limabean-locked" "$cloud_sudoers"
+  fi
+  rm -f "$lock_file" "$run/locked"
+  # features/docker.sh gives the user Docker back on the next boot.
+}
+
+# --- apply ---------------------------------------------------------------
+
+if [ "${#allowed[@]}" -gt 0 ]; then
+  start_dns
+  firewall_on
+  docker_dns on
+  echo "limabean-network: allowlist of ${#allowed[@]} domain(s)"
+else
+  firewall_off
+  restore_dns
+  docker_dns off
+  echo "limabean-network: open"
+fi
+
+if [ -z "${LIMABEAN_NETWORK_SKIP_LOCK:-}" ]; then
+  user=$(cat /etc/limabean/user)
+  if [ "$locked" = yes ]; then
+    lock "$user"
+    echo "limabean-network: locked"
+  else
+    unlock
+  fi
+fi

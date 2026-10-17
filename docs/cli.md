@@ -9,7 +9,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/mise/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
-| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets |
+| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--allow` and `--locked` set its [network policy](#network-allowlists) |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
@@ -24,6 +24,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
+| `limabean network ls\|allow\|rm\|open\|lock\|unlock` | Manages a VM's [network allowlist and lock](#network-allowlists) |
 | `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
 | `limabean mcp` | Runs an MCP server so Claude can manage VMs ([details](claude-desktop.md#let-claude-manage-vms)) |
 | `limabean completion <shell>` | Prints a tab-completion script for bash, zsh, fish or PowerShell |
@@ -55,6 +56,35 @@ reaches the disk. `rm` deletes the disk with the VM.
 repository under `~/code`. If any has uncommitted changes, stashes or
 commits not pushed to a remote, they stop and list what they found. Then,
 in a terminal, they ask before deleting. `--force` skips both.
+
+## Network allowlists
+
+A VM can be limited to the domains its work needs, for instance before
+handing it to an agent:
+
+```bash
+limabean new agent --allow github --allow python --locked
+limabean network allow agent registry.npmjs.org
+limabean network ls agent
+```
+
+Everything else is blocked, for the VM and its containers, and names that
+aren't allowed don't resolve, so data can't leave through DNS either. A
+domain allows its subdomains. Presets: `claude`, `docker`, `github`, `go`,
+`npm`, `python`, `ubuntu` (`limabean network --help` lists their domains).
+`ntp.ubuntu.com` is always allowed, for the clock.
+
+**Lock it, or it's only a guardrail.** A Lima VM's user has passwordless
+`sudo`, and Docker's socket is root-equivalent, so anything in an unlocked VM
+can turn the allowlist off. `--locked` (or `limabean network lock`) takes both
+away from the user; the lock is re-applied on every boot. Lock before giving
+the VM to an agent: a root process started earlier keeps running.
+
+The policy lives on the Mac in `~/.config/limabean/network/<vm>/` and is
+mounted read-only into the VM, where `limabean-network` applies it with
+dnsmasq and nftables. Changes apply to a running VM at once. The first boot
+provisions with the network open; the policy applies when `new` or `rebuild`
+finishes. VMs created before this need a rebuild to use it.
 
 ## Idle VMs are stopped automatically
 

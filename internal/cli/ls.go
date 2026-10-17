@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/lima"
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
@@ -19,6 +20,7 @@ type lsEntry struct {
 	MemoryGiB int64  `json:"memoryGiB"`
 	Secrets   int    `json:"secrets"`
 	SSHHost   string `json:"sshHost"`
+	Network   string `json:"network"` // e.g. "open", "3 domain(s), locked"
 }
 
 func newLsCmd(a *App) *cobra.Command {
@@ -64,6 +66,7 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 					entries = append(entries, lsEntry{
 						Name: inst.Name, Status: inst.Status, Env: a.envOf(inst.Name), CPUs: inst.CPUs,
 						MemoryGiB: inst.MemoryGiB(), Secrets: len(refs), SSHHost: "lima-" + inst.Name,
+						Network: a.networkSummary(inst),
 					})
 				}
 				enc := json.NewEncoder(out)
@@ -83,13 +86,22 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 				refs, _ := secrets.Load(a.Cfg.Dir(), inst.Name)
 				rows = append(rows, []string{
 					inst.Name, inst.Status, env, strconv.Itoa(inst.CPUs),
-					fmt.Sprintf("%d GiB", inst.MemoryGiB()), strconv.Itoa(len(refs)), "lima-" + inst.Name,
+					fmt.Sprintf("%d GiB", inst.MemoryGiB()), strconv.Itoa(len(refs)), a.networkSummary(inst), "lima-" + inst.Name,
 				})
 			}
-			a.UI.Table([]string{"NAME", "STATUS", "ENV", "CPUS", "MEMORY", "SECRETS", "SSH HOST"}, rows)
+			a.UI.Table([]string{"NAME", "STATUS", "ENV", "CPUS", "MEMORY", "SECRETS", "NETWORK", "SSH HOST"}, rows)
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print a JSON array, for scripts")
 	return cmd
+}
+
+// networkSummary describes a VM's network policy for ls.
+func (a *App) networkSummary(inst lima.Instance) string {
+	p, err := a.loadPolicy(inst.Name)
+	if err != nil || !inst.NetworkPolicy {
+		return "open"
+	}
+	return p.summary()
 }

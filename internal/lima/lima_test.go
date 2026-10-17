@@ -27,7 +27,7 @@ func (f *fakeRunner) Output(_ context.Context, stdin io.Reader, _ bool, name str
 	return nil, nil
 }
 
-const listJSON = `{"name":"dev","status":"Running","dir":"/h/.lima/dev","cpus":4,"memory":8589934592,"sshConfigFile":"/h/.lima/dev/ssh.config","config":{"provision":[{"mode":"data","path":"/etc/limabean/mise/00-base.toml"}]}}
+const listJSON = `{"name":"dev","status":"Running","dir":"/h/.lima/dev","cpus":4,"memory":8589934592,"sshConfigFile":"/h/.lima/dev/ssh.config","config":{"mounts":[{"mountPoint":"/mnt/host/limabean"}],"provision":[{"mode":"data","path":"/etc/limabean/mise/00-base.toml"}]}}
 {"name":"other","status":"Stopped","dir":"/h/.lima/other","cpus":2,"memory":4294967296,"sshConfigFile":"/h/.lima/other/ssh.config","config":{}}
 time="2026-10-16T19:00:00-05:00" level=warning msg="noise that isn't JSON"
 `
@@ -38,7 +38,7 @@ func TestListAndLimabean(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all) != 2 || all[0].Name != "dev" || !all[0].Running() || all[0].MemoryGiB() != 8 || !all[0].Limabean || all[1].Limabean {
+	if len(all) != 2 || all[0].Name != "dev" || !all[0].Running() || all[0].MemoryGiB() != 8 || !all[0].Limabean || all[1].Limabean || !all[0].NetworkPolicy || all[1].NetworkPolicy {
 		t.Fatalf("got %+v", all)
 	}
 	lb, _ := c.Limabean(context.Background())
