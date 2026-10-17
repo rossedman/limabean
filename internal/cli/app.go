@@ -57,6 +57,8 @@ type App struct {
 	openEditor func(ctx context.Context, ide string, args ...string) error
 	// How snapshots copy disks; tests replace it.
 	cloneFile func(ctx context.Context, src, dst string) error
+	// How `bump` asks mise for versions on the Mac; tests replace it.
+	miseLatest func(ctx context.Context, spec string) (string, error)
 	// How `ports` and `open` reach the Mac's side; tests replace them.
 	macListens func(port int) bool
 	openURL    func(ctx context.Context, url string) error
@@ -82,6 +84,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		launchctl:   runLaunchctl,
 		openEditor:  openEditor,
 		cloneFile:   cloneFile,
+		miseLatest:  miseLatest,
 		macListens:  macListens,
 		openURL:     openURL,
 	}

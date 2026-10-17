@@ -1,0 +1,73 @@
+name: bump
+
+# Once a month, update the pinned tool versions in templates/mise/*.toml
+# with `limabean bump` and open a pull request with the changes.
+#
+# Needs "Allow GitHub Actions to create and approve pull requests" in the
+# repository's Actions settings. Pull requests opened with the default token
+# don't trigger other workflows, so CI won't run on them until you push to
+# the branch; set a BUMP_TOKEN secret (a fine-grained token with Contents and
+# Pull requests write) to have CI run automatically.
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      MISE_VERSION: v2026.9.18
+      MISE_SHA256: 4312f8fd72a8d6a869cd2aca7444929e2a0ef6f45d2c6f2866a1eacc5bdc2e84
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install mise
+        run: |
+          tarball="mise-${MISE_VERSION}-linux-x64.tar.gz"
+          curl -fsSLO "https://github.com/jdx/mise/releases/download/${MISE_VERSION}/${tarball}"
+          echo "${MISE_SHA256}  ${tarball}" | sha256sum -c -
+          tar -xzf "$tarball" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/mise/bin" >> "$GITHUB_PATH"
+      - name: Bump pins
+        id: bump
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # mise looks versions up on GitHub; avoids rate limits
+        # A failed lookup still lets the others through; the last step fails.
+        run: |
+          set +e
+          go run ./cmd/limabean bump --plain | tee "$RUNNER_TEMP/bump.txt"
+          echo "status=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          set -e
+          {
+            echo 'summary<<EOF'
+            cat "$RUNNER_TEMP/bump.txt"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.BUMP_TOKEN || github.token }}
+          branch: bump-tool-versions
+          delete-branch: true
+          commit-message: Bump pinned tool versions
+          title: Bump pinned tool versions
+          body: |
+            `limabean bump` found newer versions of these pinned tools:
+
+            ```
+            ${{ steps.bump.outputs.summary }}
+            ```
+
+            Pins stay within their major version; newer majors are listed above
+            and need `limabean bump --major` locally. Rebuild a VM to try them.
+      - name: Fail if a lookup failed
+        if: steps.bump.outputs.status != '0'
+        run: |
+          echo "::error::limabean bump couldn't look up every tool; see the Bump pins step"
+          exit 1

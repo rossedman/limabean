@@ -366,6 +366,7 @@ heavy extras most VMs don't need.
    `rebuild` and `rm`, with the unsaved-work guard.
 4. Dotfiles (`features/dotfiles.sh`). ✅ Code-location option C (persistent
    disk).
-5. `limabean bump` (rewrite pinned versions in `base.toml`), ✅ CI (`limactl
+5. ✅ `limabean bump` (rewrite pinned versions in `base.toml`, monthly in
+   `bump.yml`), ✅ CI (`limactl
    tmpl validate` + shellcheck), and ✅ a persistent `~/code` disk so
    rebuilds keep repositories.

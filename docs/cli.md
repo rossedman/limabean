@@ -8,6 +8,7 @@ help: `limabean <command> --help` explains it and shows examples.
 |---|---|
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
+| `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/mise/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
 | `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--allow` and `--locked` set its [network policy](#network-allowlists) |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |

@@ -70,6 +70,7 @@ Leave out a VM name and you pick one from a list. Every command has
 |---|---|
 | `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token |
 | `limabean doctor` | Check everything VMs depend on |
+| `limabean bump` | Update the pinned tool versions in `templates/mise/*.toml` |
 
 **VMs**
 

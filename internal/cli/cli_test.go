@@ -32,6 +32,7 @@ type fakeWorld struct {
 	unsaved  string            // what the unsaved-work check prints
 	ghq      string            // what ghq list -p prints in every VM
 	ss       string            // what ss -ltnpH prints in every VM
+	latest   map[string]string // mise latest <spec> answers, on the Mac or in a VM
 	activity map[string]string // VM → what stop --idle's check prints
 
 	agentLoaded bool         // the autostop agent is loaded in launchd
@@ -53,7 +54,7 @@ type fakeWorld struct {
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}}
 }
 
 func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -158,6 +159,12 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return []byte("Job failed"), errors.New("exit status 1")
 			}
 			return nil, nil
+		case strings.HasPrefix(remote, "mise latest "):
+			spec := strings.Trim(strings.TrimPrefix(remote, "mise latest "), "'")
+			if v, ok := w.latest[spec]; ok {
+				return []byte(v + "\n"), nil
+			}
+			return nil, errors.New("exit status 1")
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
@@ -292,6 +299,13 @@ func (h *harness) app(u *ui.UI) *App {
 			h.world.agentLoaded = args[0] == "print"
 		}
 		return nil, nil
+	}
+	a.miseLatest = func(_ context.Context, spec string) (string, error) {
+		h.world.calls = append(h.world.calls, "mise latest "+spec)
+		if v, ok := h.world.latest[spec]; ok {
+			return v, nil
+		}
+		return "", errors.New("mise ERROR no such tool\nmore detail")
 	}
 	a.cloneFile = func(_ context.Context, src, dst string) error {
 		h.world.calls = append(h.world.calls, "clone "+filepath.Base(src))
