@@ -1,0 +1,616 @@
+package cli
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"github.com/rossedman/limabean/internal/claude"
+	"github.com/rossedman/limabean/internal/lima"
+	"github.com/rossedman/limabean/internal/ui"
+)
+
+func (h *harness) home() string { return os.Getenv("HOME") }
+
+func (h *harness) writeSSHConfig(body string) {
+	h.t.Helper()
+	if err := os.WriteFile(filepath.Join(h.home(), ".ssh", "config"), []byte(body), 0o600); err != nil {
+		h.t.Fatal(err)
+	}
+}
+
+// --- VMs ---------------------------------------------------------------
+
+func TestStop(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	if out := h.must("", "stop", "dev"); !strings.Contains(out, "Stopped dev") || h.world.vms["dev"] != "Stopped" {
+		t.Fatalf("stop: %s / %v", out, h.world.vms)
+	}
+	if out := h.must("", "stop", "dev"); !strings.Contains(out, "already stopped") {
+		t.Fatalf("second stop: %s", out)
+	}
+	if _, err := h.run("", "stop", "nope"); err == nil {
+		t.Error("stopping a missing VM should fail")
+	}
+	if _, err := h.run("", "stop"); err == nil || !strings.Contains(err.Error(), "name a VM") {
+		t.Errorf("stop without a name in plain mode: %v", err)
+	}
+}
+
+func TestPickerAndSingleVM(t *testing.T) {
+	h := newHarness(t)
+	if _, err := h.run("", "stop"); err == nil || !strings.Contains(err.Error(), "no VMs yet") {
+		t.Errorf("no VMs: %v", err)
+	}
+	h.world.vms["only"] = "Running"
+	if _, err := h.runTTY(nil, "stop"); err != nil || h.world.vms["only"] != "Stopped" {
+		t.Fatalf("a single VM is picked without asking: %v %v", err, h.world.vms)
+	}
+	h.world.vms["alpha"], h.world.vms["beta"] = "Running", "Running"
+	// alpha, beta, only: pick the second.
+	if _, err := h.runTTY([]string{ui.Down, ui.Enter}, "stop"); err != nil {
+		t.Fatal(err)
+	}
+	if h.world.vms["beta"] != "Stopped" && h.world.vms["alpha"] != "Stopped" {
+		t.Fatalf("picker stopped nothing: %v", h.world.vms)
+	}
+}
+
+func TestSSHAndGet(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Stopped"
+	h.must("", "ssh", "dev", "ls", "-la")
+	if !h.world.called("limactl start --tty=false dev") || !h.world.called("exec ssh dev ls -la") {
+		t.Fatalf("ssh should start the VM, then exec: %v", h.world.calls)
+	}
+	h.must("", "get", "dev", "acme/repo", "-p")
+	if !h.world.called("attach ssh dev ghq get -p acme/repo") {
+		t.Fatalf("get should move flags first: %v", h.world.calls)
+	}
+	if _, err := h.run("", "get", "acme/other"); err == nil {
+		t.Error("plain mode shouldn't guess the VM, even with one")
+	}
+	if _, err := h.runTTY(nil, "get", "acme/other"); err != nil { // the only VM is picked
+		t.Fatal(err)
+	}
+	if !h.world.called("attach ssh dev ghq get acme/other") {
+		t.Fatalf("get with one VM: %v", h.world.calls)
+	}
+	if _, err := h.run("", "get"); err == nil {
+		t.Error("get without a repository should fail")
+	}
+	if _, err := h.run("", "ssh", "nope"); err == nil {
+		t.Error("ssh to a missing VM should fail")
+	}
+	if _, err := h.run("", "get", "nope", "acme/x"); err == nil {
+		t.Error("get into a missing VM should fail")
+	}
+}
+
+func TestStartFailureShowsLimaOutput(t *testing.T) {
+	h := newHarness(t)
+	h.world.failStart = true
+	out, err := h.run("", "new", "dev")
+	if err == nil || !strings.Contains(out, "boom from lima") {
+		t.Fatalf("err=%v out=%s", err, out)
+	}
+	h.world.vms["stopped"] = "Stopped"
+	if _, err := h.run("", "ssh", "stopped"); err == nil {
+		t.Error("ssh should fail when the VM won't start")
+	}
+}
+
+func TestNewRestartsForUpdatesAndMountsAWS(t *testing.T) {
+	h := newHarness(t)
+	h.world.reboot = true
+	aws := filepath.Join(h.home(), ".aws")
+	if err := os.MkdirAll(aws, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LIMABEAN_AWS_DIR", aws)
+	t.Setenv("LIMABEAN_CLAUDE_DESKTOP", "no")
+	out := h.must("", "new", "dev")
+	for _, want := range []string{"Installed updates and restarted", "Mounted " + aws, "No secrets set up"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q:\n%s", want, out)
+		}
+	}
+	if !h.world.called("limactl stop dev") || !h.world.called(`limactl start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --set .mounts`) {
+		t.Errorf("calls: %v", h.world.calls)
+	}
+	if names, _ := (claude.Settings{Path: h.claude}).VMs(); len(names) != 0 {
+		t.Errorf("CLAUDE_DESKTOP=no still registered: %v", names)
+	}
+	if _, err := h.run("", "new", "x", "--secret", "bad"); err == nil {
+		t.Error("a malformed --secret should fail")
+	}
+	if _, err := h.run("", "new", "x", "nosuchenv"); err == nil || !strings.Contains(err.Error(), "unknown environment") {
+		t.Errorf("unknown env: %v", err)
+	}
+}
+
+func TestNewWhenSecretsFail(t *testing.T) {
+	h := newHarness(t)
+	h.must("", "secrets", "set", "BROKEN", "keychain:missing", "--no-sync")
+	if out := h.must("", "new", "dev"); !strings.Contains(out, "Installed 0 secret(s); fix the ones above") {
+		t.Fatalf("out:\n%s", out)
+	}
+	h.world.sshFail = true
+	if _, err := h.run("", "secrets", "sync", "dev"); err == nil {
+		t.Error("sync should fail when ssh does")
+	}
+}
+
+func TestRebuild(t *testing.T) {
+	h := newHarness(t)
+	h.must("", "new", "dev", "--secret", "OWN=kept")
+	h.world.calls = nil
+	out := h.must("", "rebuild", "dev")
+	if !h.world.called("limactl delete --force dev") || !h.world.called("limactl start --name=dev") || !strings.Contains(out, "dev was rebuilt") {
+		t.Fatalf("rebuild: %s\n%v", out, h.world.calls)
+	}
+	if !strings.Contains(h.read("secrets.dev.env"), "OWN=kept") {
+		t.Error("rebuild should keep the VM's secrets")
+	}
+	h.world.unsaved = "~/code/x: stashes\n"
+	if _, err := h.run("", "rebuild", "dev"); err == nil {
+		t.Error("rebuild with unsaved work should fail")
+	}
+	h.must("", "rebuild", "dev", "--force")
+	if _, err := h.run("", "rebuild", "nope"); err == nil {
+		t.Error("rebuild of a missing VM should fail")
+	}
+	h.world.unsaved = ""
+	h.world.sshFail = true
+	if _, err := h.run("", "rebuild", "dev"); err == nil || !strings.Contains(err.Error(), "unsaved work") {
+		t.Errorf("unsaved check failing: %v", err)
+	}
+}
+
+func TestConfirmations(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	if out, err := h.runTTY([]string{"n"}, "rm", "dev"); err != nil || !strings.Contains(out, "Kept dev") || h.world.vms["dev"] == "" {
+		t.Fatalf("rm, answered no: %v\n%s", err, out)
+	}
+	if out, err := h.runTTY([]string{"n"}, "rebuild", "dev"); err != nil || !strings.Contains(out, "Kept dev") {
+		t.Fatalf("rebuild, answered no: %v\n%s", err, out)
+	}
+	if _, err := h.runTTY([]string{"y"}, "rebuild", "dev"); err != nil || !h.world.called("limactl start --name=dev") {
+		t.Fatalf("rebuild, answered yes: %v", err)
+	}
+	if _, err := h.runTTY([]string{"y"}, "rm", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := h.world.vms["dev"]; ok {
+		t.Fatal("rm answered yes didn't delete")
+	}
+}
+
+func TestNewForm(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("FORM_VALUE", "from-env")
+	// Name; then the secrets step: add a new secret (env var), just this VM.
+	forms := [][]string{
+		{"formvm", ui.Enter}, // Name
+		{"y"},                // Add a new secret?
+		{"FORM_SECRET", ui.Enter, ui.Down, ui.Down, ui.Enter, "FORM_VALUE", ui.Enter, "n"}, // env var, just this VM
+		{"n"}, // Add another secret?
+	}
+	out, err := h.runForms(forms, "new")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if got := h.read("secrets.formvm.env"); !strings.Contains(got, "FORM_SECRET=env:FORM_VALUE") {
+		t.Fatalf("VM file = %q\n%s", got, out)
+	}
+	if !strings.Contains(h.world.sshStdin["formvm"], "export FORM_SECRET='from-env'") {
+		t.Fatalf("installed = %q", h.world.sshStdin["formvm"])
+	}
+
+	// A second VM is offered the first VM's secret, and a pasted one for
+	// every VM goes to the Keychain.
+	forms = [][]string{
+		{"second", ui.Enter},
+		{ui.Space, ui.Enter, "y"},                               // pick FORM_SECRET from formvm; add a new secret
+		{"PASTED", ui.Enter, ui.Enter, "s3cret", ui.Enter, "y"}, // pasted value, every VM
+		{"n"},
+	}
+	if out, err := h.runForms(forms, "new"); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if got := h.read("secrets.second.env"); !strings.Contains(got, "FORM_SECRET=env:FORM_VALUE") {
+		t.Errorf("second VM didn't get the picked secret: %q", got)
+	}
+	if h.world.keychain["limabean-secret-PASTED"] != "s3cret" || !strings.Contains(h.read("secrets.env"), "PASTED=keychain:limabean-secret-PASTED") {
+		t.Errorf("pasted shared secret: %v / %q", h.world.keychain, h.read("secrets.env"))
+	}
+
+	// --secret skips the secrets step.
+	if out, err := h.runTTY(nil, "new", "third", "--secret", "X=1"); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+}
+
+// --- secrets -----------------------------------------------------------
+
+func TestSecretsForms(t *testing.T) {
+	h := newHarness(t)
+	// No arguments: the form. A command source, for every VM.
+	keys := []string{"CMD_SECRET", ui.Enter, ui.Down, ui.Down, ui.Down, ui.Enter, "echo hi", ui.Enter}
+	if out, err := h.runTTY(keys, "secrets", "set"); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if !strings.Contains(h.read("secrets.env"), "CMD_SECRET=cmd:echo hi") {
+		t.Fatalf("shared file = %q", h.read("secrets.env"))
+	}
+	// A 1Password reference, through the form.
+	keys = []string{"OP_SECRET", ui.Enter, ui.Down, ui.Enter, "op://v/i/f", ui.Enter}
+	if _, err := h.runTTY(keys, "secrets", "set"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h.read("secrets.env"), "OP_SECRET=op://v/i/f") {
+		t.Fatalf("shared file = %q", h.read("secrets.env"))
+	}
+	// A name without a reference: the hidden prompt.
+	if _, err := h.runTTY([]string{"hidden-value", ui.Enter}, "secrets", "set", "HIDDEN", "--vm", "dev", "--no-sync"); err != nil {
+		t.Fatal(err)
+	}
+	if h.world.keychain["limabean-secret-dev-HIDDEN"] != "hidden-value" {
+		t.Fatalf("keychain = %v", h.world.keychain)
+	}
+}
+
+func TestSecretsSetErrors(t *testing.T) {
+	h := newHarness(t)
+	for _, args := range [][]string{
+		{"secrets", "set"},                      // no name, no terminal
+		{"secrets", "set", "1BAD", "x"},         // bad name with a reference
+		{"secrets", "set", "1BAD"},              // bad name without one
+		{"secrets", "set", "OK", "--vm", "b_d"}, // bad VM name
+	} {
+		if _, err := h.run("", args...); err == nil {
+			t.Errorf("%v should fail", args)
+		}
+	}
+	if _, err := h.run("", "secrets", "set", "EMPTY", "--from-stdin"); err == nil {
+		t.Error("an empty stdin should fail")
+	}
+	if _, err := h.run("\n", "secrets", "set", "EMPTY", "--from-stdin"); err == nil {
+		t.Error("an empty value should fail")
+	}
+}
+
+func TestSecretsLsAndRmPerVM(t *testing.T) {
+	h := newHarness(t)
+	if out := h.must("", "secrets", "ls"); !strings.Contains(out, "No secrets yet") {
+		t.Errorf("empty ls: %s", out)
+	}
+	h.must("", "secrets", "set", "SHARED", "a", "--no-sync")
+	h.must("", "secrets", "set", "OWN", "b", "--vm", "dev", "--no-sync")
+	h.must("", "secrets", "set", "OTHER", "c", "--vm", "zed", "--no-sync")
+	if err := os.WriteFile(filepath.Join(h.dir, "secrets.env"), []byte(h.read("secrets.env")+"not a line\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := h.must("", "secrets", "ls", "--vm", "dev")
+	if !strings.Contains(out, "dev only") || !strings.Contains(out, "every VM") || strings.Contains(out, "OTHER") || !strings.Contains(out, "expected NAME=reference") {
+		t.Errorf("ls --vm dev:\n%s", out)
+	}
+	if out := h.must("", "secrets", "ls"); strings.Index(out, "SHARED") > strings.Index(out, "OWN") {
+		t.Errorf("shared secrets should list first:\n%s", out)
+	}
+	h.must("", "secrets", "rm", "OWN", "--vm", "dev", "--no-sync")
+	if strings.Contains(h.read("secrets.dev.env"), "OWN=") {
+		t.Error("rm --vm didn't remove it")
+	}
+}
+
+func TestSecretsEdit(t *testing.T) {
+	h := newHarness(t)
+	editor := filepath.Join(t.TempDir(), "editor")
+	if err := os.WriteFile(editor, []byte("#!/bin/sh\necho 'EDITED=yes' >> \"$1\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("VISUAL", editor)
+	out := h.must("", "secrets", "edit")
+	if !strings.Contains(h.read("secrets.env"), "EDITED=yes") || !strings.Contains(out, "1 secret(s)") || !strings.Contains(out, "Later: limabean secrets sync") {
+		t.Fatalf("edit: %s / %q", out, h.read("secrets.env"))
+	}
+	h.world.vms["dev"] = "Running"
+	if _, err := h.runTTY([]string{"y"}, "secrets", "edit", "--vm", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h.world.sshStdin["dev"], "export EDITED='yes'") {
+		t.Errorf("edit then sync: %q", h.world.sshStdin["dev"])
+	}
+	if _, err := h.run("", "secrets", "edit", "--vm", "b_d"); err == nil {
+		t.Error("bad VM name should fail")
+	}
+	t.Setenv("VISUAL", "false")
+	if _, err := h.run("", "secrets", "edit"); err == nil {
+		t.Error("a failing editor should fail")
+	}
+}
+
+func TestSyncListsStoppedVMs(t *testing.T) {
+	h := newHarness(t)
+	if out := h.must("", "secrets", "sync"); !strings.Contains(out, "No VMs yet") {
+		t.Errorf("no VMs: %s", out)
+	}
+	h.world.vms["up"], h.world.vms["down"] = "Running", "Stopped"
+	out := h.must("", "secrets", "sync")
+	if !strings.Contains(out, "Stopped, so not updated: down") || !strings.Contains(out, "up: 0 secret(s)") {
+		t.Errorf("sync:\n%s", out)
+	}
+	h.must("", "secrets", "sync", "down") // starts it
+	if h.world.vms["down"] != "Running" {
+		t.Error("sync <name> should start a stopped VM")
+	}
+	if _, err := h.run("", "secrets", "sync", "nope"); err == nil {
+		t.Error("sync to a missing VM should fail")
+	}
+}
+
+// --- github, claude -----------------------------------------------------
+
+func TestGitHubMore(t *testing.T) {
+	h := newHarness(t)
+	if out := h.must("", "github", "status"); !strings.Contains(out, "No GitHub token saved") {
+		t.Errorf("status without a token: %s", out)
+	}
+	if out := h.must("", "github", "sync"); !strings.Contains(out, "No GitHub token saved") {
+		t.Errorf("sync without a token: %s", out)
+	}
+	if _, err := h.run("", "github", "logout"); err == nil {
+		t.Error("logout without a token should fail")
+	}
+	if _, err := h.run("", "github", "login", "--with-token"); err == nil {
+		t.Error("login with empty stdin should fail")
+	}
+	if _, err := h.run("   \n", "github", "login"); err == nil {
+		t.Error("login with a blank token should fail")
+	}
+	// The hidden prompt in a terminal.
+	if out, err := h.runTTY([]string{"github_pat_good", ui.Enter}, "github", "login", "--no-sync"); err != nil || h.world.keychain["limabean-github-token"] != "github_pat_good" {
+		t.Fatalf("interactive login: %v\n%s", err, out)
+	}
+	if _, err := h.runTTY(nil, "github", "login", "--with-token"); err == nil {
+		t.Error("--with-token in a terminal should ask for a pipe")
+	}
+	h.world.vms["up"], h.world.vms["down"] = "Running", "Stopped"
+	out := h.must("", "github", "status")
+	if !strings.Contains(out, "down") || !strings.Contains(out, "stopped") || !strings.Contains(out, "missing") {
+		t.Errorf("status:\n%s", out)
+	}
+	h.world.keychain["limabean-github-token"] = "revoked"
+	if out := h.must("", "github", "status"); !strings.Contains(out, "doesn't work") {
+		t.Errorf("revoked token:\n%s", out)
+	}
+}
+
+func TestClaudeSync(t *testing.T) {
+	h := newHarness(t)
+	if out := h.must("", "claude", "sync"); !strings.Contains(out, "No VMs to register") {
+		t.Errorf("no VMs: %s", out)
+	}
+	h.world.vms["dev"] = "Running"
+	if out := h.must("", "claude", "sync"); !strings.Contains(out, "dev (limabean)") {
+		t.Errorf("sync: %s", out)
+	}
+	if err := os.MkdirAll(filepath.Dir(h.claude), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(h.claude, []byte("{bad"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.run("", "claude", "sync"); err == nil {
+		t.Error("invalid settings should fail")
+	}
+	t.Setenv("LIMABEAN_CLAUDE_DESKTOP", "no")
+	if _, err := h.run("", "claude", "sync"); err == nil {
+		t.Error("sync with Claude Desktop off should fail")
+	}
+}
+
+// --- setup ---------------------------------------------------------------
+
+func TestDoctorBranches(t *testing.T) {
+	h := newHarness(t)
+	h.writeSSHConfig("Host *\n  User x\nInclude ~/.lima/*/ssh.config\n")
+	t.Setenv("FAKE_SSH_ADD", "1")
+	t.Setenv("UNSET_FOR_DOCTOR", "")
+	os.Unsetenv("UNSET_FOR_DOCTOR")
+	h.must("", "secrets", "set", "FROM_OP", "op://v/i/f", "--no-sync")
+	h.must("", "secrets", "set", "FROM_ENV", "env:UNSET_FOR_DOCTOR", "--no-sync")
+	h.world.keychain["limabean-github-token"] = "revoked"
+	if err := os.MkdirAll(filepath.Dir(h.claude), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(h.claude, []byte("{bad"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := h.run("", "doctor")
+	if err == nil {
+		t.Fatalf("doctor should fail:\n%s", out)
+	}
+	for _, want := range []string{
+		"sits inside the Host/Match block", "the agent has no keys", "no config or .gitconfig",
+		"settings file isn't valid JSON", "the saved token doesn't work", "$UNSET_FOR_DOCTOR isn't set",
+		"not created yet", "Fix the items marked",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("doctor missing %q:\n%s", want, out)
+		}
+	}
+	if !hasProgram("op") && !strings.Contains(out, "needs the 1Password CLI") {
+		t.Errorf("op isn't installed here, doctor should say so:\n%s", out)
+	}
+
+	// Everything fixed.
+	h2 := newHarness(t)
+	h2.writeSSHConfig("Include ~/.lima/*/ssh.config\n\nHost *\n")
+	gitDir := filepath.Join(h2.home(), ".config", "git")
+	if err := os.MkdirAll(gitDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "config"), []byte("[user]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_SSH_ADD", "0")
+	h2.world.keychain["limabean-github-token"] = "github_pat_good"
+	h2.must("", "secrets", "set", "OK", "plain", "--no-sync")
+	h2.must("", "init") // writes the config file
+	out = h2.must("", "doctor")
+	for _, want := range []string{"Include ~/.lima/*/ssh.config (line 1)", "1 key(s) loaded", "token for octocat", "all resolvable", "All good"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("healthy doctor missing %q:\n%s", want, out)
+		}
+	}
+
+	// No Include, no agent, Claude off, AWS dir missing.
+	h3 := newHarness(t)
+	t.Setenv("FAKE_SSH_ADD", "2")
+	t.Setenv("LIMABEAN_CLAUDE_DESKTOP", "no")
+	t.Setenv("LIMABEAN_AWS_DIR", filepath.Join(h3.home(), "no-aws"))
+	out, _ = h3.run("", "doctor")
+	for _, want := range []string{"doesn't include Lima's host entries", "no ssh-agent reachable", "off (CLAUDE_DESKTOP", "doesn't exist, so nothing is mounted"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("doctor missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestInitInteractive(t *testing.T) {
+	h := newHarness(t)
+	// ~/.gitconfig symlinked into a dotfiles repo: init suggests that directory.
+	dots := filepath.Join(h.home(), "dotfiles", "git")
+	if err := os.MkdirAll(dots, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dots, ".gitconfig"), []byte("[user]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(dots, ".gitconfig"), filepath.Join(h.home(), ".gitconfig")); err != nil {
+		t.Fatal(err)
+	}
+	h.writeSSHConfig("Host *\n  ServerAliveInterval 60\n")
+	// Keep both suggestions, add the Include, save a token now.
+	out, err := h.runForms([][]string{{ui.Enter, ui.Enter, "y", "y"}, {"github_pat_good", ui.Enter}}, "init")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if cfg := h.read("config"); !strings.Contains(cfg, `GIT_CONFIG_DIR="~/dotfiles/git"`) {
+		t.Errorf("config = %q", cfg)
+	}
+	ssh, _ := os.ReadFile(filepath.Join(h.home(), ".ssh", "config"))
+	if !strings.HasPrefix(string(ssh), "Include ~/.lima/*/ssh.config\n") {
+		t.Errorf("ssh config = %q", ssh)
+	}
+	if _, err := os.Stat(filepath.Join(h.home(), ".ssh", "config.limabean.bak")); err != nil {
+		t.Error("no backup of the ssh config")
+	}
+	if h.world.keychain["limabean-github-token"] != "github_pat_good" {
+		t.Error("token not saved")
+	}
+
+	// Declining the Include.
+	h2 := newHarness(t)
+	if out, err := h2.runTTY([]string{ui.Enter, ui.Enter, "n", "n"}, "init"); err != nil || !strings.Contains(out, "SSH config not changed") {
+		t.Fatalf("decline: %v\n%s", err, out)
+	}
+	if guessGitConfigDir("/nowhere", "~/keep") != "~/keep" {
+		t.Error("no ~/.gitconfig: keep the current setting")
+	}
+}
+
+func TestAddSSHIncludeCreatesConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "new", "config")
+	if err := addSSHInclude(path); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(path); !strings.HasPrefix(string(got), "Include ~/.lima/*/ssh.config") {
+		t.Fatalf("got %q", got)
+	}
+}
+
+// --- plumbing --------------------------------------------------------------
+
+func TestCompletion(t *testing.T) {
+	h := newHarness(t)
+	for shell, want := range map[string]string{"bash": "bash completion", "zsh": "#compdef", "fish": "complete -c limabean", "powershell": "Register-ArgumentCompleter"} {
+		if out := h.must("", "completion", shell); !strings.Contains(out, want) {
+			t.Errorf("%s completion missing %q", shell, want)
+		}
+	}
+	if _, err := h.run("", "completion", "tcsh"); err == nil {
+		t.Error("unknown shell should fail")
+	}
+}
+
+func TestCompletionFunctions(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	h.must("", "secrets", "set", "A", "x", "--no-sync")
+	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
+	a.configPath = filepath.Join(h.dir, "config")
+	a.Lima = &lima.Client{Runner: h.world}
+	if got, _ := a.completeVMs(nil, nil, ""); len(got) != 1 || !strings.HasPrefix(got[0], "dev\t") {
+		t.Errorf("completeVMs = %v", got)
+	}
+	if got, _ := a.completeVMs(nil, []string{"dev"}, ""); got != nil {
+		t.Errorf("second arg: %v", got)
+	}
+	if got, _ := completeEnvs(a)(nil, []string{"dev"}, ""); len(got) == 0 || got[0] != "scratch" {
+		t.Errorf("completeEnvs = %v", got)
+	}
+	if got, _ := completeEnvs(a)(nil, nil, ""); got != nil {
+		t.Errorf("completeEnvs first arg = %v", got)
+	}
+	if got, _ := completeSecretNames(a)(nil, nil, ""); len(got) != 1 || got[0] != "A" {
+		t.Errorf("completeSecretNames = %v", got)
+	}
+	if got, _ := completeSecretNames(a)(nil, []string{"A"}, ""); got != nil {
+		t.Errorf("completeSecretNames second arg = %v", got)
+	}
+}
+
+func TestExecuteExitCodes(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if code := Execute("test", fstest.MapFS{}, []string{"version"}); code != 0 {
+		t.Errorf("version exit = %d", code)
+	}
+	if code := Execute("test", fstest.MapFS{}, []string{"no-such-command"}); code != 1 {
+		t.Errorf("unknown command exit = %d", code)
+	}
+	if code := Execute("test", fstest.MapFS{}, []string{"--config", t.TempDir(), "version"}); code != 1 {
+		t.Errorf("a directory as config should fail with 1, got %d", code)
+	}
+}
+
+func TestSetupDefaults(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+	t.Setenv("LIMABEAN_KEYCHAIN_PREFIX", "")
+	a := NewApp("test", fstest.MapFS{})
+	a.plain = true
+	if err := a.setup(); err != nil {
+		t.Fatal(err)
+	}
+	if a.keychainPrefix != "limabean" || !strings.HasSuffix(a.stateDir, filepath.Join(".local", "state", "limabean")) ||
+		!strings.HasSuffix(cacheDir(), filepath.Join(".cache", "limabean")) || a.Lima == nil || a.Keychain == nil || a.Resolver.Keychain == nil {
+		t.Fatalf("defaults: %+v", a)
+	}
+	if a.secretService("vm", "N") != "limabean-secret-vm-N" || a.ownsKeychainRef("keychain:other") {
+		t.Error("service naming")
+	}
+	if envOr("LIMABEAN_TEST_UNSET_VAR", "def") != "def" || firstNonEmpty("", "") != "" || padRight("long-name", 3) != "long-name " {
+		t.Error("helpers")
+	}
+	if !hasProgram("sh") || hasProgram("definitely-not-a-program-xyz") {
+		t.Error("hasProgram")
+	}
+}

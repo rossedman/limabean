@@ -32,7 +32,7 @@ what's left of it.`,
   # No checks, no questions
   limabean rm scratch --force`,
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			name, err := a.vmArg(ctx, args, "delete")

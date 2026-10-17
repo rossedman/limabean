@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -28,6 +29,10 @@ type fakeWorld struct {
 	sshStdin map[string]string // VM → last stdin written over ssh
 	keychain map[string]string
 	unsaved  string // what the unsaved-work check prints
+
+	failStart bool // limactl start fails, with output
+	reboot    bool // the first boot left /var/run/reboot-required
+	sshFail   bool // every ssh call fails
 }
 
 func newFakeWorld() *fakeWorld {
@@ -48,11 +53,20 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return []byte("limactl version 2.2.1\n"), nil
 		case "list":
 			var b strings.Builder
-			for n, status := range w.vms {
+			names := make([]string, 0, len(w.vms))
+			for n := range w.vms {
+				names = append(names, n)
+			}
+			sort.Strings(names) // limactl lists by name
+			for _, n := range names {
+				status := w.vms[n]
 				fmt.Fprintf(&b, `{"name":%q,"status":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, n)
 			}
 			return []byte(b.String()), nil
 		case "start":
+			if w.failStart {
+				return []byte("level=fatal msg=\"boom from lima\""), errors.New("exit status 1")
+			}
 			for _, a := range args {
 				if strings.HasPrefix(a, "--name=") {
 					w.vms[strings.TrimPrefix(a, "--name=")] = "Running"
@@ -67,11 +81,17 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 		}
 		return nil, nil
 	case "ssh":
+		if w.sshFail {
+			return nil, errors.New("ssh: connection refused")
+		}
 		host := args[len(args)-2]
 		vm := strings.TrimPrefix(host, "lima-")
 		remote := args[len(args)-1]
 		switch {
 		case strings.Contains(remote, "reboot-required"):
+			if w.reboot {
+				return nil, nil
+			}
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
@@ -125,15 +145,59 @@ func newHarness(t *testing.T) *harness {
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(dir, "cache"))
 	t.Setenv("XDG_STATE_HOME", filepath.Join(dir, "state"))
 	t.Setenv("LIMABEAN_AWS_DIR", "") // never mount the real ~/.aws
+	// A home of its own (doctor and init read ~/.ssh/config), and a fake
+	// ssh-add whose answer FAKE_SSH_ADD controls: 0 keys loaded, 1 none.
+	home := filepath.Join(dir, "home")
+	bin := filepath.Join(dir, "bin")
+	for _, d := range []string{filepath.Join(home, ".ssh"), bin} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(bin, "ssh-add"), []byte("#!/bin/sh\ncase ${FAKE_SSH_ADD:-0} in 0) echo '256 SHA256:x key (ED25519)';; *) exit $FAKE_SSH_ADD;; esac\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	return h
 }
 
 // run executes limabean with args and stdin, returning its output.
 func (h *harness) run(stdin string, args ...string) (string, error) {
 	h.t.Helper()
-	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
 	var out bytes.Buffer
-	a.UI = ui.NewPlain(&out)
+	return h.runUI(ui.NewPlain(&out), &out, stdin, args...)
+}
+
+// runTTY executes limabean as if in a terminal, typing keys into its one form.
+func (h *harness) runTTY(keys []string, args ...string) (string, error) {
+	h.t.Helper()
+	return h.runForms([][]string{keys}, args...)
+}
+
+// runForms is runTTY for commands that show several forms: one key list each.
+func (h *harness) runForms(forms [][]string, args ...string) (string, error) {
+	h.t.Helper()
+	var out bytes.Buffer
+	readers := make([]io.Reader, len(forms))
+	for i, keys := range forms {
+		readers[i] = ui.Keys(keys...)
+	}
+	return h.runUI(ui.NewTerminalForms(&out, readers...), &out, "", args...)
+}
+
+func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...string) (string, error) {
+	h.t.Helper()
+	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
+	a.UI = u
+	a.execSSH = func(inst lima.Instance, command ...string) error {
+		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))
+		return nil
+	}
+	a.attachSSH = func(inst lima.Instance, command ...string) error {
+		h.world.calls = append(h.world.calls, "attach ssh "+inst.Name+" "+strings.Join(command, " "))
+		return nil
+	}
 	a.Lima = &lima.Client{Runner: h.world}
 	a.Keychain = h.world
 	a.Claude = claude.Settings{Path: h.claude}
@@ -154,10 +218,20 @@ func (h *harness) run(stdin string, args ...string) (string, error) {
 	root := NewRootCmd(a)
 	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
 	root.SetIn(strings.NewReader(stdin))
-	root.SetOut(&out)
-	root.SetErr(&out)
+	root.SetOut(out)
+	root.SetErr(out)
 	err := root.ExecuteContext(context.Background())
 	return out.String(), err
+}
+
+// called reports whether any recorded call starts with prefix.
+func (w *fakeWorld) called(prefix string) bool {
+	for _, c := range w.calls {
+		if strings.HasPrefix(c, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *harness) must(stdin string, args ...string) string {

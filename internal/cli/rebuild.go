@@ -30,7 +30,7 @@ in a terminal, asks you to confirm. --force skips both.`,
   # No checks, no questions
   limabean rebuild dev --force`,
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			name, err := a.vmArg(ctx, args, "rebuild")

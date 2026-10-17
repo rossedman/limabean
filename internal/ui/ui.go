@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -43,6 +44,11 @@ type UI struct {
 	Interactive bool
 	// Prompting: Interactive, and input is a terminal too.
 	Prompting bool
+	// FormTimeout, when set, fails a form that isn't finished in time
+	// (tests use it so a wrong key sequence fails instead of hanging).
+	FormTimeout time.Duration
+	// forms, when set, gives each form its own input, in order (tests).
+	forms []io.Reader
 
 	r *lipgloss.Renderer
 }
@@ -62,6 +68,21 @@ func New(plain bool) *UI {
 // NewPlain returns a plain UI writing to out, for tests.
 func NewPlain(out io.Writer) *UI {
 	return &UI{Out: out, Err: out, In: strings.NewReader(""), r: lipgloss.NewRenderer(io.Discard)}
+}
+
+// NewTerminal returns an interactive UI reading keys from in and writing to
+// out, as if both were a terminal; for driving forms in tests (see Keys).
+func NewTerminal(in io.Reader, out io.Writer) *UI {
+	return &UI{Out: out, Err: out, In: in, Interactive: true, Prompting: true, FormTimeout: 10 * time.Second, r: lipgloss.NewRenderer(out)}
+}
+
+// NewTerminalForms is NewTerminal with one input per form, in the order the
+// forms appear. A command that shows several forms in a row needs this: each
+// form's reader may read ahead, and keys it took are lost when it closes.
+func NewTerminalForms(out io.Writer, forms ...io.Reader) *UI {
+	u := NewTerminal(strings.NewReader(""), out)
+	u.forms = forms
+	return u
 }
 
 func (u *UI) style() lipgloss.Style { return u.r.NewStyle() }
@@ -200,7 +221,15 @@ func Theme() *huh.Theme {
 
 // Run shows a huh form (only call it when Prompting).
 func (u *UI) Run(groups ...*huh.Group) error {
-	err := huh.NewForm(groups...).WithTheme(Theme()).WithShowHelp(true).Run()
+	in := u.In
+	if len(u.forms) > 0 {
+		in, u.forms = u.forms[0], u.forms[1:]
+	}
+	form := huh.NewForm(groups...).WithTheme(Theme()).WithShowHelp(true).WithInput(in).WithOutput(u.Out)
+	if u.FormTimeout > 0 {
+		form = form.WithTimeout(u.FormTimeout)
+	}
+	err := form.Run()
 	if errors.Is(err, huh.ErrUserAborted) {
 		return ErrAborted
 	}

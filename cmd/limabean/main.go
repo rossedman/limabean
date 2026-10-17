@@ -14,7 +14,7 @@ import (
 var version = ""
 
 func main() {
-	os.Exit(cli.Execute(resolveVersion(), limabean.Templates))
+	os.Exit(cli.Execute(resolveVersion(), limabean.Templates, os.Args[1:]))
 }
 
 // resolveVersion falls back to the module version for `go install` builds.

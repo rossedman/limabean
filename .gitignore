@@ -34,3 +34,6 @@ go.work.sum
 
 # goreleaser output
 dist/
+
+# go test -coverprofile
+coverage.out

@@ -402,12 +402,17 @@ func attach(inst lima.Instance, command ...string) error {
 	return cmd.Run()
 }
 
-// completeVMs tab-completes the first argument with VM names.
-func completeVMs(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+// completeVMs tab-completes the first argument with VM names. It runs
+// before setup, so it makes its own Lima client unless one is set.
+func (a *App) completeVMs(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	list, err := lima.New().Limabean(context.Background())
+	client := a.Lima
+	if client == nil {
+		client = lima.New()
+	}
+	list, err := client.Limabean(context.Background())
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

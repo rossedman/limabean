@@ -19,7 +19,7 @@ Leave out the name to pick a VM from a list.`,
   # Pick the VM from a list
   limabean stop`,
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			name, err := a.vmArg(ctx, args, "stop")
