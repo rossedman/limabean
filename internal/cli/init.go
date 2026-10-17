@@ -41,9 +41,10 @@ suggested values are saved and the SSH config isn't changed.`,
 			_, tokenErr := a.Keychain.Get(a.githubService())
 
 			if a.UI.Prompting {
+				a.UI.Banner(a.Version, "Let's set up your Mac. Press enter to keep a suggestion.")
 				fields := []huh.Field{
-					huh.NewNote().Title("limabean setup").
-						Description("Saved to " + shortPath(cfg.Path) + ". Press enter to keep a suggestion."),
+					huh.NewNote().Title("Setup").
+						Description("Saved to " + shortPath(cfg.Path) + "."),
 					huh.NewInput().Title("Host directory with your git config").
 						Description("Mounted read-only into every VM.").Value(&cfg.GitConfigDir),
 					huh.NewInput().Title("Where repositories go inside VMs").
