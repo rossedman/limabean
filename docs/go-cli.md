@@ -67,7 +67,9 @@ its `dotenv` format, so configs written by the bash `init` keep working.
 | `GIT_CONFIG_DIR` | `~/.config/git` | | `LIMABEAN_GIT_CONFIG_DIR` |
 | `CODE_DIR` | `~/code` | | `LIMABEAN_CODE_DIR` |
 | `CODE_DISK` | `50` (GiB) | | `LIMABEAN_CODE_DISK` |
-| `CPUS` / `MEMORY` | template defaults | `--cpus` / `--memory` on `new` | `LIMABEAN_CPUS` / `LIMABEAN_MEMORY` |
+| `CPUS` / `MEMORY` / `DISK` | template defaults (2, 4 GiB, 10 GiB) | `--cpus` / `--memory` / `--disk` on `new` | `LIMABEAN_CPUS` / `LIMABEAN_MEMORY` / `LIMABEAN_DISK` |
+| `PACKS` | `go,python,node,kubernetes,infra,containers,db` | `--with` / `--without` on `new` | `LIMABEAN_PACKS` |
+| `IMAGES` | `yes` | | `LIMABEAN_IMAGES` |
 | `CLAUDE_DESKTOP` | `yes` | | `LIMABEAN_CLAUDE_DESKTOP` |
 | `AWS_DIR` | `~/.aws` | | `LIMABEAN_AWS_DIR` |
 | `IDE` | `code` | `--ide` on `code` | `LIMABEAN_IDE` |

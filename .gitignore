@@ -40,3 +40,7 @@ coverage.out
 
 # mkdocs build output
 /site/
+
+# Claude Code: personal settings stay local
+.claude/settings.local.json
+CLAUDE.local.md
