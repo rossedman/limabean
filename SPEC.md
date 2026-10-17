@@ -151,6 +151,13 @@ it) that wraps `limactl`. The README has the command reference. Design points:
 - **The environment is remembered** in `~/.local/state/limabean/<name>.env`, so
   `rebuild` recreates from the same template. `ls` shows only VMs built from
   these templates (their `lima.yaml` references `/etc/limabean/mise/`).
+- **Claude Desktop registration.** `new` adds an entry to `sshConfigs` in
+  `~/.claude/settings.json` (documented: users may set it in their own settings
+  file) with `sshHost: lima-<name>`. `rm` removes it, and `claude sync`
+  reconciles. Only ids prefixed `limabean-` are touched. Edits use `jq`, are
+  skipped if the file isn't valid JSON, and are written in place so file modes
+  and symlinks survive. Desktop installs Claude Code on the VM itself, so
+  nothing Claude-specific is provisioned.
 - **Templates are found next to the script** (symlinks resolved), so it can be
   symlinked onto PATH from a checkout.
 
@@ -163,9 +170,9 @@ over SSH, using the `lima-<name>` aliases that `~/.ssh/config` already includes
 from `~/.lima/*/ssh.config`. Because Lima regenerates that file on every start,
 the alias keeps working when the VM's SSH port changes.
 
-- **Connecting.** In the Claude desktop app, add an SSH connection to host
-  `lima-<name>` (for example `lima-scratch`) and point it at a directory under
-  `~/code`.
+- **Connecting.** `limabean new` registers the VM in Claude Desktop (see
+  *Wrapper CLI*). It appears as `<name> (limabean)` under SSH in the
+  environment dropdown, and connects to the `lima-<name>` alias.
 - **What the VM must provide:** a working SSH login, plus the toolchain on
   PATH for non-interactive commands. `mise.sh` handles PATH; Lima handles SSH.
 - **Git push from the VM.** See *Git and SSH keys* below.

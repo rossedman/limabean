@@ -121,6 +121,7 @@ It should greet you by your GitHub username.
 | `limabean stop <name>` | Stops a VM |
 | `limabean rebuild <name>` | Deletes and recreates the VM from the current templates, with the same environment |
 | `limabean rm <name>` | Deletes a VM |
+| `limabean claude sync` | Adds every VM to Claude Desktop as an SSH connection and removes entries for deleted VMs |
 
 **Your work is protected.** `rm` and `rebuild` first look at every git
 repository under `~/code` in the VM. They refuse to run if any repository has
@@ -134,6 +135,7 @@ GIT_CONFIG_DIR="~/.dotfiles/git"   # host directory mounted read-only into VMs
 CODE_DIR="~/code"                  # where ghq clones inside VMs
 CPUS=""                            # empty: template default (4)
 MEMORY=""                          # GiB; empty: template default (8)
+CLAUDE_DESKTOP="yes"               # add VMs to Claude Desktop as SSH connections
 ```
 
 Changes apply to VMs created afterwards, or to existing ones after
@@ -142,10 +144,26 @@ always use `limactl` directly.
 
 ## Connecting Claude
 
-Nothing Claude-specific runs inside the VM. In the Claude desktop app, add an
-SSH connection to host `lima-<name>` (for example `lima-scratch`) and open a
-directory under `~/code` in the VM. Commands Claude runs there use the VM's
-tools and can't touch files on your Mac.
+`limabean new` adds every VM to the Claude desktop app as an SSH connection,
+and `limabean rm` removes it. In the prompt box's environment dropdown, pick
+**SSH → `<name> (limabean)`**, then open a directory under `~/code` in the VM.
+Commands Claude runs there use the VM's tools and can't touch files on your
+Mac.
+
+How it works: Claude Desktop reads connections from the `sshConfigs` list in
+`~/.claude/settings.json` ([docs](https://code.claude.com/docs/en/desktop)).
+limabean adds an entry per VM whose `sshHost` is the `lima-<name>` alias from
+your SSH config, and only ever touches entries with ids starting `limabean-`.
+Your other settings are left alone, and the file isn't changed if it isn't
+valid JSON. Editing it needs `jq` (`brew install jq`).
+
+- VMs created before this feature, or out of sync: `limabean claude sync`
+  adds every VM and removes entries for deleted ones.
+- Restart Claude Desktop if a new VM doesn't show up in the dropdown.
+- Claude Desktop installs its own copy of Claude Code in the VM on first
+  connect, under `~/.claude/remote/` (about 1 GB). Nothing needs to be
+  provisioned for it.
+- To turn this off, set `CLAUDE_DESKTOP="no"` in `~/.config/limabean/config`.
 
 ## What's in a VM
 
