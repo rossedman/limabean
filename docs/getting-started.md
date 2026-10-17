@@ -2,18 +2,33 @@
 
 ## Install
 
-limabean needs macOS, [Lima](https://lima-vm.io) 2.0 or newer,
-[gum](https://github.com/charmbracelet/gum) for its interface, and `jq` (for
-Claude Desktop integration). If gum is missing, limabean offers to install it.
+limabean needs macOS and [Lima](https://lima-vm.io) 2.0 or newer:
 
 ```bash
-brew install lima gum jq
-git clone https://github.com/rossedman/limabean ~/code/github.com/rossedman/limabean
-ln -s ~/code/github.com/rossedman/limabean/bin/limabean ~/.local/bin/limabean   # any directory on your PATH
+brew install lima
 ```
 
-`limabean` is a single bash script. It finds the templates next to itself, so
-keep the symlink pointing into the clone.
+limabean itself is a single binary with the VM templates built in. Install it
+in one of two ways.
+
+**From a release.** The download works on Apple Silicon and Intel:
+
+```bash
+# download limabean_<version>_darwin_universal.tar.gz from
+# https://github.com/rossedman/limabean/releases, then:
+tar -xzf limabean_*_darwin_universal.tar.gz limabean
+xattr -d com.apple.quarantine limabean 2>/dev/null   # downloaded binaries are quarantined by macOS
+mv limabean ~/.local/bin/                            # any directory on your PATH
+```
+
+**With Go:**
+
+```bash
+go install github.com/rossedman/limabean/cmd/limabean@latest
+```
+
+For tab completion in zsh: `limabean completion zsh > "${fpath[1]}/_limabean"`.
+`limabean completion --help` covers other shells.
 
 ## Set up
 

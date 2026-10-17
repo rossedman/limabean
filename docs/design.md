@@ -59,7 +59,7 @@ templates/
   files/              # static files written into the VM (zshrc, env.sh, editorconfig)
   mise/               # tool versions; base.toml + one per environment
     base.toml  go.toml  python.toml
-bin/limabean          # thin wrapper CLI (milestone 3)
+cmd/, internal/         the limabean CLI (Go; see go-cli.md)
 ```
 
 Everything sits under `templates/` because Lima rejects relative paths that
@@ -136,34 +136,25 @@ apply a Linux-safe subset in a
 `features/dotfiles.sh` script. This needs D3 (shell config portability) to be
 settled first.
 
-## Wrapper CLI: `bin/limabean`
+## The CLI
 
-A single bash script (bash 3.2-compatible, so macOS's stock `/bin/bash` runs
-it) that wraps `limactl`. [cli.md](cli.md) has the command reference. Design points:
+`limabean` started as a bash script and is now a Go binary built with Cobra
+and Viper. It drives `limactl`, embeds the templates, and adds secrets with a
+creation form. Its design is in [go-cli.md](go-cli.md); the behaviors below
+carried over unchanged:
 
-- **Config file instead of Lima params.** `~/.config/limabean/config` (sourced
-  shell: `GIT_CONFIG_DIR`, `CODE_DIR`, `CPUS`, `MEMORY`) is passed to
-  `limactl start` as `--param`/`--cpus`/`--memory`. It replaces Lima's
-  `override.yaml`, which can't set mount paths.
+- **Config file** (`~/.config/limabean/config`, `KEY="value"`) instead of
+  Lima's `override.yaml`, which can't set mount paths.
 - **`doctor` turns silent failures into explicit ones**: a missing or
-  misplaced `Include` (inside a `Host`/`Match` block it doesn't apply), an
-  empty ssh-agent, and a missing git config.
-- **`rm`/`rebuild` guard unsaved work.** Over SSH, every git repo under
-  `CODE_DIR` is checked for uncommitted changes, stashes and commits on no
-  remote (`git log --branches --not --remotes`). `--force` skips the check.
-- **The environment is remembered** in `~/.local/state/limabean/<name>.env`, so
-  `rebuild` recreates from the same template. `ls` shows only VMs built from
-  these templates (their `lima.yaml` references `/etc/limabean/mise/`).
-- **Claude Desktop registration.** `new` adds an entry to `sshConfigs` in
-  `~/.claude/settings.json` (documented: users may set it in their own settings
-  file) with `sshHost: lima-<name>`. `rm` removes it (also for a VM already
-  deleted with `limactl delete`), `ls` and `new` prune entries for VMs that no
-  longer exist, and `claude sync` reconciles. Only ids prefixed `limabean-` are touched. Edits use `jq`, are
-  skipped if the file isn't valid JSON, and are written in place so file modes
-  and symlinks survive. Desktop installs Claude Code on the VM itself, so
-  nothing Claude-specific is provisioned.
-- **Templates are found next to the script** (symlinks resolved), so it can be
-  symlinked onto PATH from a checkout.
+  misplaced `Include`, an empty ssh-agent, a missing git config, broken
+  secret references.
+- **`rm` and `rebuild` guard unsaved work** in `~/code` (uncommitted changes,
+  stashes, commits on no remote). `--force` skips the check.
+- **Claude Desktop registration** in `~/.claude/settings.json` `sshConfigs`,
+  touching only `limabean-` ids, keeping other keys and their order, leaving
+  invalid JSON alone, and writing in place so symlinks survive.
+- **The environment is remembered** in `~/.local/state/limabean/<name>.env`,
+  so `rebuild` recreates from the same template.
 
 `rebuild` is the main maintenance path: change a template, rebuild, done.
 
@@ -253,13 +244,10 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   from the Mac over a forwarded socket was considered and rejected: any
   process in the VM could still request it, so it adds moving parts without
   real protection.
-- **D8 Interface. Decided: gum, with a plain fallback.** In a terminal,
-  `limabean` uses gum for spinners (Lima's logs are shown only on failure),
-  prompts, VM pickers, confirmations and tables. Status lines use the README
-  palette as 24-bit escape codes rather than a `gum style` process per line.
-  Without a terminal, or with `LIMABEAN_PLAIN=1`, output is plain and nothing
-  prompts, so scripts and CI keep working. gum is required in a terminal, and
-  limabean offers to install it with Homebrew.
+- **D8 Interface. Superseded by D11.** The bash CLI used gum, with a plain
+  fallback. The Go CLI keeps the same behavior (spinners, pickers, forms,
+  confirmations, tables; plain text and no prompts without a terminal or with
+  `--plain`) using Charm's Go libraries, so gum is no longer needed.
 - **D9 GitHub push transport. Decided: https with the token when one is
   installed, SSH otherwise.** Claude Desktop's helper in the VM runs without
   `SSH_AUTH_SOCK`, so SSH pushes can't work in Claude sessions.
@@ -271,6 +259,20 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   commands on the Mac. Read-only means SSO logins happen on the Mac. limabean
   adds the mount at creation (`--set .mounts += …`) only when the directory
   exists, so the templates stay host-independent.
+- **D11 CLI language. Decided: Go, driving `limactl`.** Bash had reached its
+  limits: bash 3.2 compatibility, quoting, a SIGPIPE false negative, and no
+  good way to build a secrets form. The Go CLI uses Cobra and Viper, one
+  command per file, with every command's help enforced by a test. It uses
+  huh and lipgloss for the interface, embeds the templates, and ships as one
+  universal binary built with GoReleaser. It doesn't import Lima's Go
+  packages, which make no promise of a stable API; `limactl` and
+  `limactl list --format json` are the boundary.
+- **D12 Secrets. Decided: references on the Mac, values only in VMs.**
+  `secrets.env` and `secrets.<vm>.env` hold `NAME=reference` lines
+  (`keychain:`, `op://`, `env:`, `cmd:` or a plain value). `secrets sync`
+  resolves them on the Mac and writes `export` lines (mode 600) into each VM.
+  The GitHub token is one of these secrets. Values never reach argv or a Lima
+  template.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 
@@ -292,7 +294,7 @@ heavy extras most VMs don't need.
 1. ✅ `layer-os.yaml` + `layer-base.yaml` + the `apt-common`, `mise`, `git` and
    `docker`/`shell` features, plus the global editorconfig. `scratch` boots, and `ssh lima-scratch` has every tool.
 2. A second environment, to exercise per-environment mise TOML files.
-3. ✅ `bin/limabean`: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
+3. ✅ The CLI: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
    `rebuild` and `rm`, with the unsaved-work guard.
 4. Dotfiles (`features/dotfiles.sh`). Code-location option C (persistent
    disk) if rebuilds become painful.

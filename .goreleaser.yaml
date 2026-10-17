@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Builds and releases limabean. Releases run from .github/workflows/release.yml
+# when a v* tag is pushed; pull requests get snapshot builds from
+# .github/workflows/snapshot.yml. Locally: goreleaser release --snapshot --clean
+version: 2
+
+project_name: limabean
+
+builds:
+  - id: limabean
+    main: ./cmd/limabean
+    binary: limabean
+    env:
+      - CGO_ENABLED=0
+    # macOS only: limabean uses the Keychain and Claude Desktop for Mac.
+    goos: [darwin]
+    goarch: [arm64, amd64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+# One binary for Apple Silicon and Intel Macs.
+universal_binaries:
+  - id: limabean
+    replace: true
+
+archives:
+  - id: limabean
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_darwin_universal"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge "
+
+release:
+  github:
+    owner: rossedman
+    name: limabean
+  prerelease: auto
+  footer: |
+    ## Install
+
+    ```bash
+    curl -fsSL https://github.com/rossedman/limabean/releases/download/{{ .Tag }}/limabean_{{ .Version }}_darwin_universal.tar.gz | tar -xz limabean
+    xattr -d com.apple.quarantine limabean 2>/dev/null; mv limabean ~/.local/bin/
+    ```
+
+    Or with Go: `go install github.com/rossedman/limabean/cmd/limabean@{{ .Tag }}`

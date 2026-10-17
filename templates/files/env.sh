@@ -20,11 +20,12 @@ for d in "$HOME/.local/share/mise/shims" "$PYTHONUSERBASE/bin" "$GOBIN"; do
 done
 export PATH
 
-# GitHub token copied in by `limabean github` (see docs/github.md). gh, git
-# over https, mise and other tools read GITHUB_TOKEN. `read` keeps shell
-# startup free of extra processes.
-if [ -r "$HOME/.config/limabean/github-token" ]; then
-  read -r GITHUB_TOKEN < "$HOME/.config/limabean/github-token" && export GITHUB_TOKEN
+# Secrets from `limabean secrets` and `limabean github`: export lines written
+# by `limabean secrets sync` (mode 600). The references they came from stay on
+# the Mac; see docs/secrets.md.
+if [ -r "$HOME/.config/limabean/secrets.env" ]; then
+  # shellcheck source=/dev/null
+  . "$HOME/.config/limabean/secrets.env"
 fi
 
 export EDITOR=vim

@@ -74,10 +74,15 @@ needs **Contents: read and write** on a repository to push to it.
 - **On the Mac**, the token is a Keychain item named `limabean-github-token`.
   It's passed to `security` and `ssh` on stdin, so it never appears in a
   process list. It doesn't depend on your host `gh` login.
-- **In the VM**, it's written to `~/.config/limabean/github-token` (mode 600).
-  [`env.sh`](../templates/files/env.sh) exports it as `GITHUB_TOKEN` in every
-  shell, interactive or not. gh uses `GITHUB_TOKEN` automatically, and git uses
-  gh as its credential helper for `https://github.com`.
+- **It's a secret like any other.** `login` adds
+  `GITHUB_TOKEN=keychain:limabean-github-token` to the shared
+  [secrets](secrets.md) file, so `secrets sync` installs it with the rest.
+  `logout` removes that line. To give one VM a different token, set
+  `GITHUB_TOKEN` in its own file: `limabean secrets set GITHUB_TOKEN --vm <name>`.
+- **In the VM**, it arrives in `~/.config/limabean/secrets.env` (mode 600),
+  which [`env.sh`](../templates/files/env.sh) loads in every shell. gh uses
+  `GITHUB_TOKEN` automatically, and git uses gh as its credential helper for
+  `https://github.com`.
 - **Never in a template.** Lima keeps templates in plain text under `~/.lima`,
   so the token is copied in after the VM boots. Provisioning on first boot
   therefore runs without it.
