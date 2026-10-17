@@ -1,0 +1,4 @@
+# Throwaway sandbox: the base layer and nothing else.
+#   limactl start --name=scratch templates/scratch.yaml
+base:
+- ./layer-base.yaml

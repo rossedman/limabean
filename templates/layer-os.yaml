@@ -1,0 +1,27 @@
+# Layer 1: operating system and VM shape. No host mounts: code lives in the VM.
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-24.04
+
+vmType: vz
+cpus: 4
+memory: 8GiB
+disk: 50GiB
+
+user:
+  # zsh from the moment the account exists. Changing the shell later doesn't
+  # reach sessions: Lima's SSH connection is persistent and keeps the shell it
+  # saw at login. Installed by features/zsh-install.sh (dependency mode),
+  # before the first login.
+  shell: /usr/bin/zsh
+
+ssh:
+  # Use the Mac's ssh-agent for git push; keys never enter the VM.
+  forwardAgent: true
+
+# Containers: Lima installs and manages containerd + nerdctl + BuildKit,
+# rootless. features/nerdctl.sh makes `docker` an alias for nerdctl.
+containerd:
+  system: false
+  user: true

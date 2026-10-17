@@ -1,0 +1,66 @@
+# Layer 2: everything every environment gets.
+# Environments add tools by shipping a mise TOML to /etc/limabean/mise/
+# (see scratch.yaml / go.yaml); features/mise.sh installs whatever is there.
+base:
+- ./layer-os.yaml
+
+param:
+  # Host directory with your git config, mounted read-only into every VM.
+  # The default is git's own XDG location. If yours lives elsewhere (for
+  # example a dotfiles repo), override it; see README.md.
+  gitConfigDir: "~/.config/git"
+  # Where ghq clones repositories inside the VM, e.g.
+  # ~/code/github.com/<owner>/<repo>.
+  codeDir: "~/code"
+
+mounts:
+- location: "{{.Param.gitConfigDir}}"
+  mountPoint: /mnt/host/git
+  writable: false
+
+provision:
+- mode: dependency
+  file: ./features/zsh-install.sh
+- mode: system
+  file: ./features/apt-common.sh
+- mode: data
+  path: /etc/limabean/mise/00-base.toml
+  file: ./mise/base.toml
+- mode: data
+  path: "{{.Home}}/.editorconfig"
+  file: ./files/editorconfig
+  owner: "{{.User}}:{{.User}}"
+- mode: data
+  path: "{{.Home}}/.config/limabean/env.sh"
+  file: ./files/env.sh
+  owner: "{{.User}}:{{.User}}"
+- mode: data
+  path: "{{.Home}}/.zshrc"
+  file: ./files/zshrc
+  owner: "{{.User}}:{{.User}}"
+- mode: data
+  path: "{{.Home}}/.zshenv"
+  content: |
+    . "$HOME/.config/limabean/env.sh"
+  owner: "{{.User}}:{{.User}}"
+- mode: user
+  file: ./features/mise.sh
+- mode: user
+  file: ./features/completions.sh
+- mode: user
+  file: ./features/git.sh
+- mode: user
+  file: ./features/nerdctl.sh
+- mode: user
+  file: ./features/shell.sh
+
+probes:
+- description: mise tools are installed
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 600s bash -c 'until test -f ~/.local/state/limabean/mise.done; do sleep 5; done'; then
+      echo >&2 "mise tools are not installed yet"
+      exit 1
+    fi
+  hint: Check /var/log/cloud-init-output.log inside the VM.
