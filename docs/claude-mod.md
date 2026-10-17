@@ -12,6 +12,21 @@ limabean ships a mod for Claude Code: a plugin that knows where Claude runs.
   (`/limabean`), and toasts what changed behind your back: a VM autostop
   stopped, an expired `--ttl` VM, a new image.
 
+## Requirements
+
+A recent Claude Code: mods are an early-access feature, and this one is
+built and tested against **Claude Code 2.1.302**. Older versions can't load
+it, and lack `/plugin configure` (older than 2.1.275, marketplace installs
+don't work in one step either). Check and update with:
+
+```bash
+claude --version
+claude update        # or: brew upgrade --cask claude-code, or npm install -g @anthropic-ai/claude-code@latest
+```
+
+VMs with the [`claude` pack](packs.md#claude-code-in-a-vm) have a version
+that runs it.
+
 ## In a VM: nothing to install
 
 Every VM has the mod at `/usr/local/share/limabean/claude/limabean`, and
