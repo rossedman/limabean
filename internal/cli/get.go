@@ -28,7 +28,7 @@ repositories need unless a GitHub token is installed (limabean github login).`,
 
   # Pick the VM from a list
   limabean get acme/private-repo -p`,
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			var name string
@@ -52,7 +52,7 @@ repositories need unless a GitHub token is installed (limabean github login).`,
 			if inst, err = a.ensureRunning(ctx, inst); err != nil {
 				return err
 			}
-			return attach(inst, append([]string{"ghq", "get"}, flagsFirst(ghqArgs)...)...)
+			return a.attachSSH(inst, append([]string{"ghq", "get"}, flagsFirst(ghqArgs)...)...)
 		},
 	}
 	cmd.Flags().SetInterspersed(false)

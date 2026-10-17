@@ -2,8 +2,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-
-	"github.com/rossedman/limabean/internal/lima"
 )
 
 func newSSHCmd(a *App) *cobra.Command {
@@ -29,7 +27,7 @@ doesn't include Lima's host entries.`,
   # Run one command
   limabean ssh dev docker ps -a
   limabean ssh dev -- ls -la ~/code`,
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			name, err := a.vmArg(ctx, args, "open")
@@ -47,7 +45,7 @@ doesn't include Lima's host entries.`,
 			if inst, err = a.ensureRunning(ctx, inst); err != nil {
 				return err
 			}
-			return lima.Exec(inst, command...)
+			return a.execSSH(inst, command...)
 		},
 	}
 	// Flags after the VM name belong to the remote command.

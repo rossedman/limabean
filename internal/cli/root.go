@@ -78,10 +78,12 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 	return root
 }
 
-// Execute runs limabean and returns the process exit code.
-func Execute(version string, embedded fs.FS) int {
+// Execute runs limabean with args (os.Args[1:]) and returns the process exit
+// code.
+func Execute(version string, embedded fs.FS, args []string) int {
 	a := NewApp(version, embedded)
 	root := NewRootCmd(a)
+	root.SetArgs(args)
 	err := root.ExecuteContext(context.Background())
 	switch {
 	case err == nil:

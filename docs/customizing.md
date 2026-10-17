@@ -47,13 +47,19 @@ limabean --templates ./templates rebuild dev
 ## Checks
 
 CI ([`lint.yml`](../.github/workflows/lint.yml)) runs gofmt, `go vet`,
-`go test`, `shellcheck` on the provisioning scripts, `limactl tmpl validate`
-on each environment template, and `goreleaser check`. Locally:
+`go test` (failing if total coverage drops below 90%), `shellcheck` on the
+provisioning scripts, `limactl tmpl validate` on each environment template,
+and `goreleaser check`. Locally:
 
 ```bash
 go test ./... && go vet ./...
+go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -1
 LIMABEAN_TEST_KEYCHAIN=1 go test ./internal/keychain/   # also tests against your login Keychain
 ```
+
+Command tests run every command against a fake Lima, Keychain and GitHub API.
+Forms are driven with keystrokes: `ui.NewTerminalForms` gives each form its
+own `ui.Keys(…)` input.
 
 ## Building and releasing
 

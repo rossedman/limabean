@@ -200,19 +200,44 @@ func (a *App) installSecrets(ctx context.Context, inst lima.Instance) (int, erro
 			a.UI.Bad("%s (%s): %v", s.Name, s.Source, err)
 		}
 	}
-	// One remote command writes the file atomically with mode 600, removes the
-	// bash version's token file, and switches git's GitHub transport to match.
-	script := `umask 077 && mkdir -p ~/.config/limabean &&
-cat > ~/.config/limabean/secrets.env.new && mv ~/.config/limabean/secrets.env.new ~/.config/limabean/secrets.env &&
-rm -f ~/.config/limabean/github-token &&
-{ ! command -v limabean-github-git >/dev/null || limabean-github-git; }`
-	if _, err := a.Lima.Run(ctx, inst, strings.NewReader(secrets.Render(values)), script); err != nil {
+	// Secrets that couldn't be resolved keep the value the VM already has, so
+	// an env: reference doesn't vanish because one sync ran in a shell
+	// without the variable.
+	var keep []string
+	for _, s := range list {
+		if errs[s.Name] != nil {
+			keep = append(keep, s.Name)
+		}
+	}
+	if _, err := a.Lima.Run(ctx, inst, strings.NewReader(secrets.Render(values)), installScript(keep)); err != nil {
 		return 0, fmt.Errorf("writing secrets to %s: %w", inst.Name, err)
+	}
+	if len(keep) > 0 {
+		a.UI.Hint(fmt.Sprintf("%s kept its current value of %s, if it had one.", inst.Name, strings.Join(keep, ", ")))
 	}
 	if len(errs) > 0 {
 		return len(values), fmt.Errorf("%d secret(s) couldn't be resolved", len(errs))
 	}
 	return len(values), nil
+}
+
+// installScript writes the VM's secrets file from stdin, atomically and
+// mode 600. Variables named in keep are carried over from the old file (they
+// couldn't be resolved this time). It also removes the bash version's token
+// file and switches git's GitHub transport to match the token's presence.
+// Names are validated identifiers, so they're safe to put in the script.
+func installScript(keep []string) string {
+	return `umask 077 && mkdir -p ~/.config/limabean && f=~/.config/limabean/secrets.env &&
+cat > "$f.new" &&
+for n in ` + strings.Join(keep, " ") + `; do
+  ( [ -r "$f" ] && . "$f" >/dev/null 2>&1
+    eval "[ -n \"\${$n+x}\" ]" || exit 0
+    eval "v=\$$n"
+    printf "export %s='%s'\n" "$n" "$(printf '%s' "$v" | sed "s/'/'\\\\''/g")" ) >> "$f.new"
+done &&
+mv "$f.new" "$f" &&
+rm -f ~/.config/limabean/github-token &&
+{ ! command -v limabean-github-git >/dev/null || limabean-github-git; }`
 }
 
 // syncSecrets installs secrets into one VM (starting it if needed) or, with
@@ -377,12 +402,17 @@ func attach(inst lima.Instance, command ...string) error {
 	return cmd.Run()
 }
 
-// completeVMs tab-completes the first argument with VM names.
-func completeVMs(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+// completeVMs tab-completes the first argument with VM names. It runs
+// before setup, so it makes its own Lima client unless one is set.
+func (a *App) completeVMs(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	list, err := lima.New().Limabean(context.Background())
+	client := a.Lima
+	if client == nil {
+		client = lima.New()
+	}
+	list, err := client.Limabean(context.Background())
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

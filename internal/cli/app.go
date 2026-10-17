@@ -47,6 +47,10 @@ type App struct {
 	// Embedded templates; tests can replace them.
 	TemplatesFS fs.FS
 
+	// How `ssh` and `get` reach a VM's terminal; tests replace them.
+	execSSH   func(inst lima.Instance, command ...string) error
+	attachSSH func(inst lima.Instance, command ...string) error
+
 	// Persistent flags.
 	configPath   string
 	plain        bool
@@ -63,6 +67,8 @@ func NewApp(version string, embedded fs.FS) *App {
 		Version:     version,
 		V:           config.New(),
 		TemplatesFS: embedded,
+		execSSH:     lima.Exec,
+		attachSSH:   attach,
 	}
 }
 

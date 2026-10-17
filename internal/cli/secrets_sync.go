@@ -21,7 +21,7 @@ installed. Run it after rotating a token or editing a secrets file.`,
   # Just dev, starting it if needed
   limabean secrets sync dev`,
 		Args:              cobra.MaximumNArgs(1),
-		ValidArgsFunction: completeVMs,
+		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := ""
 			if len(args) > 0 {
