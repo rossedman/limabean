@@ -54,6 +54,8 @@ gh auth token --hostname github.com | limabean github login --with-token
 
 limabean new dev    # create a VM; a form asks which secrets it gets
 limabean ssh dev    # or: ssh lima-dev
+
+cd ~/src/myapp && limabean up   # the VM a repository's .limabean.yaml describes
 ```
 
 Prebuilt binaries for Apple Silicon and Intel are on the

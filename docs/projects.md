@@ -1,56 +1,213 @@
 # Projects: `.limabean.yaml`
 
-A repository can say what VM it needs in a `.limabean.yaml` file at its root.
-Then anyone with limabean gets the right VM with one command, from the
-checkout on their Mac:
+A repository can describe the VM it needs in a `.limabean.yaml` file
+(`.limabean.yml` works too) at its root: the tools, the size, what it may
+reach, which secrets it uses and how to set it up. Then anyone with
+limabean gets that VM, ready to work in, with one command from their
+checkout:
 
 ```bash
 cd ~/src/myapp
 limabean up
 ```
 
-`up` creates the VM the file describes, clones the repository into it and
-runs its setup. If the VM already exists, `up` starts it.
+## Your first project file
 
-## The file
-
-Every key is optional:
+Start small. This is enough for a Node app that serves on port 3000:
 
 ```yaml
 # .limabean.yaml
-name: myapp                 # the VM's name; default: the directory's name
-env: scratch                # environment template
-packs: [rust, claude]       # added to the default packs
-without: [kubernetes]       # default packs to leave out
-cpus: 6
-memory: 12                  # GiB
-disk: 30                    # GiB of system disk, for Docker images
-network:
-  allow: [github, npm]      # only these domains and presets
-  locked: true              # and nothing in the VM can change that
-secrets: [OPENAI_API_KEY]   # names only; values stay on your Mac
-ports: [3000]               # shown as http://localhost:<port> after up
-setup: |                    # run once in the clone, with bash -e
-  make deps
-  make db-migrate
+ports: [3000]
+setup: |
+  npm ci
 ```
 
-- **Packs** are the same as `new --with` and `--without`: see
-  [Packs](packs.md).
-- **Network** is the same as `new --allow` and `--locked`: see
-  [Sandboxes](network.md). To work out what to allow, create the VM once
-  with `limabean new <name> --learn`.
-- **Secrets** are names only. Each must already be set up on your Mac
-  (`limabean secrets ls`), for every VM or for another one; up gives the VM
-  those, plus your shared secrets as always, and says which names it
-  couldn't find.
-- **The repository** cloned is the checkout's `origin` remote. Set `repo:`
-  to clone something else.
-- **Setup** runs once, when up creates the VM, in the clone, as you. If it
-  fails, the VM is kept so you can look; fix the setup and run
-  `limabean rm <name> && limabean up` to start over.
+Run `limabean up` anywhere in the checkout. It finds the file here or in a
+parent directory, shows what it's about to do, and asks:
 
-Unknown keys are errors, so a typo doesn't go unnoticed.
+```
+myapp (from ~/src/myapp/.limabean.yaml)
+    environment: scratch
+    clone: github.com/acme/myapp
+    setup, run in the VM:
+      npm ci
+Create myapp? Yes
+```
+
+Then it:
+
+1. creates a VM named after the directory (`myapp`), with the default
+   [packs](packs.md) and your shared secrets;
+2. clones the checkout's `origin` into the VM, at
+   `~/code/github.com/acme/myapp`;
+3. runs `setup` there, once;
+4. prints how to reach it:
+
+```
+myapp is ready
+
+ssh lima-myapp     or: limabean ssh myapp
+limabean code myapp /home/you.linux/code/github.com/acme/myapp
+http://localhost:3000
+```
+
+The VM is a normal limabean VM: `limabean ssh myapp`, `limabean code myapp`,
+Claude Desktop and MCP all work with it. Commit the file so everyone on the
+project gets the same VM.
+
+## Every day
+
+`limabean up` is safe to run any time. If the VM exists, it only starts it
+(if it's stopped) and prints the same summary; nothing is created, cloned or
+set up again.
+
+```bash
+limabean up                      # start it, wherever you are in the checkout
+limabean ssh myapp               # a shell
+limabean code myapp              # VS Code or Cursor, over SSH
+limabean stop myapp              # or let autostop do it
+```
+
+## Changing the file
+
+The file is read when `up` creates the VM. A VM made before a change keeps
+what it had; to apply the change, make the VM again:
+
+```bash
+limabean rm myapp && limabean up
+```
+
+`rm` stops if a repository in the VM has unpushed work, so push first. The
+new VM clones the repository again and runs `setup` from scratch. To try
+other tools on the existing VM before changing the file, rebuild it with
+them: `limabean rebuild myapp --with rust` keeps `~/code`.
+
+## Reference
+
+Every key is optional.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `name` | string | the directory's name | The VM's name: letters, digits and dashes |
+| `env` | string | `scratch` | The [environment template](customizing.md) |
+| `repo` | string | the checkout's `origin` | What to clone: `owner/repo`, `host/owner/repo` or a URL |
+| `packs` | list | none | [Packs](packs.md) to add to the defaults (`PACKS`) |
+| `without` | list | none | Default packs to leave out |
+| `cpus` | number | `CPUS`, or 2 | CPUs |
+| `memory` | number | `MEMORY`, or 4 | GiB of memory |
+| `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
+| `network.allow` | list | open | Domains and presets the VM may reach ([sandboxes](network.md)) |
+| `network.locked` | bool | `false` | Take sudo and Docker away from the VM's user, so the allowlist holds |
+| `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
+| `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
+| `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
+
+Unknown keys, malformed names and out-of-range values are errors, so a typo
+doesn't go unnoticed. A complete file:
+
+```yaml
+# .limabean.yaml
+name: myapp
+env: scratch
+packs: [rust, claude]
+without: [kubernetes]
+cpus: 4
+memory: 8
+disk: 30
+network:
+  allow: [github, npm, rust]
+  locked: true
+secrets: [OPENAI_API_KEY, NPM_TOKEN]
+ports: [3000, 5173]
+setup: |
+  npm ci
+  cargo fetch
+```
+
+### Secrets
+
+The file names secrets; the values stay on each person's Mac. Set a secret
+up once, for this project's VM or for every VM, and `up` finds it:
+
+```bash
+limabean secrets set OPENAI_API_KEY op://Work/OpenAI/credential --vm myapp
+limabean up
+```
+
+`up` gives the VM the secrets it names that are set up on your Mac, for any
+VM, plus your shared secrets as always. It lists any it can't find, and
+creates the VM without them; add them later with
+`limabean secrets set NAME --vm myapp`, which installs them in the running
+VM.
+
+### Network
+
+With `network.allow`, the VM can only reach those domains, and that already
+applies when `setup` runs: allow whatever `setup` downloads from (`npm`,
+`python`, `go`, `rust`…), and `github` for the clone. If you don't know the
+list, find it out once:
+
+```bash
+limabean new trial --learn
+limabean ssh trial 'cd ~/code && git clone https://github.com/acme/myapp && cd myapp && npm ci'
+limabean network log trial          # everything it looked up
+```
+
+and put the domains in the file ([learn mode](network.md#learn-what-a-vm-needs)).
+
+`locked: true` also applies before `setup`, so `setup` can't use `sudo` or
+Docker. If it needs either, leave `locked` out and lock the VM afterwards
+with `limabean network lock myapp`.
+
+### Setup
+
+`setup` runs with `bash -e`, so it stops at the first failing command. It
+runs in the clone (in your home directory if nothing was cloned), as the
+VM's user, with your secrets in the environment. If it fails, `up` stops and
+keeps the VM so you can look: `limabean ssh myapp`. Fix the setup and start
+over with `limabean rm myapp && limabean up`.
+
+## Examples
+
+**A web app with a dev server**
+
+```yaml
+ports: [5173]
+setup: |
+  pnpm install
+```
+
+**A Go service with Postgres, run in Docker**
+
+```yaml
+disk: 30
+ports: [8080]
+setup: |
+  docker compose up -d db
+  go mod download
+  make migrate
+```
+
+**A sandbox for Claude Code**
+
+The [`claude` pack](packs.md#claude-code-in-a-vm), a network that only
+reaches GitHub, npm and Anthropic, and no sudo or Docker for anything inside:
+
+```yaml
+name: myapp-agent
+packs: [claude]
+network:
+  allow: [github, npm, claude]
+  locked: true
+secrets: [CLAUDE_CODE_OAUTH_TOKEN]
+setup: |
+  npm ci
+```
+
+```bash
+limabean up
+limabean ssh myapp-agent 'cd ~/code/github.com/acme/myapp && claude -p "fix the failing test"'
+```
 
 ## Trust
 
@@ -67,10 +224,18 @@ your shared secrets. So `up` never acts on it blindly:
 Read a file from someone else's repository before saying yes, as you would
 a `Makefile`.
 
+## Speed
+
+The first VM of a kind (its environment and packs) is provisioned from
+scratch, and an [image](lifecycle.md#fast-vms-images) of it is built in the
+background. After that, `up` for any project with the same packs only has
+to boot a copy. To have the image ready before the first `up`, build it:
+`limabean images build --with rust,claude`.
+
 ## Commands
 
 | Command | Does |
 |---|---|
-| `limabean up` | Creates the VM from `.limabean.yaml` here or in a parent directory, or starts it |
+| `limabean up` | Creates the VM from `.limabean.yaml` (or `.yml`) here or in a parent directory, or starts it |
 | `limabean up --yes` | The same without asking, for a file you trust |
 | `limabean up --file <path>` | Uses another file |

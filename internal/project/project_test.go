@@ -84,3 +84,15 @@ func TestLoadRejects(t *testing.T) {
 		t.Errorf("DefaultName: %q %q", DefaultName("/x/___"), DefaultName("/x/Foo.Bar"))
 	}
 }
+
+func TestFindYml(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".limabean.yml"), "cpus: 2\n")
+	if p, err := Find(dir); err != nil || filepath.Base(p) != ".limabean.yml" {
+		t.Fatalf("Find = %q, %v", p, err)
+	}
+	write(t, filepath.Join(dir, FileName), "cpus: 2\n")
+	if _, err := Find(dir); err == nil || !strings.Contains(err.Error(), "keep one") {
+		t.Errorf("both: %v", err)
+	}
+}

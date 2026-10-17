@@ -109,6 +109,16 @@ When something in the sandbox can't reach a host, Claude can see which name
 was blocked with `network_log`, and tell you; adding it is up to you
 (`limabean network allow triage <domain>`).
 
+## Claude Code inside a VM
+
+MCP lets Claude on your Mac drive VMs. To run an agent *inside* one
+instead, give the VM the [`claude` pack](packs.md#claude-code-in-a-vm) and a
+login secret, and lock it down: the agent works with the VM's tools and
+network, never your Mac's. Combine it with a [project file](projects.md)
+(`packs: [claude]`) or with
+[`limabean run --rm`](lifecycle.md#throwaway-vms) for a VM that's gone when
+the task is done.
+
 ## Tools
 
 | Tool | Does |

@@ -23,9 +23,10 @@ func newUpCmd(a *App) *cobra.Command {
 		Use:   "up",
 		Short: "Create or start the VM a repository's .limabean.yaml describes",
 		Long: `Bring up the VM for the project you're in. A repository describes the VM it
-needs in .limabean.yaml, here or in a parent directory; up creates that VM,
-clones the repository into it and runs its setup, or starts it if it
-already exists.
+needs in .limabean.yaml (or .limabean.yml), here or in a parent directory.
+up creates that VM, clones the repository into it and runs its setup, or
+starts it if it already exists. Changes to the file reach a VM made
+before them when it's made again: limabean rm <name> && limabean up.
 
   # .limabean.yaml
   name: myapp                 # default: the directory's name
@@ -34,7 +35,7 @@ already exists.
   without: [kubernetes]       # default packs to leave out
   cpus: 6
   memory: 12                  # GiB
-  disk: 30                    # GiB of system disk, for Docker images
+  disk: 30                    # GiB of system disk
   network:                    # see: limabean network --help
     allow: [github, npm]
     locked: true
@@ -101,13 +102,27 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
 	plan := []string{"environment: " + firstNonEmpty(f.Env, "scratch")}
 	if len(f.Packs) > 0 || len(f.Without) > 0 {
-		plan = append(plan, fmt.Sprintf("packs: defaults, plus [%s], without [%s]", strings.Join(f.Packs, ", "), strings.Join(f.Without, ", ")))
+		packs := "packs: the defaults"
+		if len(f.Packs) > 0 {
+			packs += ", plus " + strings.Join(f.Packs, ", ")
+		}
+		if len(f.Without) > 0 {
+			packs += ", without " + strings.Join(f.Without, ", ")
+		}
+		plan = append(plan, packs)
 	}
 	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
 		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
 	}
 	if len(f.Network.Allow) > 0 || f.Network.Locked {
-		plan = append(plan, fmt.Sprintf("network: only [%s], locked: %v", strings.Join(f.Network.Allow, ", "), f.Network.Locked))
+		network := "network: open"
+		if len(f.Network.Allow) > 0 {
+			network = "network: only " + strings.Join(f.Network.Allow, ", ")
+		}
+		if f.Network.Locked {
+			network += ", locked"
+		}
+		plan = append(plan, network)
 	}
 	if len(f.Secrets) > 0 {
 		plan = append(plan, "secrets: shared ones, plus "+strings.Join(f.Secrets, ", "))

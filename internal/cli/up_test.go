@@ -43,7 +43,7 @@ setup: |
 	if err == nil || !strings.Contains(err.Error(), "--yes") || len(h.world.vms) != 0 {
 		t.Fatalf("up without --yes: %v\n%s", err, out)
 	}
-	for _, want := range []string{"myapp", "clone: github.com/me/myapp", "make deps", "locked: true", "Not set up on this Mac, so the VM won't get them: MISSING"} {
+	for _, want := range []string{"myapp", "clone: github.com/me/myapp", "make deps", ", locked", "Not set up on this Mac, so the VM won't get them: MISSING"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("plan missing %q:\n%s", want, out)
 		}

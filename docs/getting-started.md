@@ -130,10 +130,28 @@ Then ask Claude to *"make a VM, clone owner/repo and run the tests"*. Setup
 for Claude Desktop, example prompts and what Claude can and can't do are in
 [Claude and MCP](mcp.md).
 
+## A VM for each project
+
+Put a `.limabean.yaml` in a repository to describe the VM it needs (its
+packs, size, network, secrets and setup), and `limabean up` in the checkout
+creates it, clones the repository and sets it up:
+
+```yaml
+# .limabean.yaml
+packs: [rust]
+ports: [3000]
+setup: |
+  make deps
+```
+
+See [Projects](projects.md).
+
 ## Next
 
 - [Claude and MCP](mcp.md): let Claude create and drive VMs
-- [Sandboxes](network.md): limit what a VM can reach, for agents
-- [Inside a VM](inside-a-vm.md): tools, Docker, shell, ports
-- [Rebuilds, snapshots and autostop](lifecycle.md)
+- [Projects](projects.md): `.limabean.yaml` and `limabean up`
+- [Packs](packs.md): Go, Node, Rust, Java, Ruby, Claude Code and more
+- [Sandboxes](network.md): limit what a VM can reach, and learn what it needs
+- [Rebuilds, clones and snapshots](lifecycle.md): fast images, throwaway VMs, autostop
+- [Inside a VM](inside-a-vm.md): tools, Docker, shell, ports, copying files
 - [The CLI](cli.md): every command and setting

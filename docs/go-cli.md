@@ -26,12 +26,16 @@ data.
 cmd/limabean/main.go       entry point: cli.Execute()
 internal/cli/              Cobra commands, one per file (root.go, new.go, ls.go,
                            secrets_set.go, …); groups (github, secrets, claude,
-                           network, snapshot, autostop) have a file for the
-                           parent and one per subcommand; mcp.go is the MCP
-                           server, which runs these commands in-process
+                           network, snapshot, autostop, images) have a file for
+                           the parent and one per subcommand; mcp.go is the MCP
+                           server, which runs these commands in-process;
+                           images.go builds and finds the images VMs are
+                           copied from
 internal/config/           Viper: config file, LIMABEAN_* environment, flags
 internal/lima/             limactl runner (list, start, stop, delete, disks, ssh)
 internal/pins/             pinned versions in mise TOML files, for bump
+internal/project/          .limabean.yaml: find, parse and check, for up
+internal/templates/        the templates directory, packs and environments
 internal/secrets/          reference files: parse, merge, resolve, render
 internal/keychain/         macOS Keychain via `security`, values on stdin
 internal/claude/           sshConfigs entries in ~/.claude/settings.json
