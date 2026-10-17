@@ -24,6 +24,10 @@ booted.
   replaced in the background, so copies never miss more than a week of
   updates. Any change to the templates or packs, a `limabean bump` or a
   pack of your own included, gives a new kind of image.
+- **Size is the VM's own.** A copy gets the VM's CPUs and memory, and its
+  disk grows on first boot when `DISK` or `--disk` asks for more than the
+  image's 10 GiB. A VM asking for a smaller disk than its image is
+  provisioned from scratch, as Lima can't shrink a disk.
 - **Images are hidden** from `limabean ls`. `limabean images ls` lists them;
   `autostop run` and `limabean images prune` delete outdated ones and ones
   nobody has copied for 30 days. Each image uses a few GiB.

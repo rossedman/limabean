@@ -34,6 +34,7 @@ already exists.
   without: [kubernetes]       # default packs to leave out
   cpus: 6
   memory: 12                  # GiB
+  disk: 30                    # GiB of system disk, for Docker images
   network:                    # see: limabean network --help
     allow: [github, npm]
     locked: true
@@ -102,8 +103,8 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	if len(f.Packs) > 0 || len(f.Without) > 0 {
 		plan = append(plan, fmt.Sprintf("packs: defaults, plus [%s], without [%s]", strings.Join(f.Packs, ", "), strings.Join(f.Without, ", ")))
 	}
-	if f.CPUs > 0 || f.Memory > 0 {
-		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB (0: the default)", f.CPUs, f.Memory))
+	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
+		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
 	}
 	if len(f.Network.Allow) > 0 || f.Network.Locked {
 		plan = append(plan, fmt.Sprintf("network: only [%s], locked: %v", strings.Join(f.Network.Allow, ", "), f.Network.Locked))
@@ -144,6 +145,9 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	}
 	if f.Memory > 0 {
 		a.Cfg.Memory = fmt.Sprint(f.Memory)
+	}
+	if f.Disk > 0 {
+		a.Cfg.Disk = f.Disk
 	}
 	o := createOptions{Name: f.Name, Env: firstNonEmpty(f.Env, "scratch")}
 	if err := a.prepareVM(&o, vmChoices{secrets: own, with: f.Packs, without: f.Without, allow: f.Network.Allow, locked: f.Network.Locked}); err != nil {

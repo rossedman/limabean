@@ -58,11 +58,11 @@ func TestStartArgs(t *testing.T) {
 	o := StartOptions{
 		Name: "dev", Template: "/t/scratch.yaml",
 		Params: map[string]string{"gitConfigDir": "~/.config/git", "codeDir": "~/code"},
-		CPUs:   6, Memory: "12",
+		CPUs:   6, Memory: "12", Disk: 30,
 		Sets: []string{`.mounts += [{"location":"~/.aws"}]`},
 	}
 	got := strings.Join(o.Args(), " ")
-	want := `start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
+	want := `start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --disk 30 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
 	if got != want {
 		t.Fatalf("got  %s\nwant %s", got, want)
 	}
@@ -91,7 +91,8 @@ func TestCloneAndCopyArgs(t *testing.T) {
 	f := &fakeRunner{}
 	c := &Client{Runner: f}
 	ctx := context.Background()
-	_, _ = c.Clone(ctx, "dev", "dev-2", `.param.x = "y"`)
+	_, _ = c.Clone(ctx, false, "dev", "dev-2", `.param.x = "y"`)
+	_, _ = c.Clone(ctx, true, "img", "api")
 	_, _ = c.Copy(ctx, true, "./dist", "dev:code/")
 	_, _ = c.Copy(ctx, false, "dev:a", "b")
 	got := make([]string, len(f.calls))
@@ -100,6 +101,7 @@ func TestCloneAndCopyArgs(t *testing.T) {
 	}
 	want := []string{
 		`limactl clone --tty=false --set .param.x = "y" dev dev-2`,
+		"limactl clone --tty=false --start img api",
 		"limactl copy -r -- ./dist dev:code/",
 		"limactl copy -- dev:a b",
 	}

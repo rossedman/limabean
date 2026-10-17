@@ -89,7 +89,7 @@ func TestBadCPUs(t *testing.T) {
 
 func TestSaveRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "config")
-	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor", CodeDisk: 0, Packs: "go,rust", Images: false}
+	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", Disk: 20, ClaudeDesktop: false, AWSDir: "", IDE: "cursor", CodeDisk: 0, Packs: "go,rust", Images: false}
 	if err := want.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -145,5 +145,19 @@ func TestEmptyEnvironmentVariableIsAValue(t *testing.T) {
 	}
 	if c.AWSDir != "" {
 		t.Fatalf("LIMABEAN_AWS_DIR=\"\" should turn the AWS mount off, got %q", c.AWSDir)
+	}
+}
+
+func TestDisk(t *testing.T) {
+	for in, want := range map[string]int{"": 0, "20": 20, "40GiB": 40} {
+		t.Setenv("LIMABEAN_DISK", in)
+		c, err := Load(New(), filepath.Join(t.TempDir(), "x"))
+		if err != nil || c.Disk != want {
+			t.Errorf("DISK=%q: %d, %v", in, c.Disk, err)
+		}
+	}
+	t.Setenv("LIMABEAN_DISK", "big")
+	if _, err := Load(New(), filepath.Join(t.TempDir(), "x")); err == nil || !strings.Contains(err.Error(), "DISK") {
+		t.Errorf("bad DISK: %v", err)
 	}
 }

@@ -53,8 +53,8 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
     --secret OPENAI_API_KEY=op://Private/OpenAI/credential \
     --secret NPM_TOKEN=env:NPM_TOKEN
 
-  # Bigger than the template default
-  limabean new k8s --cpus 8 --memory 16
+  # Bigger than the template default (2 CPUs, 4 GiB, a 10 GiB disk)
+  limabean new k8s --cpus 8 --memory 16 --disk 40
 
   # Record what it reaches, then allow just that (limabean network learn)
   limabean new agent --learn
@@ -137,10 +137,12 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	f.BoolVar(&learn, "learn", false, "record the domains the VM looks up, to build its allowlist (see: limabean network learn --help)")
 	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
 	f.DurationVar(&ttl, "ttl", 0, "delete the VM, whatever is in it, once it's this old, e.g. 2h (needs: limabean autostop on)")
-	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 4)")
-	f.String("memory", "", "memory in GiB (default: the template's, 8)")
+	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 2)")
+	f.String("memory", "", "memory in GiB (default: the template's, 4)")
+	f.String("disk", "", "system disk in GiB (default: the template's, 10); ~/code has its own")
 	_ = a.V.BindPFlag(config.KeyCPUs, f.Lookup("cpus"))
 	_ = a.V.BindPFlag(config.KeyMemory, f.Lookup("memory"))
+	_ = a.V.BindPFlag(config.KeyDisk, f.Lookup("disk"))
 	return cmd
 }
 

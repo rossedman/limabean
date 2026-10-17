@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -56,10 +57,13 @@ type fakeWorld struct {
 	attachErr      error           // what commands run on the terminal return
 	failDelete     bool            // limactl delete fails
 	spawnErr       error           // starting a background build fails
+	bootless       bool            // the next start or clone --start succeeds without booting
+	neverBoots     bool            // every start succeeds without booting
+	diskGiB        map[string]int  // VM → its system disk's size
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}, diskGiB: map[string]int{}}
 }
 
 func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -87,7 +91,7 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				if w.oldVMs[n] {
 					mounts = ""
 				}
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n, mounts)
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"disk":%d,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), w.diskGiB[n]<<30, n, mounts)
 			}
 			return []byte(b.String()), nil
 		case "start":
@@ -101,7 +105,10 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 					return nil, nil
 				}
 			}
-			w.vms[args[len(args)-1]] = "Running"
+			if !w.bootless && !w.neverBoots {
+				w.vms[args[len(args)-1]] = "Running"
+			}
+			w.bootless = false // as when a second start boots it
 		case "stop":
 			if w.failStop {
 				return []byte("stop failed"), errors.New("exit status 1")
@@ -118,6 +125,12 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			}
 			src, dst := args[len(args)-2], args[len(args)-1]
 			w.vms[dst] = "Stopped"
+			if slices.Contains(args, "--start") {
+				if !w.bootless {
+					w.vms[dst] = "Running"
+				}
+				w.bootless = false
+			}
 			w.writeFile(filepath.Join(dst, "disk"), w.readFile(filepath.Join(src, "disk")))
 		case "disk":
 			switch args[1] {

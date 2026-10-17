@@ -60,6 +60,7 @@ type Instance struct {
 	Dir           string `json:"dir"`
 	CPUs          int    `json:"cpus"`
 	Memory        int64  `json:"memory"`
+	Disk          int64  `json:"disk"` // bytes
 	SSHConfigFile string `json:"sshConfigFile"`
 	// Limabean is true for VMs built from limabean's templates, whose
 	// provisioning writes to /etc/limabean/mise/.
@@ -169,6 +170,7 @@ type StartOptions struct {
 	Params   map[string]string // --param key=value
 	CPUs     int               // 0: template default
 	Memory   string            // GiB; "": template default
+	Disk     int               // GiB of the system disk; 0: template default
 	Sets     []string          // --set yq expressions
 }
 
@@ -183,6 +185,9 @@ func (o StartOptions) Args() []string {
 	}
 	if o.Memory != "" {
 		args = append(args, "--memory", o.Memory)
+	}
+	if o.Disk > 0 {
+		args = append(args, "--disk", fmt.Sprint(o.Disk))
 	}
 	for _, s := range o.Sets {
 		args = append(args, "--set", s)
@@ -212,10 +217,13 @@ func (c *Client) Delete(ctx context.Context, name string) ([]byte, error) {
 }
 
 // Clone copies a stopped VM to a new one, with APFS clones of its disks,
-// changing the copy's configuration with --set yq expressions. The copy
-// isn't started.
-func (c *Client) Clone(ctx context.Context, src, dst string, sets ...string) ([]byte, error) {
+// changing the copy's configuration with --set yq expressions, and with
+// start boots the copy too (Lima 2.0's clone --start).
+func (c *Client) Clone(ctx context.Context, start bool, src, dst string, sets ...string) ([]byte, error) {
 	args := []string{"clone", "--tty=false"}
+	if start {
+		args = append(args, "--start")
+	}
 	for _, s := range sets {
 		args = append(args, "--set", s)
 	}

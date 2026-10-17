@@ -74,14 +74,14 @@ func TestImagesMakeNewVMsCopies(t *testing.T) {
 		`.additionalDisks += [{"name": "` + codeDiskName("api") + `"`,
 		".cpus = 6",
 		`.memory = "12GiB"`,
+		"--start",
 		img + " api",
-		"limactl start --tty=false api",
 	} {
 		if !strings.Contains(calls, want) {
 			t.Errorf("copy missing %q:\n%s", want, calls)
 		}
 	}
-	if strings.Contains(calls, "limactl start --name=api") || h.world.called("spawn") || !strings.Contains(out, "from an image built") {
+	if strings.Contains(calls, "limactl start") || h.world.called("spawn") || !strings.Contains(out, "from an image built") || h.world.vms["api"] != "Running" {
 		t.Errorf("a fresh image is copied, and not rebuilt:\n%s\n%s", calls, out)
 	}
 
@@ -233,5 +233,55 @@ func TestSpawn(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(imagesLog()); !strings.Contains(string(b), "limabean -test.run=^$") {
 		t.Errorf("log = %q", b)
+	}
+}
+
+// limactl can report success without booting a VM; limabean notices,
+// starts it, and fails clearly if it still isn't running.
+func TestNewChecksTheVMRuns(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_IMAGES", "yes")
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "images", "build")
+
+	h.world.bootless = true
+	h.world.calls = nil
+	out := h.must("", "new", "dev")
+	if !h.world.called("limactl clone --tty=false --start") || !h.world.called("limactl start --tty=false dev") || h.world.vms["dev"] != "Running" || !strings.Contains(out, "dev is ready") {
+		t.Fatalf("a clone that didn't boot should be started:\n%s\n%v", out, h.world.calls)
+	}
+
+	// Started, and still not running: an error, not "ready".
+	h.world.neverBoots = true
+	h.world.vms["dev"] = "Stopped"
+	out, err := h.run("", "ssh", "dev", "true")
+	if err == nil || !strings.Contains(err.Error(), "the VM is stopped") || !strings.Contains(err.Error(), "ha.stderr.log") {
+		t.Fatalf("a VM that won't start: %v\n%s", err, out)
+	}
+}
+
+// A VM's system disk: --disk on a new VM, grown from a smaller image's on
+// boot, but never copied from a bigger one, which Lima can't shrink.
+func TestNewDisk(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "new", "plain", "--disk", "20", "--cpus", "2")
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "--cpus 2 --disk 20") {
+		t.Errorf("new --disk: %v", h.world.calls)
+	}
+
+	t.Setenv("LIMABEAN_IMAGES", "yes")
+	h.must("", "images", "build")
+	img := imageNames(t, h)[0].Name
+	h.world.diskGiB[img] = 10
+	h.world.calls = nil
+	h.must("", "new", "big", "--disk", "40")
+	if !h.world.called("limactl clone") || !strings.Contains(strings.Join(h.world.calls, "\n"), `.disk = "40GiB"`) {
+		t.Errorf("a bigger disk than the image's is a copy, grown: %v", h.world.calls)
+	}
+	h.world.calls = nil
+	h.must("", "new", "small", "--disk", "8")
+	if h.world.called("limactl clone") || !h.world.called("limactl start --name=small") {
+		t.Errorf("a smaller disk than the image's can't be a copy: %v", h.world.calls)
 	}
 }
