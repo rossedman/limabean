@@ -24,6 +24,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
 | `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
+| `limabean mcp` | Runs an MCP server so Claude can manage VMs ([details](claude-desktop.md#let-claude-manage-vms)) |
 | `limabean completion <shell>` | Prints a tab-completion script for bash, zsh, fish or PowerShell |
 | `limabean version` | Prints the version |
 

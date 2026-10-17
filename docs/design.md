@@ -301,6 +301,24 @@ An opt-in `--mount` of a host directory (B) is still open.
   its original and rename it into place, so a failure never leaves a
   half-written disk. Live snapshots (memory included) would need
   Virtualization.framework's save/restore, which Lima doesn't expose.
+- **D14 MCP server. Decided: `limabean mcp`, stdio, VM-scoped tools.**
+  Built on the official Go SDK. Each tool runs limabean's own command
+  in-process, with a plain UI capturing its output and `ssh`/`get`'s
+  terminal handoff disabled (stdout carries the protocol), so every guard
+  applies. Threat model: the client is an agent that may have read hostile
+  content (a README, an issue, a web page) and been steered by it. So:
+  - nothing runs on the Mac: `run_in_vm` and `clone_repo` go over ssh
+    into a running VM, and secrets aren't exposed at all, since a `cmd:`
+    reference is a command on the Mac;
+  - names and snapshot tags are validated before reaching the command line,
+    where `--force` would be a flag, and a repository can't start with `-`;
+  - tools that destroy work exist only with `--allow-destructive`, carry
+    `destructiveHint` so clients confirm them, and `delete_vm` keeps rm's
+    unsaved-work check;
+  - one limabean command runs at a time; `run_in_vm` has a timeout (10
+    minutes by default, an hour at most) and returns the last 100 KiB.
+  What a VM can reach (its secrets, GitHub with its token, the network)
+  an agent in it can reach too; scoping that is per-VM secrets' job.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

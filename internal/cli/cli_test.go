@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -53,7 +54,7 @@ func newFakeWorld() *fakeWorld {
 	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}}
 }
 
-func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
+func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
 	w.calls = append(w.calls, name+" "+strings.Join(args, " "))
 	in := ""
 	if stdin != nil {
@@ -136,6 +137,14 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
+		case strings.HasPrefix(remote, "echo "):
+			return []byte(strings.TrimPrefix(remote, "echo ") + "\n"), nil
+		case remote == "false":
+			err := exec.Command("sh", "-c", "exit 3").Run()
+			return []byte("it failed\n"), err
+		case remote == "sleep":
+			<-ctx.Done()
+			return []byte("partial"), ctx.Err()
 		case remote == "sh -s": // stop --idle's check
 			return []byte(w.activity[vm]), nil
 		case remote == "ss -ltnpH":
@@ -238,6 +247,18 @@ func (h *harness) runForms(forms [][]string, args ...string) (string, error) {
 
 func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...string) (string, error) {
 	h.t.Helper()
+	a := h.app(u)
+	root := NewRootCmd(a)
+	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
+	root.SetIn(strings.NewReader(stdin))
+	root.SetOut(out)
+	root.SetErr(out)
+	err := root.ExecuteContext(context.Background())
+	return out.String(), err
+}
+
+// app returns an App wired to the fake world.
+func (h *harness) app(u *ui.UI) *App {
 	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
 	a.UI = u
 	a.execSSH = func(inst lima.Instance, command ...string) error {
@@ -298,13 +319,7 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 			return secrets.RunCommand(ctx, name, args...)
 		},
 	}
-	root := NewRootCmd(a)
-	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
-	root.SetIn(strings.NewReader(stdin))
-	root.SetOut(out)
-	root.SetErr(out)
-	err := root.ExecuteContext(context.Background())
-	return out.String(), err
+	return a
 }
 
 // writeFile writes a file under the fake Lima home.
