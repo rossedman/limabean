@@ -11,7 +11,7 @@ chrome=${CHROME:-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}
 targets="
 banner 1280 400
 how-it-works 1280 660
-terminal 1280 640
+terminal 1280 760
 social-preview 1280 640
 "
 

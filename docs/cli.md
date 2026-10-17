@@ -3,6 +3,19 @@
 `limabean` is a thin wrapper around `limactl`. Everything it does is plain
 Lima, so `limactl` always works alongside it.
 
+In a terminal it uses [gum](https://github.com/charmbracelet/gum) for its
+interface:
+- slow steps (creating, starting, stopping and deleting VMs) run behind a
+  spinner, and Lima's output is shown only if a step fails
+- leave out a VM name and you pick from a list: `limabean ssh`, `stop`, `rm`,
+  `rebuild` and `get <repo>`. `limabean new` asks for a name.
+- `init` and `github login` prompt for their values
+- `rm` and `rebuild` ask before deleting
+
+When output isn't a terminal (pipes, scripts, CI), or with `LIMABEAN_PLAIN=1`,
+it prints plain text and never prompts: missing names are errors, and
+questions take their defaults.
+
 | Command | What it does |
 |---|---|
 | `limabean init` | Saves your settings to `~/.config/limabean/config`, offers to add the SSH `Include` to `~/.ssh/config` (with a backup), then runs `doctor` |
@@ -22,7 +35,8 @@ Lima, so `limactl` always works alongside it.
 
 `rm` and `rebuild` first check every git repository under `~/code` in the VM.
 If any has uncommitted changes, stashes or commits not pushed to a remote, they
-stop and list what they found. `--force` skips the check.
+stop and list what they found. Then, in a terminal, they ask before deleting.
+`--force` skips both.
 
 ## Settings
 

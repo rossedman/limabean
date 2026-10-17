@@ -253,6 +253,13 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   from the Mac over a forwarded socket was considered and rejected: any
   process in the VM could still request it, so it adds moving parts without
   real protection.
+- **D8 Interface. Decided: gum, with a plain fallback.** In a terminal,
+  `limabean` uses gum for spinners (Lima's logs are shown only on failure),
+  prompts, VM pickers, confirmations and tables. Status lines use the README
+  palette as 24-bit escape codes rather than a `gum style` process per line.
+  Without a terminal, or with `LIMABEAN_PLAIN=1`, output is plain and nothing
+  prompts, so scripts and CI keep working. gum is required in a terminal, and
+  limabean offers to install it with Homebrew.
 - **D9 GitHub push transport. Decided: https with the token when one is
   installed, SSH otherwise.** Claude Desktop's helper in the VM runs without
   `SSH_AUTH_SOCK`, so SSH pushes can't work in Claude sessions.

@@ -29,7 +29,7 @@ copying them in, and appears in Claude Desktop as an SSH connection.
 ## Quick start
 
 ```bash
-brew install lima jq
+brew install lima gum jq
 git clone https://github.com/rossedman/limabean ~/code/github.com/rossedman/limabean
 ln -s ~/code/github.com/rossedman/limabean/bin/limabean ~/.local/bin/limabean
 
