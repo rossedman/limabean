@@ -153,8 +153,9 @@ it) that wraps `limactl`. The README has the command reference. Design points:
   these templates (their `lima.yaml` references `/etc/limabean/mise/`).
 - **Claude Desktop registration.** `new` adds an entry to `sshConfigs` in
   `~/.claude/settings.json` (documented: users may set it in their own settings
-  file) with `sshHost: lima-<name>`. `rm` removes it, and `claude sync`
-  reconciles. Only ids prefixed `limabean-` are touched. Edits use `jq`, are
+  file) with `sshHost: lima-<name>`. `rm` removes it (also for a VM already
+  deleted with `limactl delete`), `ls` and `new` prune entries for VMs that no
+  longer exist, and `claude sync` reconciles. Only ids prefixed `limabean-` are touched. Edits use `jq`, are
   skipped if the file isn't valid JSON, and are written in place so file modes
   and symlinks survive. Desktop installs Claude Code on the VM itself, so
   nothing Claude-specific is provisioned.

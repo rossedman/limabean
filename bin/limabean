@@ -133,6 +133,39 @@ limabean_vms() {
   done
 }
 
+# claude_ready: true when Claude Desktop entries can be read and edited.
+claude_ready() {
+  [ "$CLAUDE_DESKTOP" = yes ] && command -v jq >/dev/null &&
+    { [ ! -s "$CLAUDE_SETTINGS" ] || jq empty "$CLAUDE_SETTINGS" 2>/dev/null; }
+}
+
+# claude_has <name>: whether Claude Desktop has an entry for the VM.
+claude_has() {
+  claude_ready && [ -s "$CLAUDE_SETTINGS" ] &&
+    jq -e --arg id "limabean-$1" 'any(.sshConfigs[]?; .id == $id)' "$CLAUDE_SETTINGS" >/dev/null
+}
+
+# claude_prune: remove Claude Desktop entries and saved state for VMs that no
+# longer exist, e.g. ones deleted with `limactl delete`. Prints what it removed.
+claude_prune() {
+  local vms id name f
+  vms=$(limabean_vms)
+  if claude_ready && [ -s "$CLAUDE_SETTINGS" ]; then
+    for id in $(jq -r '.sshConfigs[]?.id | select(startswith("limabean-"))' "$CLAUDE_SETTINGS"); do
+      name=${id#limabean-}
+      if ! printf '%s\n' "$vms" | grep -x "$name" >/dev/null; then
+        claude_remove "$name"
+        info "Removed $name from Claude Desktop (the VM no longer exists)"
+      fi
+    done
+  fi
+  for f in "$STATE"/*.env; do
+    [ -f "$f" ] || continue
+    name=$(basename "$f" .env)
+    printf '%s\n' "$vms" | grep -x "$name" >/dev/null || rm -f "$f"
+  done
+}
+
 # check_unsaved <name>: list git repos under the VM's code dir with
 # uncommitted changes, stashes or commits not on any remote. Fails if any.
 check_unsaved() {
@@ -292,6 +325,7 @@ cmd_new() {
   [ $# -ge 1 ] || die "usage: limabean new <name> [environment]"
   local name=$1 env=${2:-scratch}
   exists "$name" && die "a VM named '$name' already exists"
+  claude_prune
   cmd_doctor >/dev/null 2>&1 || warn "limabean doctor reports problems; the VM will still be created"
   create "$name" "$env"
   claude_add "$name"
@@ -304,6 +338,7 @@ cmd_new() {
 
 cmd_ls() {
   local name status cpus mem env found=0
+  claude_prune
   printf '%-16s %-10s %-12s %-5s %-7s %s\n' NAME STATUS ENV CPUS MEMORY "SSH HOST"
   while read -r name status cpus mem; do
     limabean_vms | grep -x "$name" >/dev/null || continue
@@ -349,11 +384,20 @@ parse_force() {
     esac
   done
   [ -n "$NAME" ] || die "usage: limabean $CMD <name> [--force]"
-  need_vm "$NAME"
 }
 
 cmd_rm() {
   parse_force "$@"
+  if ! exists "$NAME"; then
+    # Already deleted (say, with limactl delete): clean up what's left.
+    if claude_has "$NAME" || [ -f "$STATE/$NAME.env" ]; then
+      claude_remove "$NAME"
+      rm -f "$STATE/$NAME.env"
+      info "No VM named $NAME; removed what was left of it (Claude Desktop entry, saved state)"
+      return 0
+    fi
+    die "no VM named '$NAME' (see: limabean ls)"
+  fi
   [ $FORCE -eq 1 ] || check_unsaved "$NAME" || exit 1
   limactl delete -f "$NAME"
   rm -f "$STATE/$NAME.env"
@@ -363,6 +407,7 @@ cmd_rm() {
 
 cmd_rebuild() {
   parse_force "$@"
+  need_vm "$NAME"
   local env
   env=$(cat "$STATE/$NAME.env" 2>/dev/null || echo scratch)
   [ $FORCE -eq 1 ] || check_unsaved "$NAME" || exit 1
@@ -381,13 +426,7 @@ cmd_claude() {
   fi
   local vms id
   vms=$(limabean_vms)
-  # Drop entries for VMs that no longer exist, then add one for each VM.
-  for id in $(jq -r '.sshConfigs[]?.id | select(startswith("limabean-"))' "$CLAUDE_SETTINGS" 2>/dev/null); do
-    if ! printf '%s\n' "$vms" | grep -x "${id#limabean-}" >/dev/null; then
-      claude_remove "${id#limabean-}"
-      info "Removed ${id#limabean-} (VM no longer exists)"
-    fi
-  done
+  claude_prune
   for id in $vms; do
     claude_add "$id"
     info "Registered ${bold}$id (limabean)${reset} → ssh lima-$id"
@@ -416,7 +455,7 @@ VMs
 
 Claude Desktop
   claude sync                add every VM as an SSH connection and remove
-                             deleted ones (new and rm already do this)
+                             deleted ones (new, rm and ls already do this)
 
 rm and rebuild refuse to run while repositories in the VM have uncommitted,
 stashed or unpushed work; --force skips that check.

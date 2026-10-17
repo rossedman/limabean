@@ -157,6 +157,9 @@ your SSH config, and only ever touches entries with ids starting `limabean-`.
 Your other settings are left alone, and the file isn't changed if it isn't
 valid JSON. Editing it needs `jq` (`brew install jq`).
 
+- A VM deleted with `limactl delete` instead of `limabean rm` loses its entry
+  the next time you run `limabean ls` or `limabean new`. `limabean rm <name>`
+  also cleans it up, even though the VM is already gone.
 - VMs created before this feature, or out of sync: `limabean claude sync`
   adds every VM and removes entries for deleted ones.
 - Restart Claude Desktop if a new VM doesn't show up in the dropdown.
