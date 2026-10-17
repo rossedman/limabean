@@ -53,6 +53,8 @@ type App struct {
 	attachSSH func(inst lima.Instance, command ...string) error
 	// How `autostop` drives launchd; tests replace it.
 	launchctl func(ctx context.Context, args ...string) ([]byte, error)
+	// How `code` starts the editor; tests replace it.
+	openEditor func(ctx context.Context, ide string, args ...string) error
 
 	// Persistent flags.
 	configPath   string
@@ -73,6 +75,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		execSSH:     lima.Exec,
 		attachSSH:   attach,
 		launchctl:   runLaunchctl,
+		openEditor:  openEditor,
 	}
 }
 

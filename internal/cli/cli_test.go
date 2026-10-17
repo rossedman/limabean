@@ -29,6 +29,7 @@ type fakeWorld struct {
 	sshStdin map[string]string // VM → last stdin written over ssh
 	keychain map[string]string
 	unsaved  string            // what the unsaved-work check prints
+	ghq      string            // what ghq list -p prints in every VM
 	activity map[string]string // VM → what stop --idle's check prints
 
 	agentLoaded bool // the autostop agent is loaded in launchd
@@ -104,6 +105,10 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return []byte(w.unsaved), nil
 		case remote == "sh -s": // stop --idle's check
 			return []byte(w.activity[vm]), nil
+		case strings.HasPrefix(remote, "ghq list -p "):
+			return []byte(w.ghq), nil
+		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
+			return []byte("/home/me.linux/code\n"), nil
 		case strings.Contains(remote, "grep -q"):
 			if strings.Contains(w.sshStdin[vm], "export "+strings.Split(strings.Split(remote, "'^export ")[1], "=")[0]+"=") {
 				return nil, nil
@@ -219,6 +224,10 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 			h.world.agentLoaded = args[0] == "print"
 		}
 		return nil, nil
+	}
+	a.openEditor = func(_ context.Context, ide string, args ...string) error {
+		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
+		return nil
 	}
 	a.Lima = &lima.Client{Runner: h.world}
 	a.Keychain = h.world
@@ -453,6 +462,51 @@ func TestLsAndPrune(t *testing.T) {
 	}
 	if !strings.Contains(out, "Removed ghost from Claude Desktop") {
 		t.Errorf("ls didn't prune the ghost entry:\n%s", out)
+	}
+}
+
+func TestLsJSON(t *testing.T) {
+	h := newHarness(t)
+	var stdout, stderr bytes.Buffer
+	ls := func() []map[string]any {
+		t.Helper()
+		stdout.Reset()
+		u := ui.NewPlain(&stdout)
+		u.Err = &stderr
+		if _, err := h.runUI(u, &stdout, "", "ls", "--json"); err != nil {
+			t.Fatal(err)
+		}
+		var got []map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &got); err != nil {
+			t.Fatalf("stdout isn't JSON: %v\n%s", err, stdout.String())
+		}
+		return got
+	}
+	if got := ls(); got == nil || len(got) != 0 {
+		t.Fatalf("no VMs should print [], got %v", got)
+	}
+
+	h.must("", "new", "dev")
+	h.must("", "secrets", "set", "OWN", "plain", "--vm", "dev", "--no-sync")
+	h.world.vms["other"] = "Stopped"
+	if err := (claude.Settings{Path: h.claude}).Add("ghost"); err != nil {
+		t.Fatal(err)
+	}
+	got := ls()
+	if len(got) != 2 {
+		t.Fatalf("want 2 VMs, got %v", got)
+	}
+	want := map[string]any{"name": "dev", "status": "Running", "env": "scratch", "cpus": 4.0, "memoryGiB": 8.0, "secrets": 1.0, "sshHost": "lima-dev"}
+	for k, v := range want {
+		if got[0][k] != v {
+			t.Errorf("dev %s = %v, want %v", k, got[0][k], v)
+		}
+	}
+	if got[1]["name"] != "other" || got[1]["env"] != "" {
+		t.Errorf("other: %v", got[1])
+	}
+	if !strings.Contains(stderr.String(), "Removed ghost from Claude Desktop") {
+		t.Errorf("tidy-up notes should go to stderr, got %q", stderr.String())
 	}
 }
 

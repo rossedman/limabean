@@ -25,6 +25,7 @@ const (
 	KeyMemory        = "memory"
 	KeyClaudeDesktop = "claude_desktop"
 	KeyAWSDir        = "aws_dir"
+	KeyIDE           = "ide"
 	KeyPlain         = "plain"
 	KeyTemplates     = "templates"
 )
@@ -38,6 +39,7 @@ type Config struct {
 	Memory        string // GiB; "": template default
 	ClaudeDesktop bool   // register VMs as SSH connections in Claude Desktop
 	AWSDir        string // mounted read-only at ~/.aws in VMs; "": never
+	IDE           string // editor command for `limabean code`, e.g. code or cursor
 }
 
 // DefaultPath is ~/.config/limabean/config.
@@ -58,6 +60,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyMemory, "")
 	v.SetDefault(KeyClaudeDesktop, "yes")
 	v.SetDefault(KeyAWSDir, "~/.aws")
+	v.SetDefault(KeyIDE, "code")
 	v.SetEnvPrefix("LIMABEAN")
 	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
 	v.AllowEmptyEnv(true)
@@ -96,6 +99,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		Memory:        strings.TrimSpace(v.GetString(KeyMemory)),
 		ClaudeDesktop: yes(v.GetString(KeyClaudeDesktop)),
 		AWSDir:        v.GetString(KeyAWSDir),
+		IDE:           strings.TrimSpace(v.GetString(KeyIDE)),
 	}, nil
 }
 
@@ -137,7 +141,11 @@ CLAUDE_DESKTOP=%q
 
 # AWS CLI config, mounted read-only at ~/.aws in VMs when it exists. Empty: never.
 AWS_DIR=%q
-`, c.GitConfigDir, c.CodeDir, cpus, c.Memory, claude, c.AWSDir)
+
+# Editor that limabean code opens VMs in: code (VS Code), cursor, or another
+# editor with VS Code's --remote flag.
+IDE=%q
+`, c.GitConfigDir, c.CodeDir, cpus, c.Memory, claude, c.AWSDir, c.IDE)
 	return os.WriteFile(c.Path, []byte(body), 0o600)
 }
 

@@ -24,7 +24,7 @@ and battery. "autostop on" installs a launchd agent in your login session
 that runs "limabean stop --idle <after>" every 10 minutes; see
 "limabean stop --help" for what counts as in use.
 
-A stopped VM keeps its disk. "limabean ssh" and "limabean start" bring it
+A stopped VM keeps its disk. "limabean ssh", "code" and "start" bring it
 back, and Claude Desktop lists it again once it runs.`,
 		Example: `  # Stop VMs nobody has used for two hours
   limabean autostop on

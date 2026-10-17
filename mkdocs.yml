@@ -1,0 +1,39 @@
+# Landing page for limabean, published to GitHub Pages by .github/workflows/pages.yml.
+# Preview locally: pip install mkdocs-material && mkdocs serve
+site_name: limabean
+site_description: Disposable Linux dev VMs for macOS, ready for SSH and Claude.
+site_url: https://rossedman.github.io/limabean/
+repo_url: https://github.com/rossedman/limabean
+repo_name: rossedman/limabean
+
+# The long-form docs are written for GitHub and link into the repo, so the
+# site is one page that links to them there.
+exclude_docs: |
+  /*.md
+  !/index.md
+  /assets/src/
+  /assets/render.sh
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/site/bean.svg
+  favicon: assets/site/bean.svg
+  palette:
+    scheme: slate
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+
+extra_css:
+  - assets/site/landing.css
+extra_javascript:
+  - assets/site/landing.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rossedman/limabean
+  generator: false
