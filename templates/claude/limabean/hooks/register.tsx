@@ -61,14 +61,16 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'limabean' }, async $ => {
     const where = await read($, place)
     if (where === 'mac') {
-      const opened = await $.ui.open({ id: PANE, title: 'limabean' })
+      const opened = await $.ui.open({ id: PANE, title: preview === 'off' ? 'limabean' : 'limabean (preview: sample VMs)' })
       void readMac($)
-      return { text: opened.isPlaced ? 'Opened the limabean pane.' : `The limabean pane is waiting: ${opened.reason}` }
+      const shown = opened.isPlaced ? 'Opened the limabean pane.' : `The limabean pane is waiting: ${opened.reason}`
+      return { text: preview === 'off' ? shown : `${shown}\n\n${PREVIEW_NOTE}` }
     }
     const vm = await read($, inside)
     if (where === 'vm' && vm !== null) {
       await update($, bandHidden, () => false)
       $.ui.status(undefined)
+      if (preview !== 'off') return { text: `${PREVIEW_NOTE}\n\nInside a real VM, Claude would be told:\n\n${F.insideSection(vm)}` }
       return { text: F.insideSection(vm) }
     }
     return { text: "limabean isn't here: this session runs neither in a limabean VM nor on a Mac with limabean on its PATH. If limabean is somewhere else, set its path with /plugin configure limabean@limabean, then restart Claude Code." }
@@ -78,7 +80,8 @@ export const register: Register = (on, options) => {
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
     const vm = await read($, inside)
-    if (vm === null || e.traits.includes('bare')) return composed
+    // Preview data is for the person to look at; Claude is never told it.
+    if (vm === null || preview !== 'off' || e.traits.includes('bare')) return composed
     return { sections: [...composed.sections, { id: 'limabean:vm', text: F.insideSection(vm), scope: 'session' as const }] }
   })
 
@@ -86,7 +89,7 @@ export const register: Register = (on, options) => {
   // Claude asks for the domain instead of trying mirrors.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
-    if (ran.deny !== undefined) return ran
+    if (ran.deny !== undefined || preview !== 'off') return ran
     const vm = await read($, inside)
     if (vm === null || vm.learning || vm.allow.length === 0) return ran
     const host = F.blockedHost(ran.text ?? '')
@@ -108,6 +111,7 @@ export const register: Register = (on, options) => {
         <Text color="green" bold>
           limabean{' '}
         </Text>
+        {preview !== 'off' && <Text color="yellow">preview, sample data: </Text>}
         <Text bold>{vm.name}</Text>
         <Text dimColor> · {network}</Text>
         {vm.locked && <Text color="yellow"> · locked: no sudo, no Docker</Text>}
@@ -118,7 +122,7 @@ export const register: Register = (on, options) => {
           plain
           onPress={async () => {
             await update($, bandHidden, () => true)
-            $.ui.status(F.insideLine(vm))
+            $.ui.status(label(F.insideLine(vm)))
           }}
         />
       </Box>
@@ -194,6 +198,14 @@ export const register: Register = (on, options) => {
   })
 }
 
+/** Marks a status line as sample data while previewing. */
+function label(line: string): string {
+  return preview === 'off' ? line : `${line} (preview: sample data)`
+}
+
+const PREVIEW_NOTE =
+  "Preview is on: what limabean shows here is sample data, not where this session runs, and Claude isn't told any of it. Turn it off with /plugin configure limabean@limabean (Preview: off), then restart Claude Code."
+
 const EMPTY: MacView = { vms: [], images: [], ports: {}, readAt: 0 }
 
 const PREVIEW_VM: InsideVM = {
@@ -259,7 +271,7 @@ async function readInside($: $): Promise<void> {
       $.ui.toast(`This VM's allowlist changed: ${vm.allow.length > 0 ? vm.allow.join(', ') : 'the network is open'}`)
     }
   }
-  if (await read($, bandHidden)) $.ui.status(F.insideLine(vm))
+  if (await read($, bandHidden)) $.ui.status(label(F.insideLine(vm)))
 }
 
 /** Runs limabean on the Mac and returns its stdout. */
@@ -301,5 +313,5 @@ async function readMac($: $): Promise<void> {
   const before = await read($, mac)
   for (const change of F.changes(before, view, view.readAt).slice(0, 3)) $.ui.toast(change)
   await update($, mac, () => view)
-  $.ui.status(F.macLine(view))
+  $.ui.status(label(F.macLine(view)))
 }

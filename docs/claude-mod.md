@@ -106,9 +106,11 @@ not `/config`:
 | Setting | Values | Does |
 |---|---|---|
 | `binary` | a path; empty by default | Where limabean is, if `/limabean` says it can't find it. Empty: `limabean` on the PATH, then `/opt/homebrew/bin`, `/usr/local/bin`, `~/go/bin` and `~/.local/bin`. `which limabean` in a terminal prints the path. |
-| `preview` | `off` (default), `mac`, `vm` | Sample data instead of real VMs, to see what the mod looks like: `mac` shows the status line and the pane, `vm` the band and what Claude is told inside a VM. |
+| `preview` | `off` (default), `mac`, `vm` | Sample data instead of real VMs, to see what the mod looks like: `mac` shows the status line and the pane, `vm` the band. It's marked as sample data, and Claude is never told it. Set it back to `off` when you've looked. |
 
-At the Claude Code prompt, this opens a form for both:
+`/plugin` commands only work in **Claude Code in a terminal**: the desktop
+app and web sessions answer that plugins aren't available there. In a
+terminal, run `claude`, then at its prompt:
 
 ```
 /plugin configure limabean@limabean
@@ -123,7 +125,9 @@ claude plugin configure limabean@limabean        # shows what's set
 ```
 
 Restart Claude Code afterwards: a saved value applies to sessions started
-after it. The values live in `~/.claude/settings.json`:
+after it. The values live in `~/.claude/settings.json`, which you can also
+edit by hand (`open -e ~/.claude/settings.json`); this works whatever
+version or app you use:
 
 ```json
 {
