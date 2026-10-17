@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # limabean: create and manage dev VMs from the Lima templates in this repo.
-# Thin wrapper around limactl; see README.md. Works with macOS's bash 3.2.
+# Thin wrapper around limactl; see docs/cli.md. Works with macOS's bash 3.2.
 # Paths like "~/code" are kept unexpanded on purpose: Lima expands them.
 # shellcheck disable=SC2088
 set -euo pipefail
