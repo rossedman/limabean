@@ -21,6 +21,7 @@
   --md-default-fg-color: var(--cream);
   --md-default-fg-color--light: var(--mist);
   --md-primary-fg-color: var(--ink);
+  --md-primary-fg-color--dark: var(--ink-3);
   --md-primary-bg-color: var(--cream);
   --md-accent-fg-color: var(--leaf);
   --md-typeset-a-color: var(--leaf);
@@ -37,8 +38,11 @@
 .md-header__title { font-weight: 700; letter-spacing: -0.02em; }
 .md-header__button.md-logo img { height: 1.6rem; }
 
-/* The page is all custom sections; Material's empty article goes away. */
-.md-container:has(.lb) .md-main { display: none; }
+/* The page is all custom sections; Material's empty article goes away.
+   .md-main itself stays: on small screens it holds the menu drawer. */
+.md-container:has(.lb) .md-content,
+.md-container:has(.lb) .md-sidebar--secondary { display: none; }
+.md-container:has(.lb) .md-main__inner { margin: 0; height: 0; }
 .md-container:has(.lb) { min-height: 100vh; }
 
 .lb {
