@@ -58,18 +58,50 @@ Prebuilt binaries for Apple Silicon and Intel are on the
 
 ## Commands
 
+Leave out a VM name and you pick one from a list. Every command has
+`--help` with examples, and the [CLI reference](docs/cli.md) has the details.
+
+**Setup**
+
 | Command | What it does |
 |---|---|
-| `limabean init` / `doctor` | Set up, and check prerequisites |
+| `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token |
+| `limabean doctor` | Check everything VMs depend on |
+
+**VMs**
+
+| Command | What it does |
+|---|---|
 | `limabean new [name] [env]` | Create a VM, choosing its secrets |
 | `limabean ls` | List VMs |
-| `limabean ssh <name> [cmd]` | Open a shell or run a command |
-| `limabean get <name> <repo>` | Clone a repository into the VM with ghq |
-| `limabean rebuild <name>` | Recreate from the current templates |
-| `limabean start` / `stop` / `rm <name>` | Start, stop or delete a VM |
-| `limabean secrets set NAME [ref]` | Give VMs an API key or setting |
-| `limabean github login` | Give VMs a GitHub token for `gh` and the API |
-| `limabean claude sync` | Sync VMs with Claude Desktop |
+| `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
+| `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
+| `limabean start [name]` | Start a stopped VM |
+| `limabean stop [name]` | Stop a running VM |
+| `limabean rebuild [name]` | Recreate a VM from the current templates |
+| `limabean rm [name]` | Delete a VM |
+
+**Secrets and access**
+
+| Command | What it does |
+|---|---|
+| `limabean secrets ls` | List secrets and where their values come from |
+| `limabean secrets set NAME [ref]` | Add or change a secret (Keychain, 1Password, env var, command) |
+| `limabean secrets rm NAME` | Remove a secret |
+| `limabean secrets edit` | Edit a secrets file in your editor |
+| `limabean secrets sync` | Install secrets in running VMs |
+| `limabean github login` | Save a GitHub token for `gh`, the API and https pushes |
+| `limabean github status` | Show the token's account and expiry, and which VMs have it |
+| `limabean github sync` | Install the token in every running VM |
+| `limabean github logout` | Remove the token from the Keychain and VMs |
+| `limabean claude sync` | Register running VMs in Claude Desktop, remove the rest |
+
+**More**
+
+| Command | What it does |
+|---|---|
+| `limabean completion <shell>` | Print a completion script for bash, zsh, fish or PowerShell |
+| `limabean version` | Print the version |
 
 ## Documentation
 
