@@ -49,7 +49,7 @@ build three layers:
 
 ```
 templates/
-  layer-os.yaml       # layer 1: Ubuntu 24.04, CPU/mem/disk, ssh agent forwarding, zsh
+  layer-os.yaml       # layer 1: Ubuntu 26.04 LTS, CPU/mem/disk, ssh agent forwarding, zsh
   layer-base.yaml     # layer 2: base: layer-os + apt + Docker + mise tools + git + zsh + editorconfig
   scratch.yaml        # layer 3: base: layer-base, nothing else (throwaway sandbox)
   go.yaml             #          base: layer-base + mise/go.toml
@@ -209,8 +209,12 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
 
 ## Other decisions to make
 
-- **D2 Base distro. Decided: Ubuntu 24.04** (`template:ubuntu-24.04`), pinned
-  rather than `ubuntu-lts` so rebuilds stay reproducible.
+- **D2 Base distro. Decided: Ubuntu 26.04 LTS** (`template:_images/ubuntu-26.04`),
+  pinned rather than `ubuntu-lts` so rebuilds stay reproducible. Moved from
+  24.04, whose systemd 255 only gets patches and is too old for Varlink tooling
+  such as vlx (needs v257+). 26.04 ships systemd 259 with `varlinkctl` and the
+  `io.systemd.*` Varlink interfaces, and Docker's apt repository supports it.
+  Upgrading systemd within 24.04 isn't possible.
 - **D3 Shell config portability.** For when dotfiles return: shell configs
   often assume macOS (`/opt/homebrew`, `pbcopy`). They need
   `[[ $OSTYPE == darwin* ]]` guards to work in both places.

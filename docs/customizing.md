@@ -6,7 +6,7 @@ to read. They're layered with Lima's `base:` composition:
 
 ```
 templates/
-  layer-os.yaml       Ubuntu 24.04, VM size, agent forwarding, zsh login shell
+  layer-os.yaml       Ubuntu 26.04 LTS, VM size, agent forwarding, zsh login shell
   layer-base.yaml     everything every VM gets (built on layer-os)
   scratch.yaml        an environment (built on layer-base)
   features/           idempotent provisioning scripts, one per capability

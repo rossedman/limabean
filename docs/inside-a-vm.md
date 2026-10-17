@@ -1,6 +1,7 @@
 # Inside a VM
 
-Each VM runs Ubuntu 24.04, fully updated on first boot. It has no access to
+Each VM runs Ubuntu 26.04 LTS, with systemd 259 and its Varlink APIs, fully
+updated on first boot. It has no access to
 your Mac's files apart from the read-only git config mount. Keep code in the VM
 under `~/code` and push it to a remote.
 
