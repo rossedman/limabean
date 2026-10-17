@@ -81,30 +81,37 @@ open. It changes nothing except what its Start and Stop buttons ask for.
 ## Settings
 
 Most people set nothing: in a VM the mod finds everything itself, and on
-the Mac it finds limabean where Homebrew or `go install` put it. There are
-two settings, and they only appear in `/config` once the mod is installed
-(on the Mac, with the `/plugin install` line above):
+the Mac it finds limabean where Homebrew or `go install` put it. Settings
+belong to the installed plugin, so they exist once you've run the
+`/plugin install` line above, and they're changed with `/plugin configure`,
+not `/config`:
 
 | Setting | Values | Does |
 |---|---|---|
-| `limabean.binary` | a path; empty by default | Where limabean is, if the mod says it can't find it. Empty: `limabean` on the PATH, then `/opt/homebrew/bin`, `/usr/local/bin`, `~/go/bin` and `~/.local/bin`. |
-| `limabean.preview` | `off` (default), `mac`, `vm` | Sample data instead of real VMs, to see what the mod looks like: `mac` shows the status line and the pane, `vm` the band and what Claude is told inside a VM. |
+| `binary` | a path; empty by default | Where limabean is, if `/limabean` says it can't find it. Empty: `limabean` on the PATH, then `/opt/homebrew/bin`, `/usr/local/bin`, `~/go/bin` and `~/.local/bin`. `which limabean` in a terminal prints the path. |
+| `preview` | `off` (default), `mac`, `vm` | Sample data instead of real VMs, to see what the mod looks like: `mac` shows the status line and the pane, `vm` the band and what Claude is told inside a VM. |
 
-Set one at the prompt, and it applies at once:
+At the Claude Code prompt, this opens a form for both:
 
 ```
-/config limabean.binary=/opt/homebrew/bin/limabean
-/config limabean.preview=vm
-/config limabean.preview=off
+/plugin configure limabean@limabean
 ```
 
-`which limabean` in a terminal prints the path to use. Settings are kept in
-`~/.claude/settings.json`, under `pluginConfigs`:
+From a shell, pass the values you want to change as JSON:
+
+```bash
+echo '{"binary": "/opt/homebrew/bin/limabean"}' | claude plugin configure limabean@limabean --values-stdin
+echo '{"preview": "vm"}' | claude plugin configure limabean@limabean --values-stdin
+claude plugin configure limabean@limabean        # shows what's set
+```
+
+Restart Claude Code afterwards: a saved value applies to sessions started
+after it. The values live in `~/.claude/settings.json`:
 
 ```json
 {
   "pluginConfigs": {
-    "limabean": { "options": { "binary": "/opt/homebrew/bin/limabean" } }
+    "limabean@limabean": { "options": { "binary": "/opt/homebrew/bin/limabean" } }
   }
 }
 ```

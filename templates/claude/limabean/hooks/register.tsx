@@ -71,7 +71,7 @@ export const register: Register = (on, options) => {
       $.ui.status(undefined)
       return { text: F.insideSection(vm) }
     }
-    return { text: "limabean isn't here: this session runs neither in a limabean VM nor on a Mac with limabean on its PATH. If limabean is somewhere else: /config limabean.binary=/path/to/limabean" }
+    return { text: "limabean isn't here: this session runs neither in a limabean VM nor on a Mac with limabean on its PATH. If limabean is somewhere else, set its path with /plugin configure limabean@limabean, then restart Claude Code." }
   })
 
   // Inside a VM, Claude learns where it runs before its first step.
