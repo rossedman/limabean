@@ -1,0 +1,40 @@
+name: lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: shellcheck
+        run: shellcheck bin/limabean templates/features/*.sh
+
+  lima-validate:
+    runs-on: macos-latest
+    env:
+      LIMA_VERSION: 2.2.1
+      LIMA_SHA256: 9e9eacce88f37e185c346bad73aa6136f738d8cdf8c3bb23cd42b071824bc66e
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Lima
+        run: |
+          tarball="lima-${LIMA_VERSION}-Darwin-arm64.tar.gz"
+          curl -fsSLO "https://github.com/lima-vm/lima/releases/download/v${LIMA_VERSION}/${tarball}"
+          echo "${LIMA_SHA256}  ${tarball}" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/lima"
+          tar -xzf "$tarball" -C "$RUNNER_TEMP/lima"
+          echo "$RUNNER_TEMP/lima/bin" >> "$GITHUB_PATH"
+      - name: Validate templates
+        # Layers are only meaningful as bases; validate the environments built on them.
+        run: |
+          limactl --version
+          for f in templates/*.yaml; do
+            case "$(basename "$f")" in layer-*) continue ;; esac
+            limactl tmpl validate "$f"
+          done

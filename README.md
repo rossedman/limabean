@@ -283,6 +283,11 @@ Lima doesn't allow `..` in relative paths or base template file names starting
 with `_`. That's why scripts and TOML files live under `templates/` and the
 layers are named `layer-*.yaml`.
 
+CI ([.github/workflows/lint.yml](.github/workflows/lint.yml)) runs on every push
+and pull request: `shellcheck` over `bin/limabean` and `templates/features/*.sh`,
+and `limactl tmpl validate` on every `templates/*.yaml` except the `layer-*`
+bases. It doesn't boot a VM.
+
 ## Troubleshooting
 
 Start with `limabean doctor`.
