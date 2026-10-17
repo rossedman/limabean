@@ -58,11 +58,11 @@ func TestStartArgs(t *testing.T) {
 	o := StartOptions{
 		Name: "dev", Template: "/t/scratch.yaml",
 		Params: map[string]string{"gitConfigDir": "~/.config/git", "codeDir": "~/code"},
-		CPUs:   6, Memory: "12",
+		CPUs:   6, Memory: "12", Disk: 30,
 		Sets: []string{`.mounts += [{"location":"~/.aws"}]`},
 	}
 	got := strings.Join(o.Args(), " ")
-	want := `start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
+	want := `start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --disk 30 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
 	if got != want {
 		t.Fatalf("got  %s\nwant %s", got, want)
 	}

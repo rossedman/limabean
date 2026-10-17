@@ -59,10 +59,11 @@ type fakeWorld struct {
 	spawnErr       error           // starting a background build fails
 	bootless       bool            // the next start or clone --start succeeds without booting
 	neverBoots     bool            // every start succeeds without booting
+	diskGiB        map[string]int  // VM → its system disk's size
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}, diskGiB: map[string]int{}}
 }
 
 func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -90,7 +91,7 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				if w.oldVMs[n] {
 					mounts = ""
 				}
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n, mounts)
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"disk":%d,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), w.diskGiB[n]<<30, n, mounts)
 			}
 			return []byte(b.String()), nil
 		case "start":

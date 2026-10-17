@@ -62,8 +62,9 @@ flag where one exists, which take priority:
 GIT_CONFIG_DIR="~/.config/git"   # host directory mounted read-only into VMs
 CODE_DIR="~/code"                # where ghq clones inside VMs
 CODE_DISK="50"                   # GiB of the disk CODE_DIR lives on, kept by rebuild; empty: none
-CPUS=""                          # empty: template default (4); flag: new --cpus
-MEMORY=""                        # GiB; empty: template default (8); flag: new --memory
+CPUS=""                          # empty: template default (2); flag: new --cpus
+MEMORY=""                        # GiB; empty: template default (4); flag: new --memory
+DISK=""                          # GiB of system disk; empty: template default (10); flag: new --disk
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
 PACKS="go,python,node,kubernetes,infra,containers,db"   # packs new VMs get; flag: new --with/--without

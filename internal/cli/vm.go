@@ -178,6 +178,7 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		Params:   map[string]string{"gitConfigDir": a.Cfg.GitConfigDir, "codeDir": a.Cfg.CodeDir, "networkDir": a.networkDir(o.Name)},
 		CPUs:     a.Cfg.CPUs,
 		Memory:   a.Cfg.Memory,
+		Disk:     a.Cfg.Disk,
 	}
 	if err := os.MkdirAll(a.networkDir(o.Name), 0o755); err != nil {
 		return err
@@ -209,6 +210,10 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 			key = imageKey(hash, o.Env, o.Packs)
 			im, fromImage = a.imageFor(ctx, key)
 		}
+	}
+	// Lima grows a disk on boot but can't shrink one.
+	if fromImage && opts.Disk > 0 && int64(opts.Disk)<<30 < a.imageDisk(ctx, im) {
+		fromImage = false
 	}
 	if fromImage {
 		if err := a.cloneImage(ctx, im, opts, own); err != nil {
@@ -789,6 +794,9 @@ func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, 
 	if opts.Memory != "" {
 		sets = append(sets, fmt.Sprintf(`.memory = "%sGiB"`, strings.TrimSuffix(opts.Memory, "GiB")))
 	}
+	if opts.Disk > 0 {
+		sets = append(sets, fmt.Sprintf(`.disk = "%dGiB"`, opts.Disk))
+	}
 	sets = append(sets, own...)
 	// A shared lock: a build replacing this image waits for the copy.
 	if unlock, err := lockFile(a.imageLock(im.Key, "use"), false, true); err == nil {
@@ -803,4 +811,13 @@ func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, 
 	im.Used = time.Now()
 	_ = a.saveImage(im)
 	return nil
+}
+
+// imageDisk is the size of an image's system disk in bytes, 0 if unknown.
+func (a *App) imageDisk(ctx context.Context, im image) int64 {
+	inst, ok, err := a.Lima.Get(ctx, im.Name)
+	if err != nil || !ok {
+		return 0
+	}
+	return inst.Disk
 }

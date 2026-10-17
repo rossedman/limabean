@@ -23,6 +23,7 @@ const (
 	KeyCodeDir       = "code_dir"
 	KeyCPUs          = "cpus"
 	KeyMemory        = "memory"
+	KeyDisk          = "disk"
 	KeyClaudeDesktop = "claude_desktop"
 	KeyAWSDir        = "aws_dir"
 	KeyIDE           = "ide"
@@ -43,6 +44,7 @@ type Config struct {
 	CodeDir       string // ghq root inside VMs
 	CPUs          int    // 0: template default
 	Memory        string // GiB; "": template default
+	Disk          int    // GiB of the system disk; 0: template default
 	ClaudeDesktop bool   // register VMs as SSH connections in Claude Desktop
 	AWSDir        string // mounted read-only at ~/.aws in VMs; "": never
 	IDE           string // editor command for `limabean code`, e.g. code or cursor
@@ -67,6 +69,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyCodeDir, "~/code")
 	v.SetDefault(KeyCPUs, 0)
 	v.SetDefault(KeyMemory, "")
+	v.SetDefault(KeyDisk, "")
 	v.SetDefault(KeyClaudeDesktop, "yes")
 	v.SetDefault(KeyAWSDir, "~/.aws")
 	v.SetDefault(KeyIDE, "code")
@@ -103,6 +106,14 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		}
 		cpus = n
 	}
+	disk := 0
+	if s := strings.TrimSpace(v.GetString(KeyDisk)); s != "" {
+		n, err := strconv.Atoi(strings.TrimSuffix(s, "GiB"))
+		if err != nil || n < 0 {
+			return nil, fmt.Errorf("DISK must be a size in GiB, like 20, or empty, got %q", s)
+		}
+		disk = n
+	}
 	codeDisk := 0
 	if s := strings.TrimSpace(v.GetString(KeyCodeDisk)); s != "" {
 		n, err := strconv.Atoi(strings.TrimSuffix(s, "GiB"))
@@ -117,6 +128,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		CodeDir:       v.GetString(KeyCodeDir),
 		CPUs:          cpus,
 		Memory:        strings.TrimSpace(v.GetString(KeyMemory)),
+		Disk:          disk,
 		ClaudeDesktop: yes(v.GetString(KeyClaudeDesktop)),
 		AWSDir:        v.GetString(KeyAWSDir),
 		IDE:           strings.TrimSpace(v.GetString(KeyIDE)),
@@ -143,6 +155,10 @@ func (c *Config) Save() error {
 	if c.CPUs > 0 {
 		cpus = strconv.Itoa(c.CPUs)
 	}
+	disk := ""
+	if c.Disk > 0 {
+		disk = strconv.Itoa(c.Disk)
+	}
 	codeDisk := ""
 	if c.CodeDisk > 0 {
 		codeDisk = strconv.Itoa(c.CodeDisk)
@@ -165,9 +181,11 @@ CODE_DIR=%q
 # limabean rebuild. Empty: CODE_DIR is on the VM's own disk.
 CODE_DISK=%q
 
-# VM size; empty uses the template default (4 CPUs, 8 GiB).
+# VM size: CPUs, and GiB of memory and of system disk. Empty uses the
+# template default (2 CPUs, 4 GiB, 10 GiB).
 CPUS=%q
 MEMORY=%q
+DISK=%q
 
 # Add each VM to Claude Desktop as an SSH connection (~/.claude/settings.json).
 CLAUDE_DESKTOP=%q
@@ -186,7 +204,7 @@ PACKS=%q
 # Create VMs in seconds by cloning a provisioned image, built in the
 # background and kept fresh (limabean images). no: provision every VM.
 IMAGES=%q
-`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images))
+`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, disk, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images))
 	return os.WriteFile(c.Path, []byte(body), 0o600)
 }
 

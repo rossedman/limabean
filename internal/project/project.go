@@ -32,6 +32,7 @@ type File struct {
 	Without []string `yaml:"without"` // default packs to leave out
 	CPUs    int      `yaml:"cpus"`
 	Memory  int      `yaml:"memory"` // GiB
+	Disk    int      `yaml:"disk"`   // GiB of the system disk
 	Network struct {
 		Allow  []string `yaml:"allow"`
 		Locked bool     `yaml:"locked"`
@@ -106,8 +107,8 @@ func (f *File) check() error {
 			return fmt.Errorf("secrets: %q isn't a secret's name (only names go here; set values with limabean secrets set)", s)
 		}
 	}
-	if f.CPUs < 0 || f.Memory < 0 {
-		return errors.New("cpus and memory must be positive")
+	if f.CPUs < 0 || f.Memory < 0 || f.Disk < 0 {
+		return errors.New("cpus, memory and disk must be positive")
 	}
 	for _, p := range f.Ports {
 		if p < 1 || p > 65535 {

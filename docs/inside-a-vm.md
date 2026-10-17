@@ -1,7 +1,10 @@
 # Inside a VM
 
 Each VM runs Ubuntu 26.04 LTS, with systemd 259 and its Varlink APIs, fully
-updated on first boot. It has no access to your Mac's files apart from a
+updated on first boot. It's small by default: 2 CPUs, 4 GiB of memory and
+a 10 GiB system disk, with `~/code` on a 50 GiB disk of its own. Docker
+images live on the system disk, so give a VM that builds big ones more with
+`limabean new <name> --disk 40`, or `DISK` in the config for every VM. It has no access to your Mac's files apart from a
 few read-only mounts: your git config, `~/.aws` if you have it, and the VM's
 own [network policy](network.md). Keep code in the VM under `~/code`, which is
 on its own disk and [survives rebuilds](lifecycle.md), and push it to a

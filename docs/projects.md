@@ -24,6 +24,7 @@ packs: [rust, claude]       # added to the default packs
 without: [kubernetes]       # default packs to leave out
 cpus: 6
 memory: 12                  # GiB
+disk: 30                    # GiB of system disk, for Docker images
 network:
   allow: [github, npm]      # only these domains and presets
   locked: true              # and nothing in the VM can change that

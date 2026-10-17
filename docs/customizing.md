@@ -22,7 +22,7 @@ templates/
 | Add an environment variable for every shell | [`files/env.sh`](https://github.com/rossedman/limabean/blob/main/templates/files/env.sh) |
 | Add a tool's zsh completion | a `gen` line in [`features/completions.sh`](https://github.com/rossedman/limabean/blob/main/templates/features/completions.sh) |
 | Change the global editorconfig | [`files/editorconfig`](https://github.com/rossedman/limabean/blob/main/templates/files/editorconfig) |
-| Change CPU or memory | `CPUS`/`MEMORY` in `~/.config/limabean/config`, or the defaults in [`layer-os.yaml`](https://github.com/rossedman/limabean/blob/main/templates/layer-os.yaml) |
+| Change CPU, memory or disk | `CPUS`/`MEMORY`/`DISK` in `~/.config/limabean/config` (or `new --cpus/--memory/--disk`), or the defaults (2 CPUs, 4 GiB, a 10 GiB disk) in [`layer-os.yaml`](https://github.com/rossedman/limabean/blob/main/templates/layer-os.yaml) |
 | Add your own environment | `~/.config/limabean/templates/<env>.yaml` with `base: [./layer-base.yaml]`, then `limabean new <name> <env>`. No rebuild of limabean needed. |
 
 VMs are disposable, and rebuilding is how changes get applied:

@@ -24,6 +24,7 @@ packs: [rust, claude]
 without: [kubernetes]
 cpus: 6
 memory: 12
+disk: 30
 network:
   allow: [github]
   locked: true
@@ -44,7 +45,7 @@ setup: |
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.Name != "my-app" || f.CPUs != 6 || !f.Network.Locked || f.Packs[1] != "claude" || f.Setup != "make deps\n" || f.Ports[0] != 3000 {
+	if f.Name != "my-app" || f.CPUs != 6 || f.Disk != 30 || !f.Network.Locked || f.Packs[1] != "claude" || f.Setup != "make deps\n" || f.Ports[0] != 3000 {
 		t.Errorf("Load = %+v", f)
 	}
 	if _, err := Find(t.TempDir()); err == nil || !strings.Contains(err.Error(), "no .limabean.yaml") {

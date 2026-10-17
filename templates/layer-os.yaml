@@ -15,9 +15,12 @@ vmOpts:
     rosetta:
       enabled: true
       binfmt: true
-cpus: 4
-memory: 8GiB
-disk: 50GiB
+# Small by default: CPUS, MEMORY and DISK in limabean's config (or new
+# --cpus/--memory/--disk) make a VM bigger. ~/code is on a disk of its own
+# (CODE_DISK), so the system disk holds the OS, tools and Docker images.
+cpus: 2
+memory: 4GiB
+disk: 10GiB
 
 user:
   # zsh from the moment the account exists. Changing the shell later doesn't

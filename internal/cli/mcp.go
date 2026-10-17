@@ -68,8 +68,9 @@ type (
 	mcpCreate struct {
 		Name   string   `json:"name" jsonschema:"name for the new VM: letters, digits and dashes"`
 		Env    string   `json:"env,omitempty" jsonschema:"environment template; default scratch"`
-		CPUs   int      `json:"cpus,omitempty" jsonschema:"CPUs; default the template's"`
-		Memory int      `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's"`
+		CPUs   int      `json:"cpus,omitempty" jsonschema:"CPUs; default the template's (2)"`
+		Memory int      `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's (4)"`
+		Disk   int      `json:"disk,omitempty" jsonschema:"system disk in GiB; default the template's (10). ~/code has a disk of its own"`
 		Allow  []string `json:"allow,omitempty" jsonschema:"only let the VM reach these domains (and subdomains) or presets: claude, docker, github, go, java, npm, python, ruby, rust, ubuntu"`
 		With   []string `json:"with,omitempty" jsonschema:"packs of tools to add to the defaults: claude, rust, java, ruby, api, supply-chain, … (limabean packs lists them)"`
 		Locked bool     `json:"locked,omitempty" jsonschema:"take sudo and Docker away from the VM's user, so the allowlist can't be turned off from inside"`
@@ -132,8 +133,8 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			if err := checkNames(in.Name, in.Env); err != nil {
 				return nil, nil, err
 			}
-			if in.CPUs < 0 || in.Memory < 0 {
-				return nil, nil, errors.New("cpus and memory must be positive")
+			if in.CPUs < 0 || in.Memory < 0 || in.Disk < 0 {
+				return nil, nil, errors.New("cpus, memory and disk must be positive")
 			}
 			args := []string{"new"}
 			if in.CPUs > 0 {
@@ -141,6 +142,9 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			if in.Memory > 0 {
 				args = append(args, "--memory", strconv.Itoa(in.Memory))
+			}
+			if in.Disk > 0 {
+				args = append(args, "--disk", strconv.Itoa(in.Disk))
 			}
 			// Validated here, and passed as --allow=<value> so nothing reads
 			// as a flag of its own.

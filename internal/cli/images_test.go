@@ -259,3 +259,29 @@ func TestNewChecksTheVMRuns(t *testing.T) {
 		t.Fatalf("a VM that won't start: %v\n%s", err, out)
 	}
 }
+
+// A VM's system disk: --disk on a new VM, grown from a smaller image's on
+// boot, but never copied from a bigger one, which Lima can't shrink.
+func TestNewDisk(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "new", "plain", "--disk", "20", "--cpus", "2")
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "--cpus 2 --disk 20") {
+		t.Errorf("new --disk: %v", h.world.calls)
+	}
+
+	t.Setenv("LIMABEAN_IMAGES", "yes")
+	h.must("", "images", "build")
+	img := imageNames(t, h)[0].Name
+	h.world.diskGiB[img] = 10
+	h.world.calls = nil
+	h.must("", "new", "big", "--disk", "40")
+	if !h.world.called("limactl clone") || !strings.Contains(strings.Join(h.world.calls, "\n"), `.disk = "40GiB"`) {
+		t.Errorf("a bigger disk than the image's is a copy, grown: %v", h.world.calls)
+	}
+	h.world.calls = nil
+	h.must("", "new", "small", "--disk", "8")
+	if h.world.called("limactl clone") || !h.world.called("limactl start --name=small") {
+		t.Errorf("a smaller disk than the image's can't be a copy: %v", h.world.calls)
+	}
+}
