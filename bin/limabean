@@ -211,11 +211,17 @@ gh_check() {
 }
 
 # gh_install <name> <token> / gh_uninstall <name>: the VM's copy.
+# limabean-github-git then switches git to https with the token, or back to
+# SSH pushes (VMs created before it existed simply skip that step).
 gh_install() {
   printf '%s\n' "$2" | ssh -o BatchMode=yes "lima-$1" \
-    'umask 077 && mkdir -p ~/.config/limabean && cat > ~/.config/limabean/github-token'
+    'umask 077 && mkdir -p ~/.config/limabean && cat > ~/.config/limabean/github-token &&
+     { ! command -v limabean-github-git >/dev/null || limabean-github-git; }'
 }
-gh_uninstall() { ssh -o BatchMode=yes "lima-$1" 'rm -f ~/.config/limabean/github-token'; }
+gh_uninstall() {
+  ssh -o BatchMode=yes "lima-$1" 'rm -f ~/.config/limabean/github-token &&
+    { ! command -v limabean-github-git >/dev/null || limabean-github-git; }'
+}
 
 # gh_each <install|uninstall> [token]: apply to every running VM; list the
 # stopped ones, which `limabean github sync` covers once they're running.

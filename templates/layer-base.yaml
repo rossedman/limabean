@@ -43,6 +43,10 @@ provision:
   file: ./files/zshrc
   owner: "{{.User}}:{{.User}}"
 - mode: data
+  path: /usr/local/bin/limabean-github-git
+  file: ./files/limabean-github-git
+  permissions: 755
+- mode: data
   path: "{{.Home}}/.zshenv"
   content: |
     . "$HOME/.config/limabean/env.sh"

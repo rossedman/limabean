@@ -69,9 +69,10 @@ or not, so `ssh lima-dev <cmd>` sees the same tools as a login shell.
 ## Repositories
 
 [ghq](https://github.com/x-motemen/ghq) clones into `~/code/<host>/<owner>/<repo>`.
-GitHub repositories are fetched over https and pushed over SSH through your
-forwarded agent. Private repositories clone over https with the token from
-[`limabean github login`](github.md), or over SSH with `ghq get -p`.
+How git reaches GitHub depends on whether a [GitHub token](github.md) is
+installed. With one, everything goes over https with the token, so it works
+in Claude Desktop sessions too. Without one, repositories are fetched over
+https and pushed over SSH through your forwarded agent.
 
 The global [`.editorconfig`](../templates/files/editorconfig) applies unless a
 project has its own.

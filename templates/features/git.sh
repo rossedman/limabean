@@ -25,9 +25,9 @@ template=$(first .gitcommit.txt commit-template.txt)
   # ghq uses the first ghq.root as its primary root, so this one wins over a
   # host-specific root; the host's per-URL [ghq "<url>"] roots still apply.
   printf '[ghq]\n  root = %s\n' "$code_dir"
-  # ghq clones GitHub over https, which needs no credentials for public repos;
-  # push over SSH so the forwarded agent authenticates it.
-  printf '[url "git@github.com:"]\n  pushInsteadOf = https://github.com/\n'
+  # How GitHub is reached (https with the token, or SSH pushes without one) is
+  # in a file that limabean-github-git rewrites when the token changes.
+  printf '[include]\n  path = %s\n' "$HOME/.config/limabean/github.gitconfig"
   [ -n "$config" ] && printf '[include]\n  path = %s\n' "$config"
   # https access to GitHub (private clones, `ghq get` without -p) through gh,
   # which uses the GITHUB_TOKEN from `limabean github`. Set after the host
@@ -38,6 +38,7 @@ template=$(first .gitcommit.txt commit-template.txt)
   [ -n "$template" ] && printf '[commit]\n  template = %s\n' "$template"
   true
 } > ~/.gitconfig
+limabean-github-git
 
 if [ -z "$config" ]; then
   echo >&2 "limabean: no git config found in the gitConfigDir mount; see docs/getting-started.md"

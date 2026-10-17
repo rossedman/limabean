@@ -1,0 +1,28 @@
+#!/bin/sh
+# How git reaches GitHub in this VM. Installed as /usr/local/bin/limabean-github-git
+# by layer-base.yaml. Run at boot by features/git.sh, and by `limabean github`
+# whenever it installs or removes the GitHub token.
+#
+# With a token (~/.config/limabean/github-token): everything goes over https
+# with the token, including SSH-style remotes. SSH needs a forwarded ssh-agent,
+# and Claude Desktop sessions in the VM don't get one.
+# Without a token: pushes go over SSH with the agent forwarded by
+# `limabean ssh` or `ssh lima-<name>`.
+set -eu
+
+out="$HOME/.config/limabean/github.gitconfig"
+mkdir -p "$(dirname "$out")"
+if [ -s "$HOME/.config/limabean/github-token" ]; then
+  cat > "$out" <<'GIT'
+# Managed by limabean-github-git: a GitHub token is installed, so git uses https.
+[url "https://github.com/"]
+  insteadOf = git@github.com:
+  insteadOf = ssh://git@github.com/
+GIT
+else
+  cat > "$out" <<'GIT'
+# Managed by limabean-github-git: no GitHub token, so pushes use SSH.
+[url "git@github.com:"]
+  pushInsteadOf = https://github.com/
+GIT
+fi

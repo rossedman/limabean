@@ -253,6 +253,12 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
   from the Mac over a forwarded socket was considered and rejected: any
   process in the VM could still request it, so it adds moving parts without
   real protection.
+- **D9 GitHub push transport. Decided: https with the token when one is
+  installed, SSH otherwise.** Claude Desktop's helper in the VM runs without
+  `SSH_AUTH_SOCK`, so SSH pushes can't work in Claude sessions.
+  `limabean-github-git` writes `~/.config/limabean/github.gitconfig`: with a
+  token, `insteadOf` rules send GitHub SSH remotes over https; without one,
+  `pushInsteadOf` sends https pushes over SSH.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 

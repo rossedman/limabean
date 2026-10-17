@@ -1,9 +1,8 @@
 # GitHub access
 
-Git in a VM pushes over SSH through your forwarded ssh-agent, so no token is
-needed for that. The `gh` CLI, the GitHub API, private clones over https and
-authenticated downloads (mise, Go) do need a token. limabean keeps one in your
-macOS Keychain and installs it in every VM.
+The `gh` CLI, the GitHub API, private clones and authenticated downloads (mise,
+Go) need a GitHub token, and so does pushing from Claude Desktop sessions.
+limabean keeps one token in your macOS Keychain and installs it in every VM.
 
 ```bash
 limabean github login     # paste a token; installs it in running VMs
@@ -53,6 +52,22 @@ scoped (see above), so limabean warns about it. With `--with-token` and nothing
 piped in, limabean stops and says so instead of waiting. Surrounding whitespace
 and a missing trailing newline are fine. Even without the flag, a token piped
 into `limabean github login` is read from stdin.
+
+## How git reaches GitHub
+
+| | With a token | Without a token |
+|---|---|---|
+| Fetch | https, with the token | https (public repositories only) |
+| Push | https, with the token | SSH, through your forwarded ssh-agent |
+| Remotes like `git@github.com:…` | rewritten to https | SSH |
+| Claude Desktop sessions | work | can't push |
+
+Claude Desktop sessions don't get a forwarded ssh-agent, so SSH pushes fail
+there. With a token installed, git in the VM rewrites GitHub SSH remotes to
+https and uses the token, so pushing works the same everywhere. The rule lives
+in `~/.config/limabean/github.gitconfig`. `limabean-github-git` rewrites it at
+boot and whenever `limabean github` installs or removes the token. The token
+needs **Contents: read and write** on a repository to push to it.
 
 ## How it works
 
