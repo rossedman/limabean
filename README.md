@@ -31,7 +31,8 @@ copying them in, and appears in Claude Desktop as an SSH connection.
 ## Quick start
 
 ```bash
-brew install rossedman/tap/limabean   # installs lima too; or go install / a release
+brew install lima
+go install github.com/rossedman/limabean/cmd/limabean@latest   # or download a release
 
 limabean init       # save settings, fix ~/.ssh/config, check your setup
 

@@ -139,13 +139,6 @@ it load secrets after `limabean rebuild`.
 GoReleaser ([`.goreleaser.yaml`](../.goreleaser.yaml)) builds one universal
 macOS binary, with the version set through `-X main.version`. Pull requests
 get snapshot builds as workflow artifacts (`snapshot.yml`). A `v*` tag runs
-`release.yml`, which tests, builds and publishes a GitHub release.
-
-The same run pushes a Homebrew cask, `Casks/limabean.rb`, to
-[rossedman/homebrew-tap](https://github.com/rossedman/homebrew-tap), so
-`brew install rossedman/tap/limabean` installs the release along with its
-`lima` dependency. The cask clears the macOS quarantine attribute after
-install. Pushing to the tap needs the `HOMEBREW_TAP_TOKEN` repository secret:
-a fine-grained token with Contents: write on `rossedman/homebrew-tap` only.
-Prereleases (tags like `v0.2.0-rc.1`) skip the tap. Snapshot builds write the
-cask to `dist/homebrew/Casks/` without pushing it.
+`release.yml`, which tests, builds and publishes a GitHub release with the
+archive, checksums and a changelog, using the workflow's own `GITHUB_TOKEN`.
+No other secrets are needed.

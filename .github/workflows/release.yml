@@ -2,7 +2,7 @@ name: release
 
 # Pushing a tag like v0.1.0 tests the code, builds the macOS binary with
 # GoReleaser and publishes a GitHub release with the archive, checksums and a
-# changelog, then updates the Homebrew cask in rossedman/homebrew-tap. Configuration: .goreleaser.yaml.
+# changelog. Configuration: .goreleaser.yaml.
 on:
   push:
     tags: ["v*"]
@@ -29,6 +29,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Fine-grained token with Contents: write on rossedman/homebrew-tap;
-          # GoReleaser pushes Casks/limabean.rb there.
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
