@@ -45,13 +45,15 @@ type fakeWorld struct {
 	failDiskList   bool
 	failDiskCreate bool
 	failDiskDelete bool
-	failClone      bool // snapshot copies fail
-	reboot         bool // the first boot left /var/run/reboot-required
-	sshFail        bool // every ssh call fails
+	failClone      bool            // snapshot copies fail
+	oldVMs         map[string]bool // VMs created before network policies
+	failNetwork    bool            // applying a network policy fails
+	reboot         bool            // the first boot left /var/run/reboot-required
+	sshFail        bool            // every ssh call fails
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}}
 }
 
 func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -75,7 +77,11 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			sort.Strings(names) // limactl lists by name
 			for _, n := range names {
 				status := w.vms[n]
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n)
+				mounts := `"mounts":[{"mountPoint":"/mnt/host/limabean"}],`
+				if w.oldVMs[n] {
+					mounts = ""
+				}
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n, mounts)
 			}
 			return []byte(b.String()), nil
 		case "start":
@@ -147,6 +153,11 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			return []byte("partial"), ctx.Err()
 		case remote == "sh -s": // stop --idle's check
 			return []byte(w.activity[vm]), nil
+		case remote == "sudo -n systemctl start limabean-network.service":
+			if w.failNetwork {
+				return []byte("Job failed"), errors.New("exit status 1")
+			}
+			return nil, nil
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):

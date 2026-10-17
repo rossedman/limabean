@@ -88,6 +88,17 @@ func TestMCPTools(t *testing.T) {
 	if !h.world.called("limactl start --name=agent --tty=false --cpus 6 --memory 12") && !strings.Contains(strings.Join(h.world.calls, "\n"), "--cpus 6 --memory 12") {
 		t.Errorf("create_vm should pass cpus and memory: %v", h.world.calls)
 	}
+	// A sandbox: the agent can narrow a new VM's network, never widen it.
+	out, isErr = call(t, cs, "create_vm", map[string]any{"name": "sandbox", "allow": []string{"github", "pypi.org"}, "locked": true})
+	if isErr || !strings.Contains(out, "Network: 5 domain(s), locked") {
+		t.Fatalf("create_vm with allow and locked: %v\n%s", isErr, out)
+	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "allow": []string{"--secret=X=cmd:id"}}); !isErr || !strings.Contains(out, "isn't a domain") {
+		t.Errorf("an allow entry that looks like a flag should be refused: %v\n%s", isErr, out)
+	}
+	call(t, cs, "stop_vm", map[string]any{"name": "sandbox"})
+	delete(h.world.vms, "sandbox")
+
 	var vms []map[string]any
 	out, _ = call(t, cs, "list_vms", nil)
 	if err := json.Unmarshal([]byte(out), &vms); err != nil || len(vms) != 1 || vms[0]["name"] != "agent" {

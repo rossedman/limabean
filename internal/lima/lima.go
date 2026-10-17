@@ -64,6 +64,9 @@ type Instance struct {
 	// Limabean is true for VMs built from limabean's templates, whose
 	// provisioning writes to /etc/limabean/mise/.
 	Limabean bool `json:"-"`
+	// NetworkPolicy is true for VMs that mount their network policy from
+	// the Mac at /mnt/host/limabean (created by limabean with it).
+	NetworkPolicy bool `json:"-"`
 }
 
 // Running reports whether the VM is up.
@@ -124,6 +127,7 @@ func parseList(out []byte) ([]Instance, error) {
 			return nil, fmt.Errorf("parsing limactl list: %w", err)
 		}
 		inst.Limabean = bytes.Contains(line, []byte("/etc/limabean/mise/"))
+		inst.NetworkPolicy = bytes.Contains(line, []byte(`"/mnt/host/limabean"`))
 		list = append(list, inst)
 	}
 	return list, sc.Err()

@@ -18,6 +18,14 @@ if ! command -v docker >/dev/null 2>&1; then
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
 
+systemctl enable --now docker.socket docker.service
+
+# A locked VM's user doesn't get Docker: its socket is root-equivalent
+# (features/network.sh, files/limabean-network).
+if grep -qx locked /mnt/host/limabean/network.conf 2>/dev/null; then
+  exit 0
+fi
+
 # Let the VM user run docker without sudo. Joining the docker group isn't
 # enough on first boot: Lima's SSH connection is already open and keeps the
 # group list it saw at login. So the user also owns the socket.
@@ -31,4 +39,3 @@ if [ "$(cat "$conf" 2>/dev/null)" != "$want" ]; then
   systemctl daemon-reload
   systemctl restart docker.socket docker.service
 fi
-systemctl enable --now docker.socket docker.service

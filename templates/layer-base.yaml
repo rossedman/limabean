@@ -15,10 +15,17 @@ param:
   # Lima disk mounted over codeDir so it survives a rebuild; limabean
   # passes it when the CODE_DISK setting is on. Empty: none.
   codeDisk: ""
+  # Host directory with this VM's network policy (network.conf), mounted
+  # read-only; limabean passes ~/.config/limabean/network/<vm>. An empty
+  # directory means an open network.
+  networkDir: "~/.config/limabean/network/default"
 
 mounts:
 - location: "{{.Param.gitConfigDir}}"
   mountPoint: /mnt/host/git
+  writable: false
+- location: "{{.Param.networkDir}}"
+  mountPoint: /mnt/host/limabean
   writable: false
 
 provision:
@@ -32,6 +39,12 @@ provision:
   file: ./features/docker.sh
 - mode: system
   file: ./features/code-disk.sh
+- mode: data
+  path: /usr/local/sbin/limabean-network
+  file: ./files/limabean-network
+  permissions: 755
+- mode: system
+  file: ./features/network.sh
 - mode: data
   path: /etc/limabean/mise/00-base.toml
   file: ./mise/base.toml

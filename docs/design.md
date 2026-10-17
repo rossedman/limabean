@@ -301,6 +301,24 @@ An opt-in `--mount` of a host directory (B) is still open.
   its original and rename it into place, so a failure never leaves a
   half-written disk. Live snapshots (memory included) would need
   Virtualization.framework's save/restore, which Lima doesn't expose.
+- **D15 Network allowlists. Decided: dnsmasq and nftables in the VM, plus
+  an opt-in lock.** dnsmasq answers only allowed domains (`address=/#/`
+  makes the rest NXDOMAIN, which also closes DNS as a way out) and adds the
+  addresses it returns to nftables sets (`nftset=`); an `inet limabean`
+  table drops all other output and forwarded traffic, so containers are
+  covered, and only dnsmasq's user may reach the upstream DNS server.
+  The policy file is written on the Mac and mounted read-only, so the VM
+  can't edit it; `limabean-network` applies it at boot (after the mount)
+  and on `systemctl start limabean-network`. Inside the VM this isn't a
+  boundary on its own: Lima gives the user passwordless sudo, and the
+  Docker socket is root. So `locked` replaces cloud-init's sudoers entry
+  with two commands (Lima's host agent runs `sudo cat` on its param file at
+  every start; re-applying the policy only reads the Mac's copy), drops the
+  sudo/docker groups and the socket ownership, and is re-applied every boot
+  because cloud-init and docker.sh would restore them. Enforcing on the
+  Mac (a filtering proxy plus pf rules) would hold against root in the VM
+  too, but needs admin rights on the Mac; it's the next step if the lock
+  isn't enough.
 - **D14 MCP server. Decided: `limabean mcp`, stdio, VM-scoped tools.**
   Built on the official Go SDK. Each tool runs limabean's own command
   in-process, with a plain UI capturing its output and `ssh`/`get`'s

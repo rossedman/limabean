@@ -36,7 +36,7 @@ path from `which limabean`:
 | Tool | Does |
 |---|---|
 | `list_vms` | Lists VMs and their status, as JSON |
-| `create_vm` | Creates a VM (name, environment, CPUs, memory) with your shared secrets |
+| `create_vm` | Creates a VM (name, environment, CPUs, memory) with your shared secrets; `allow` and `locked` make it a [sandbox](cli.md#network-allowlists) that can only reach what the task needs |
 | `start_vm`, `stop_vm` | Starts or stops a VM |
 | `run_in_vm` | Runs a shell command in a running VM and returns its exit code and output |
 | `clone_repo` | Clones a repository into `~/code` with ghq |

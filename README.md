@@ -21,6 +21,8 @@ copying them in, and appears in Claude Desktop as an SSH connection.
   read-only.
 - **Secrets without files.** API keys and tokens come from your Keychain,
   1Password, environment variables or commands, chosen when you create a VM.
+- **Sandboxes for agents.** Limit a VM to the domains its work needs and
+  lock it, so nothing inside, an agent included, can turn that off.
 - **Built for Claude.** Every VM is registered as an SSH connection in Claude
   Desktop.
 - **Safe to throw away.** `~/code` lives on its own disk, so `rebuild`
@@ -100,6 +102,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean github status` | Show the token's account and expiry, and which VMs have it |
 | `limabean github sync` | Install the token in every running VM |
 | `limabean github logout` | Remove the token from the Keychain and VMs |
+| `limabean network ls\|allow\|rm\|open\|lock\|unlock` | Limit which domains a VM can reach, and lock it so that holds |
 | `limabean claude sync` | Register running VMs in Claude Desktop, remove the rest |
 | `limabean mcp` | Let Claude create, run and snapshot VMs, as an MCP server ([details](docs/claude-desktop.md#let-claude-manage-vms)) |
 

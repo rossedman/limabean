@@ -148,9 +148,12 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	opts := lima.StartOptions{
 		Name:     o.Name,
 		Template: tmpl,
-		Params:   map[string]string{"gitConfigDir": a.Cfg.GitConfigDir, "codeDir": a.Cfg.CodeDir},
+		Params:   map[string]string{"gitConfigDir": a.Cfg.GitConfigDir, "codeDir": a.Cfg.CodeDir, "networkDir": a.networkDir(o.Name)},
 		CPUs:     a.Cfg.CPUs,
 		Memory:   a.Cfg.Memory,
+	}
+	if err := os.MkdirAll(a.networkDir(o.Name), 0o755); err != nil {
+		return err
 	}
 	disk, err := a.prepareCodeDisk(ctx, o.Name)
 	if err != nil {
@@ -212,6 +215,21 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	} else {
 		a.UI.Warn("No secrets set up, so gh and other tools in the VM aren't logged in")
 		a.UI.Hint("limabean github login   or   limabean secrets set NAME")
+	}
+	// The first boot provisions with the network open; the VM's policy
+	// (from new --allow/--locked, or kept through a rebuild) applies now.
+	policy, err := a.loadPolicy(o.Name)
+	if err != nil {
+		return err
+	}
+	if !policy.open() || policy.Locked {
+		if inst, err = a.vm(ctx, o.Name); err != nil {
+			return err
+		}
+		if err := a.applyPolicy(ctx, inst); err != nil {
+			return err
+		}
+		a.UI.OK("Network: %s", policy.summary())
 	}
 	a.claudeAdd(o.Name)
 	return nil
@@ -419,6 +437,7 @@ func (a *App) envOf(name string) string {
 // file and the Keychain items limabean created for it.
 func (a *App) forget(ctx context.Context, name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
+	_ = os.RemoveAll(a.networkDir(name))
 	if disk := codeDiskName(name); a.hasCodeDisk(ctx, name) {
 		if out, err := a.Lima.DiskDelete(ctx, disk); err != nil {
 			a.UI.Warn("Couldn't delete %s's code disk %s: %v %s", name, disk, err, strings.TrimSpace(string(out)))

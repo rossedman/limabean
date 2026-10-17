@@ -14,7 +14,8 @@ import (
 )
 
 func newNewCmd(a *App) *cobra.Command {
-	var secretFlags []string
+	var secretFlags, allowFlags []string
+	var locked bool
 	cmd := &cobra.Command{
 		Use:     "new [name] [environment]",
 		Aliases: []string{"create"},
@@ -49,7 +50,10 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
     --secret NPM_TOKEN=env:NPM_TOKEN
 
   # Bigger than the template default
-  limabean new k8s --cpus 8 --memory 16`,
+  limabean new k8s --cpus 8 --memory 16
+
+  # An agent sandbox: GitHub and PyPI only, and no way to undo that
+  limabean new agent --allow github --allow python --locked`,
 		Args:              cobra.MaximumNArgs(2),
 		ValidArgsFunction: completeEnvs(a),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -98,6 +102,15 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 					return err
 				}
 			}
+			if len(allowFlags) > 0 || locked {
+				domains, err := expandAllow(allowFlags)
+				if err != nil {
+					return err
+				}
+				if err := a.savePolicy(o.Name, netPolicy{Locked: locked, Allow: domains}); err != nil {
+					return err
+				}
+			}
 
 			a.prune(ctx)
 			if err := a.create(ctx, o); err != nil {
@@ -113,6 +126,8 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	}
 	f := cmd.Flags()
 	f.StringArrayVar(&secretFlags, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
+	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
+	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
 	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 4)")
 	f.String("memory", "", "memory in GiB (default: the template's, 8)")
 	_ = a.V.BindPFlag(config.KeyCPUs, f.Lookup("cpus"))

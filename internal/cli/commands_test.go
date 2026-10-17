@@ -774,7 +774,7 @@ func TestNewRestartsForUpdatesAndMountsAWS(t *testing.T) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}
 	}
-	if !h.world.called("limactl stop dev") || !h.world.called(`limactl start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --set .mounts`) {
+	if !h.world.called("limactl stop dev") || !h.world.called(`limactl start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --param networkDir=`) || !strings.Contains(strings.Join(h.world.calls, "\n"), "--set .mounts += [{\"location\": \""+aws) {
 		t.Errorf("calls: %v", h.world.calls)
 	}
 	if names, _ := (claude.Settings{Path: h.claude}).VMs(); len(names) != 0 {
