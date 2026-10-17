@@ -194,6 +194,11 @@ func TestMCPDestructiveTools(t *testing.T) {
 		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore", "run_in_vm"}, tool.Name) != destructive {
 			t.Errorf("%s: destructiveHint = %v", tool.Name, destructive)
 		}
+		// Claude Code asks before every call to these.
+		asks := tool.Meta["anthropic/requiresUserInteraction"] == true
+		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore"}, tool.Name) != asks {
+			t.Errorf("%s: anthropic/requiresUserInteraction = %v", tool.Name, asks)
+		}
 	}
 
 	h.world.writeFile(filepath.Join("dev", "disk"), "broken")
