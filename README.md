@@ -34,6 +34,10 @@ git clone https://github.com/rossedman/limabean ~/code/github.com/rossedman/lima
 ln -s ~/code/github.com/rossedman/limabean/bin/limabean ~/.local/bin/limabean
 
 limabean init       # save settings, fix ~/.ssh/config, check your setup
+
+# optional: log VMs into GitHub for gh and the API (scoped tokens: docs/github.md)
+gh auth token --hostname github.com | limabean github login --with-token
+
 limabean new dev    # create a VM
 limabean ssh dev    # or: ssh lima-dev
 ```
