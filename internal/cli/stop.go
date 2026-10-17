@@ -11,7 +11,11 @@ func newStopCmd(a *App) *cobra.Command {
 		Use:   "stop [name]",
 		Short: "Stop a running VM",
 		Long: `Shut a VM down. Its disk, and everything in ~/code, is kept; start it again
-with "limabean ssh <name>" or "limactl start <name>".
+with "limabean start <name>" (or "limabean ssh <name>").
+
+Its Claude Desktop connection is removed while it's stopped (Claude Desktop
+shows an error for a VM it can't reach) and added back when limabean starts
+it.
 
 Leave out the name to pick a VM from a list.`,
 		Example: `  limabean stop dev
@@ -31,6 +35,7 @@ Leave out the name to pick a VM from a list.`,
 				return err
 			}
 			if !inst.Running() {
+				a.claudeRemove(name)
 				a.UI.Info("%s is already stopped", name)
 				return nil
 			}
@@ -40,6 +45,7 @@ Leave out the name to pick a VM from a list.`,
 				return err
 			}
 			a.UI.OK("Stopped %s", a.UI.Code(name))
+			a.claudeRemove(name)
 			return nil
 		},
 	}

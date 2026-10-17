@@ -82,7 +82,31 @@ func (a *App) ensureRunning(ctx context.Context, inst lima.Instance) (lima.Insta
 	}); err != nil {
 		return inst, err
 	}
+	a.claudeAdd(inst.Name)
 	return a.vm(ctx, inst.Name)
+}
+
+// claudeAdd and claudeRemove keep a VM's Claude Desktop entry in step with
+// whether it runs: Claude Desktop shows an error for a connection whose VM
+// is stopped, so only running VMs are listed.
+func (a *App) claudeAdd(name string) {
+	if !a.Cfg.ClaudeDesktop {
+		return
+	}
+	if err := a.Claude.Add(name); err != nil {
+		a.UI.Warn("Couldn't add %s to Claude Desktop: %v", name, err)
+		return
+	}
+	a.UI.OK("Added to Claude Desktop")
+}
+
+func (a *App) claudeRemove(name string) {
+	if !a.Cfg.ClaudeDesktop {
+		return
+	}
+	if err := a.Claude.Remove(name); err != nil && !errors.Is(err, claude.ErrInvalid) {
+		a.UI.Warn("Couldn't update Claude Desktop: %v", err)
+	}
 }
 
 // limaStep runs a limactl call behind a spinner, showing Lima's output only
@@ -176,13 +200,7 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		a.UI.Warn("No secrets set up, so gh and other tools in the VM aren't logged in")
 		a.UI.Hint("limabean github login   or   limabean secrets set NAME")
 	}
-	if a.Cfg.ClaudeDesktop {
-		if err := a.Claude.Add(o.Name); err != nil {
-			a.UI.Warn("Couldn't add %s to Claude Desktop: %v", o.Name, err)
-		} else {
-			a.UI.OK("Added to Claude Desktop")
-		}
-	}
+	a.claudeAdd(o.Name)
 	return nil
 }
 
@@ -325,24 +343,35 @@ done`
 	return false, nil
 }
 
-// prune removes Claude Desktop entries and saved state for VMs deleted
-// outside limabean, e.g. with `limactl delete`.
+// prune brings Claude Desktop in line with VMs started, stopped or deleted
+// outside limabean (limactl, a Mac restart): entries go for VMs that are
+// gone or stopped, and running VMs get one. Saved state for deleted VMs is
+// removed too.
 func (a *App) prune(ctx context.Context) {
 	list, err := a.Lima.List(ctx)
 	if err != nil {
 		return
 	}
-	exists := map[string]bool{}
+	exists, running := map[string]bool{}, map[string]bool{}
 	for _, inst := range list {
 		exists[inst.Name] = true
+		running[inst.Name] = inst.Limabean && inst.Running()
 	}
 	if a.Cfg.ClaudeDesktop {
 		if names, err := a.Claude.VMs(); err == nil {
 			for _, name := range names {
-				if !exists[name] {
-					if a.Claude.Remove(name) == nil {
-						a.UI.Info("Removed %s from Claude Desktop (the VM no longer exists)", name)
-					}
+				if running[name] || a.Claude.Remove(name) != nil {
+					continue
+				}
+				if exists[name] {
+					a.UI.Info("Removed %s from Claude Desktop (the VM is stopped)", name)
+				} else {
+					a.UI.Info("Removed %s from Claude Desktop (the VM no longer exists)", name)
+				}
+			}
+			for _, inst := range list {
+				if running[inst.Name] && !slices.Contains(names, inst.Name) && a.Claude.Add(inst.Name) == nil {
+					a.UI.Info("Added %s to Claude Desktop (the VM is running)", inst.Name)
 				}
 			}
 		}
@@ -377,11 +406,7 @@ func (a *App) envOf(name string) string {
 // Keychain items limabean created for it.
 func (a *App) forget(name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
-	if a.Cfg.ClaudeDesktop {
-		if err := a.Claude.Remove(name); err != nil && !errors.Is(err, claude.ErrInvalid) {
-			a.UI.Warn("Couldn't update Claude Desktop: %v", err)
-		}
-	}
+	a.claudeRemove(name)
 	file := secrets.VMFile(a.Cfg.Dir(), name)
 	list, _ := secrets.LoadFile(file)
 	for _, s := range list {

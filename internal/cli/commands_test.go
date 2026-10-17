@@ -614,3 +614,61 @@ func TestSetupDefaults(t *testing.T) {
 		t.Error("hasProgram")
 	}
 }
+
+// Claude Desktop errors on a connection to a stopped VM, so only running VMs
+// are listed: stop removes the entry, starting adds it back, and ls and sync
+// catch up with VMs started or stopped with limactl.
+func TestClaudeFollowsRunningVMs(t *testing.T) {
+	h := newHarness(t)
+	entries := func() string {
+		names, _ := claude.Settings{Path: h.claude}.VMs()
+		return strings.Join(names, ",")
+	}
+	h.world.vms["dev"] = "Running"
+	h.must("", "claude", "sync")
+	if entries() != "dev" {
+		t.Fatalf("after sync: %q", entries())
+	}
+
+	h.must("", "stop", "dev")
+	if entries() != "" {
+		t.Fatalf("stop kept the entry: %q", entries())
+	}
+	if out := h.must("", "ssh", "dev", "true"); !strings.Contains(out, "Added to Claude Desktop") || entries() != "dev" {
+		t.Fatalf("starting with ssh didn't add the entry: %q\n%s", entries(), out)
+	}
+
+	// Stopped behind limabean's back, then started the same way.
+	h.world.vms["dev"] = "Stopped"
+	if out := h.must("", "ls"); !strings.Contains(out, "Removed dev from Claude Desktop (the VM is stopped)") || entries() != "" {
+		t.Fatalf("ls didn't remove the stopped VM: %q\n%s", entries(), out)
+	}
+	if out := h.must("", "claude", "sync"); !strings.Contains(out, "dev is stopped") || entries() != "" {
+		t.Fatalf("sync registered a stopped VM: %q\n%s", entries(), out)
+	}
+	h.world.vms["dev"] = "Running"
+	if out := h.must("", "ls"); !strings.Contains(out, "Added dev to Claude Desktop (the VM is running)") || entries() != "dev" {
+		t.Fatalf("ls didn't add the running VM: %q\n%s", entries(), out)
+	}
+
+	// start boots it and adds the entry; a second start just ensures it.
+	h.world.vms["dev"] = "Stopped"
+	h.must("", "ls")
+	if out := h.must("", "start", "dev"); !strings.Contains(out, "Started dev") || h.world.vms["dev"] != "Running" || entries() != "dev" {
+		t.Fatalf("start: %q %v\n%s", entries(), h.world.vms, out)
+	}
+	if out := h.must("", "start", "dev"); !strings.Contains(out, "already running") {
+		t.Fatalf("second start: %s", out)
+	}
+	if _, err := h.run("", "start", "nope"); err == nil {
+		t.Error("starting a missing VM should fail")
+	}
+
+	// An entry left from before this change goes when stop finds the VM
+	// already stopped.
+	h.world.vms["dev"] = "Stopped"
+	h.must("", "stop", "dev")
+	if entries() != "" {
+		t.Fatalf("stopping a stopped VM kept the entry: %q", entries())
+	}
+}
