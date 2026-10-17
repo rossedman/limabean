@@ -212,10 +212,13 @@ func (c *Client) Delete(ctx context.Context, name string) ([]byte, error) {
 }
 
 // Clone copies a stopped VM to a new one, with APFS clones of its disks,
-// changing the copy's configuration with --set yq expressions. The copy
-// isn't started.
-func (c *Client) Clone(ctx context.Context, src, dst string, sets ...string) ([]byte, error) {
+// changing the copy's configuration with --set yq expressions, and with
+// start boots the copy too (Lima 2.0's clone --start).
+func (c *Client) Clone(ctx context.Context, start bool, src, dst string, sets ...string) ([]byte, error) {
 	args := []string{"clone", "--tty=false"}
+	if start {
+		args = append(args, "--start")
+	}
 	for _, s := range sets {
 		args = append(args, "--set", s)
 	}

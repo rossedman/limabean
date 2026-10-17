@@ -91,7 +91,8 @@ func TestCloneAndCopyArgs(t *testing.T) {
 	f := &fakeRunner{}
 	c := &Client{Runner: f}
 	ctx := context.Background()
-	_, _ = c.Clone(ctx, "dev", "dev-2", `.param.x = "y"`)
+	_, _ = c.Clone(ctx, false, "dev", "dev-2", `.param.x = "y"`)
+	_, _ = c.Clone(ctx, true, "img", "api")
 	_, _ = c.Copy(ctx, true, "./dist", "dev:code/")
 	_, _ = c.Copy(ctx, false, "dev:a", "b")
 	got := make([]string, len(f.calls))
@@ -100,6 +101,7 @@ func TestCloneAndCopyArgs(t *testing.T) {
 	}
 	want := []string{
 		`limactl clone --tty=false --set .param.x = "y" dev dev-2`,
+		"limactl clone --tty=false --start img api",
 		"limactl copy -r -- ./dist dev:code/",
 		"limactl copy -- dev:a b",
 	}

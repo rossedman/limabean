@@ -87,13 +87,27 @@ func (a *App) ensureRunning(ctx context.Context, inst lima.Instance) (lima.Insta
 	if inst.Running() {
 		return inst, nil
 	}
-	if err := a.limaStep(ctx, "Starting "+inst.Name, func(ctx context.Context) ([]byte, error) {
-		return a.Lima.Start(ctx, inst.Name)
-	}); err != nil {
+	inst, err := a.startVM(ctx, inst.Name)
+	if err != nil {
 		return inst, err
 	}
 	a.claudeAdd(inst.Name)
-	return a.vm(ctx, inst.Name)
+	return inst, nil
+}
+
+// startVM starts a VM and checks that it's running: limactl can return
+// without booting it, for one it wrongly takes to be running already.
+func (a *App) startVM(ctx context.Context, name string) (lima.Instance, error) {
+	if err := a.limaStep(ctx, "Starting "+name, func(ctx context.Context) ([]byte, error) {
+		return a.Lima.Start(ctx, name)
+	}); err != nil {
+		return lima.Instance{Name: name}, err
+	}
+	inst, err := a.vm(ctx, name)
+	if err == nil && !inst.Running() {
+		err = fmt.Errorf("limactl start %s returned, but the VM is %s; its log is %s", name, strings.ToLower(inst.Status), shortPath(filepath.Join(inst.Dir, "ha.stderr.log")))
+	}
+	return inst, err
 }
 
 // claudeAdd and claudeRemove keep a VM's Claude Desktop entry in step with
@@ -200,7 +214,7 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		if err := a.cloneImage(ctx, im, opts, own); err != nil {
 			return err
 		}
-		a.UI.OK("Created %s from %s, from an image built %s ago", a.UI.Code(o.Name), o.Env, roughDuration(time.Since(im.Built)))
+		a.UI.OK("Created %s (%s) from an image built %s ago", a.UI.Code(o.Name), o.Env, roughDuration(time.Since(im.Built)))
 	} else {
 		opts.Sets = append(append(opts.Sets, packSets...), own...)
 		if err := a.limaStep(ctx, fmt.Sprintf("Creating %s from %s. The first boot takes a minute or two…", o.Name, o.Env),
@@ -230,6 +244,11 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	inst, err := a.vm(ctx, o.Name)
 	if err != nil {
 		return err
+	}
+	if !inst.Running() {
+		if inst, err = a.startVM(ctx, o.Name); err != nil {
+			return err
+		}
 	}
 
 	// The first boot upgrades every package (features/apt-upgrade.sh). Some
@@ -776,10 +795,7 @@ func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, 
 		defer unlock()
 	}
 	err := a.limaStep(ctx, "Creating "+opts.Name+" from an image", func(ctx context.Context) ([]byte, error) {
-		if out, err := a.Lima.Clone(ctx, im.Name, opts.Name, sets...); err != nil {
-			return out, err
-		}
-		return a.Lima.Start(ctx, opts.Name)
+		return a.Lima.Clone(ctx, true, im.Name, opts.Name, sets...)
 	})
 	if err != nil {
 		return err

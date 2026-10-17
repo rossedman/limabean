@@ -76,7 +76,7 @@ func (a *App) cloneVM(ctx context.Context, src, dst string) error {
 			return err
 		}
 		if err := a.limaStep(ctx, "Copying "+src+" to "+dst, func(ctx context.Context) ([]byte, error) {
-			return a.Lima.Clone(ctx, src, dst, sets...)
+			return a.Lima.Clone(ctx, false, src, dst, sets...)
 		}); err != nil {
 			a.discardClone(ctx, dst, code)
 			return err

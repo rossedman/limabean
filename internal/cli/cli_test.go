@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -56,6 +57,8 @@ type fakeWorld struct {
 	attachErr      error           // what commands run on the terminal return
 	failDelete     bool            // limactl delete fails
 	spawnErr       error           // starting a background build fails
+	bootless       bool            // the next start or clone --start succeeds without booting
+	neverBoots     bool            // every start succeeds without booting
 }
 
 func newFakeWorld() *fakeWorld {
@@ -101,7 +104,10 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 					return nil, nil
 				}
 			}
-			w.vms[args[len(args)-1]] = "Running"
+			if !w.bootless && !w.neverBoots {
+				w.vms[args[len(args)-1]] = "Running"
+			}
+			w.bootless = false // as when a second start boots it
 		case "stop":
 			if w.failStop {
 				return []byte("stop failed"), errors.New("exit status 1")
@@ -118,6 +124,12 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			}
 			src, dst := args[len(args)-2], args[len(args)-1]
 			w.vms[dst] = "Stopped"
+			if slices.Contains(args, "--start") {
+				if !w.bootless {
+					w.vms[dst] = "Running"
+				}
+				w.bootless = false
+			}
 			w.writeFile(filepath.Join(dst, "disk"), w.readFile(filepath.Join(src, "disk")))
 		case "disk":
 			switch args[1] {

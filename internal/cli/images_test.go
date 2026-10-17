@@ -74,14 +74,14 @@ func TestImagesMakeNewVMsCopies(t *testing.T) {
 		`.additionalDisks += [{"name": "` + codeDiskName("api") + `"`,
 		".cpus = 6",
 		`.memory = "12GiB"`,
+		"--start",
 		img + " api",
-		"limactl start --tty=false api",
 	} {
 		if !strings.Contains(calls, want) {
 			t.Errorf("copy missing %q:\n%s", want, calls)
 		}
 	}
-	if strings.Contains(calls, "limactl start --name=api") || h.world.called("spawn") || !strings.Contains(out, "from an image built") {
+	if strings.Contains(calls, "limactl start") || h.world.called("spawn") || !strings.Contains(out, "from an image built") || h.world.vms["api"] != "Running" {
 		t.Errorf("a fresh image is copied, and not rebuilt:\n%s\n%s", calls, out)
 	}
 
@@ -233,5 +233,29 @@ func TestSpawn(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(imagesLog()); !strings.Contains(string(b), "limabean -test.run=^$") {
 		t.Errorf("log = %q", b)
+	}
+}
+
+// limactl can report success without booting a VM; limabean notices,
+// starts it, and fails clearly if it still isn't running.
+func TestNewChecksTheVMRuns(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_IMAGES", "yes")
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "images", "build")
+
+	h.world.bootless = true
+	h.world.calls = nil
+	out := h.must("", "new", "dev")
+	if !h.world.called("limactl clone --tty=false --start") || !h.world.called("limactl start --tty=false dev") || h.world.vms["dev"] != "Running" || !strings.Contains(out, "dev is ready") {
+		t.Fatalf("a clone that didn't boot should be started:\n%s\n%v", out, h.world.calls)
+	}
+
+	// Started, and still not running: an error, not "ready".
+	h.world.neverBoots = true
+	h.world.vms["dev"] = "Stopped"
+	out, err := h.run("", "ssh", "dev", "true")
+	if err == nil || !strings.Contains(err.Error(), "the VM is stopped") || !strings.Contains(err.Error(), "ha.stderr.log") {
+		t.Fatalf("a VM that won't start: %v\n%s", err, out)
 	}
 }
