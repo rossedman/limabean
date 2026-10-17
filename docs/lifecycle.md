@@ -1,9 +1,42 @@
 # Rebuilds, clones and snapshots
 
 VMs are meant to be thrown away and recreated. limabean keeps that cheap:
-your repositories survive a rebuild, a clone or a snapshot takes seconds,
-throwaway VMs delete themselves, and VMs nobody is using stop by
-themselves.
+new VMs are copies of a ready-made image, your repositories survive a
+rebuild, a clone or a snapshot takes seconds, throwaway VMs delete
+themselves, and VMs nobody is using stop by themselves.
+
+## Fast VMs: images
+
+Provisioning a VM from scratch takes minutes: every Ubuntu update, Docker,
+and each pack's tools. So limabean does it once per kind of VM and keeps
+the result as an **image**: a provisioned VM, shut down, with no secrets,
+code disk or network policy of its own. `new`, `up`, `run`, `rebuild` and
+MCP's `create_vm` make an APFS clone of the image, give it the VM's own
+settings, and boot it. The copy takes moments and shares disk blocks with
+the image until they change, so a new VM is ready about as soon as it has
+booted.
+
+- **The first VM of a kind** (an environment and a set of packs) is
+  provisioned the slow way, and its image is built in the background, so
+  the next one is fast. Build one ahead of time with
+  `limabean images build` (`--with rust` for other packs).
+- **Images are kept fresh.** One more than a week old is still used, and
+  replaced in the background, so copies never miss more than a week of
+  updates. Any change to the templates or packs, a `limabean bump` or a
+  pack of your own included, gives a new kind of image.
+- **Images are hidden** from `limabean ls`. `limabean images ls` lists them;
+  `autostop run` and `limabean images prune` delete outdated ones and ones
+  nobody has copied for 30 days. Each image uses a few GiB.
+
+Background builds log to `~/Library/Logs/limabean-images.log`. To provision
+every VM from scratch instead, set `IMAGES="no"` in the config.
+
+```bash
+limabean images ls
+limabean images build              # the default packs, now
+limabean images prune
+limabean images rm --all
+```
 
 ## Rebuilds keep `~/code`
 

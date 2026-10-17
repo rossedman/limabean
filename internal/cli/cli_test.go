@@ -55,6 +55,7 @@ type fakeWorld struct {
 	sshFail        bool            // every ssh call fails
 	attachErr      error           // what commands run on the terminal return
 	failDelete     bool            // limactl delete fails
+	spawnErr       error           // starting a background build fails
 }
 
 func newFakeWorld() *fakeWorld {
@@ -240,7 +241,8 @@ func newHarness(t *testing.T) *harness {
 	t.Cleanup(h.github.Close)
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(dir, "cache"))
 	t.Setenv("XDG_STATE_HOME", filepath.Join(dir, "state"))
-	t.Setenv("LIMABEAN_AWS_DIR", "") // never mount the real ~/.aws
+	t.Setenv("LIMABEAN_AWS_DIR", "")  // never mount the real ~/.aws
+	t.Setenv("LIMABEAN_IMAGES", "no") // images have tests of their own
 	// A home of its own (doctor and init read ~/.ssh/config), and a fake
 	// ssh-add whose answer FAKE_SSH_ADD controls: 0 keys loaded, 1 none.
 	home := filepath.Join(dir, "home")
@@ -342,6 +344,10 @@ func (h *harness) app(u *ui.UI) *App {
 		return nil
 	}
 	a.macListens = func(port int) bool { return h.world.macPorts[port] }
+	a.spawn = func(args ...string) error {
+		h.world.calls = append(h.world.calls, "spawn "+strings.Join(args, " "))
+		return h.world.spawnErr
+	}
 	a.openURL = func(_ context.Context, url string) error {
 		h.world.calls = append(h.world.calls, "open "+url)
 		return nil

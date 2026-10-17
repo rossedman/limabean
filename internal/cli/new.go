@@ -24,8 +24,10 @@ func newNewCmd(a *App) *cobra.Command {
 		Short:   "Create a VM",
 		Long: `Create a VM from an environment template (default: scratch), boot it, apply
 every pending Ubuntu update, install its secrets and register it with
-Claude Desktop. The first VM takes a few minutes while Lima downloads
-Ubuntu; later ones take about a minute.
+Claude Desktop. The first VM of a kind (environment and packs) is
+provisioned from scratch, which takes a few minutes, and an image of it is
+built in the background; later ones are copies of that image and only
+have to boot (see: limabean images --help).
 
 In a terminal, new asks for anything you didn't pass and then shows the
 secrets step:

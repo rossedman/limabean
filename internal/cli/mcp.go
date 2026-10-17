@@ -127,7 +127,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 			return cli(ctx, "ls", "--json")
 		})
-	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass with to add packs of tools (claude, rust, java, ruby, …), allow (and locked) to make a sandbox that can only reach what the task needs, and ttl to have it deleted later.", false, &no),
+	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes as long as a boot when an image of that kind exists, and a few minutes otherwise. Pass with to add packs of tools (claude, rust, java, ruby, …), allow (and locked) to make a sandbox that can only reach what the task needs, and ttl to have it deleted later.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpCreate) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name, in.Env); err != nil {
 				return nil, nil, err

@@ -329,6 +329,32 @@ An opt-in `--mount` of a host directory (B) is still open.
     minutes by default, an hour at most) and returns the last 100 KiB.
   What a VM can reach (its secrets, GitHub with its token, the network)
   an agent in it can reach too; scoping that is per-VM secrets' job.
+- **D16 Fast creation. Decided: clone a provisioned image.** Provisioning
+  (full upgrade, Docker, every pack's tools) took minutes per VM; booting
+  takes seconds. An image is a VM provisioned exactly like any other but
+  with an empty network policy, no code disk, no AWS mount and no secrets,
+  then cleaned (`apt-get clean`, an empty `/etc/machine-id` so each copy
+  gets its own, as cloud images do) and stopped. A new VM is
+  `limactl clone` of it, with `--set` replacing the per-VM params and
+  mounts (git config, network policy, code dir), adding its code disk and
+  AWS mount, and setting its size; then a normal boot, whose provisioning
+  scripts find everything installed. Lima regenerates the cloud-init
+  instance ID, SSH host keys and MAC address per instance, and networking
+  uses `dhcp-identifier: mac`, so copies don't collide.
+  - The key is a hash of the image format, every file under the templates
+    directory (user templates and packs included), the environment and the
+    packs. Anything that would change a VM changes the key, and outdated
+    images are pruned rather than patched.
+  - No image yet means the old path plus a detached
+    `images build --if-needed`, so the first VM is no slower than before.
+    Images older than a week are used and replaced in the background,
+    bounding how stale a copy's packages are.
+  - flock guards: one build per key (`.build`), and copies hold `.use`
+    shared while the builder takes it exclusively to delete the image it
+    replaced.
+  - Considered: snapshotting the first real VM before its secrets were
+    installed (saves one provision, but risks carrying VM-specific state
+    into the image), and Lima's own image caching (only the download).
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
@@ -367,3 +393,6 @@ heavy extras most VMs don't need.
    (`--ttl`, `run --rm`), copy-on-write clones (`clone`, over `limactl
    clone`), learning allowlists from DNS lookups (`network learn`/`log`),
    `cp`, and a `claude` pack.
+7. ✅ Images: new VMs are `limactl clone`s of a provisioned, cleaned and
+   stopped VM, one per environment, pack set and templates hash, built in
+   the background and replaced weekly (`limabean images`).

@@ -33,11 +33,17 @@ func validVMName(name string) error {
 	if !vmNameRE.MatchString(name) {
 		return errors.New("use letters, digits and dashes, starting with a letter or digit")
 	}
+	if isImage(name) {
+		return errors.New(imagePrefix + " names are for limabean's images")
+	}
 	return nil
 }
 
-// vms returns the VMs built from limabean's templates.
-func (a *App) vms(ctx context.Context) ([]lima.Instance, error) { return a.Lima.Limabean(ctx) }
+// vms returns the VMs built from limabean's templates, leaving out images.
+func (a *App) vms(ctx context.Context) ([]lima.Instance, error) {
+	list, err := a.Lima.Limabean(ctx)
+	return slices.DeleteFunc(list, func(inst lima.Instance) bool { return isImage(inst.Name) }), err
+}
 
 // vm returns a VM by name, or an error pointing at `limabean ls`.
 func (a *App) vm(ctx context.Context, name string) (lima.Instance, error) {
@@ -166,10 +172,11 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	if err != nil {
 		return err
 	}
-	opts.Sets = append(opts.Sets, packSets...)
+	// What's particular to this VM: on top of an image, or a template.
+	var own []string
 	if disk != "" {
 		opts.Params["codeDisk"] = disk
-		opts.Sets = append(opts.Sets, fmt.Sprintf(`.additionalDisks += [{"name": %q, "format": true, "fsType": "ext4"}]`, disk))
+		own = append(own, fmt.Sprintf(`.additionalDisks += [{"name": %q, "format": true, "fsType": "ext4"}]`, disk))
 	}
 	// AWS CLI config, read-only: a writable mount would let the VM change
 	// ~/.aws/config, whose credential_process runs commands on the Mac.
@@ -177,15 +184,34 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	if a.Cfg.AWSDir != "" {
 		if fi, err := os.Stat(config.Expand(a.Cfg.AWSDir)); err == nil && fi.IsDir() {
 			aws = a.Cfg.AWSDir
-			opts.Sets = append(opts.Sets, fmt.Sprintf(
+			own = append(own, fmt.Sprintf(
 				`.mounts += [{"location": %q, "mountPoint": "{{.Home}}/.aws", "writable": false}]`, aws))
 		}
 	}
-	if err := a.limaStep(ctx, fmt.Sprintf("Creating %s from %s. The first boot takes a minute or two…", o.Name, o.Env),
-		func(ctx context.Context) ([]byte, error) { return a.Lima.Create(ctx, opts) }); err != nil {
-		return err
+	im, fromImage := image{}, false
+	key := ""
+	if a.Cfg.Images {
+		if hash, err := templatesHash(root); err == nil {
+			key = imageKey(hash, o.Env, o.Packs)
+			im, fromImage = a.imageFor(ctx, key)
+		}
 	}
-	a.UI.OK("Created %s from %s", a.UI.Code(o.Name), o.Env)
+	if fromImage {
+		if err := a.cloneImage(ctx, im, opts, own); err != nil {
+			return err
+		}
+		a.UI.OK("Created %s from %s, from an image built %s ago", a.UI.Code(o.Name), o.Env, roughDuration(time.Since(im.Built)))
+	} else {
+		opts.Sets = append(append(opts.Sets, packSets...), own...)
+		if err := a.limaStep(ctx, fmt.Sprintf("Creating %s from %s. The first boot takes a minute or two…", o.Name, o.Env),
+			func(ctx context.Context) ([]byte, error) { return a.Lima.Create(ctx, opts) }); err != nil {
+			return err
+		}
+		a.UI.OK("Created %s from %s", a.UI.Code(o.Name), o.Env)
+	}
+	if key != "" && (!fromImage || im.stale()) {
+		defer a.buildInBackground(o.Env, o.Packs)
+	}
 	if disk != "" {
 		a.UI.OK("%s is on its own disk, kept when the VM is rebuilt", a.Cfg.CodeDir)
 	}
@@ -400,7 +426,7 @@ func (a *App) prune(ctx context.Context) {
 	exists, running := map[string]bool{}, map[string]bool{}
 	for _, inst := range list {
 		exists[inst.Name] = true
-		running[inst.Name] = inst.Limabean && inst.Running()
+		running[inst.Name] = inst.Limabean && inst.Running() && !isImage(inst.Name)
 	}
 	if a.Cfg.ClaudeDesktop {
 		if names, err := a.Claude.VMs(); err == nil {
@@ -500,7 +526,9 @@ func (a *App) completeVMs(_ *cobra.Command, args []string, _ string) ([]string, 
 	}
 	names := make([]string, 0, len(list))
 	for _, inst := range list {
-		names = append(names, inst.Name+"\t"+inst.Status)
+		if !isImage(inst.Name) {
+			names = append(names, inst.Name+"\t"+inst.Status)
+		}
 	}
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
@@ -721,5 +749,42 @@ func (a *App) removeExpired(ctx context.Context) error {
 	if failed {
 		return errSilent
 	}
+	return nil
+}
+
+// cloneImage creates a VM as a copy of an image, with the VM's own
+// settings (opts' params, size and the expressions in own) in place of the
+// image's, and boots it.
+func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, own []string) error {
+	sets := []string{
+		fmt.Sprintf(`.param.gitConfigDir = %q | (.mounts[] | select(.mountPoint == "/mnt/host/git") | .location) = %q`, opts.Params["gitConfigDir"], opts.Params["gitConfigDir"]),
+		fmt.Sprintf(`.param.networkDir = %q | (.mounts[] | select(.mountPoint == "/mnt/host/limabean") | .location) = %q`, opts.Params["networkDir"], opts.Params["networkDir"]),
+		fmt.Sprintf(`.param.codeDir = %q`, opts.Params["codeDir"]),
+	}
+	if disk := opts.Params["codeDisk"]; disk != "" {
+		sets = append(sets, fmt.Sprintf(`.param.codeDisk = %q`, disk))
+	}
+	if opts.CPUs > 0 {
+		sets = append(sets, fmt.Sprintf(`.cpus = %d`, opts.CPUs))
+	}
+	if opts.Memory != "" {
+		sets = append(sets, fmt.Sprintf(`.memory = "%sGiB"`, strings.TrimSuffix(opts.Memory, "GiB")))
+	}
+	sets = append(sets, own...)
+	// A shared lock: a build replacing this image waits for the copy.
+	if unlock, err := lockFile(a.imageLock(im.Key, "use"), false, true); err == nil {
+		defer unlock()
+	}
+	err := a.limaStep(ctx, "Creating "+opts.Name+" from an image", func(ctx context.Context) ([]byte, error) {
+		if out, err := a.Lima.Clone(ctx, im.Name, opts.Name, sets...); err != nil {
+			return out, err
+		}
+		return a.Lima.Start(ctx, opts.Name)
+	})
+	if err != nil {
+		return err
+	}
+	im.Used = time.Now()
+	_ = a.saveImage(im)
 	return nil
 }

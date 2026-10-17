@@ -28,6 +28,7 @@ const (
 	KeyIDE           = "ide"
 	KeyCodeDisk      = "code_disk"
 	KeyPacks         = "packs"
+	KeyImages        = "images"
 	KeyPlain         = "plain"
 	KeyTemplates     = "templates"
 )
@@ -47,6 +48,7 @@ type Config struct {
 	IDE           string // editor command for `limabean code`, e.g. code or cursor
 	CodeDisk      int    // GiB of the disk holding CodeDir in new VMs; 0: none
 	Packs         string // packs new VMs get besides core, comma-separated
+	Images        bool   // create VMs by cloning a cached, provisioned image
 }
 
 // DefaultPath is ~/.config/limabean/config.
@@ -70,6 +72,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyIDE, "code")
 	v.SetDefault(KeyCodeDisk, "50")
 	v.SetDefault(KeyPacks, DefaultPacks)
+	v.SetDefault(KeyImages, "yes")
 	v.SetEnvPrefix("LIMABEAN")
 	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
 	v.AllowEmptyEnv(true)
@@ -119,6 +122,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		IDE:           strings.TrimSpace(v.GetString(KeyIDE)),
 		CodeDisk:      codeDisk,
 		Packs:         strings.TrimSpace(v.GetString(KeyPacks)),
+		Images:        yes(v.GetString(KeyImages)),
 	}, nil
 }
 
@@ -143,9 +147,11 @@ func (c *Config) Save() error {
 	if c.CodeDisk > 0 {
 		codeDisk = strconv.Itoa(c.CodeDisk)
 	}
-	claude := "no"
-	if c.ClaudeDesktop {
-		claude = "yes"
+	yesNo := func(b bool) string {
+		if b {
+			return "yes"
+		}
+		return "no"
 	}
 	body := fmt.Sprintf(`# limabean config. Applies to VMs created afterwards.
 
@@ -176,7 +182,11 @@ IDE=%q
 # Packs of tools new VMs get besides core (limabean packs lists them);
 # new --with/--without adjust it per VM.
 PACKS=%q
-`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, claude, c.AWSDir, c.IDE, c.Packs)
+
+# Create VMs in seconds by cloning a provisioned image, built in the
+# background and kept fresh (limabean images). no: provision every VM.
+IMAGES=%q
+`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images))
 	return os.WriteFile(c.Path, []byte(body), 0o600)
 }
 
