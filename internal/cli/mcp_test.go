@@ -93,6 +93,17 @@ func TestMCPTools(t *testing.T) {
 	if isErr || !strings.Contains(out, "Network: 5 domain(s), locked") {
 		t.Fatalf("create_vm with allow and locked: %v\n%s", isErr, out)
 	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "rusty", "with": []string{"rust"}}); isErr || !strings.Contains(out, "rust") {
+		t.Errorf("create_vm with a pack: %v\n%s", isErr, out)
+	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "with": []string{"--secret=X=cmd:id"}}); !isErr {
+		t.Errorf("a pack name that looks like a flag should be refused:\n%s", out)
+	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "with": []string{"cobol"}}); !isErr || !strings.Contains(out, "unknown pack") {
+		t.Errorf("an unknown pack: %v\n%s", isErr, out)
+	}
+	call(t, cs, "stop_vm", map[string]any{"name": "rusty"})
+	delete(h.world.vms, "rusty")
 	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "allow": []string{"--secret=X=cmd:id"}}); !isErr || !strings.Contains(out, "isn't a domain") {
 		t.Errorf("an allow entry that looks like a flag should be refused: %v\n%s", isErr, out)
 	}

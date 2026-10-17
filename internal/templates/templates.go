@@ -102,6 +102,33 @@ func (d Dirs) copyUser(root string) error {
 			return err
 		}
 	}
+	return d.copyUserPacks(root)
+}
+
+// copyUserPacks copies ~/.config/limabean/templates/packs/*.{toml,apt} to
+// root/user-packs, replacing what an earlier run copied, so a pack removed
+// there is gone here too. A user pack overrides a built-in one of its name.
+func (d Dirs) copyUserPacks(root string) error {
+	dst := filepath.Join(root, "user-packs")
+	if err := os.RemoveAll(dst); err != nil {
+		return err
+	}
+	files, _ := filepath.Glob(filepath.Join(d.User, "packs", "*"))
+	for _, f := range files {
+		if ext := filepath.Ext(f); ext != ".toml" && ext != ".apt" {
+			continue
+		}
+		data, err := os.ReadFile(f)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(dst, 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dst, filepath.Base(f)), data, 0o644); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

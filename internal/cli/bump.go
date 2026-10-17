@@ -23,12 +23,13 @@ func newBumpCmd(a *App) *cobra.Command {
 		Use:   "bump [file...]",
 		Short: "Update the pinned tool versions in mise TOML files",
 		Long: `Look up the newest version of every tool pinned in mise TOML files and
-rewrite the pins, keeping comments and layout. Without files it updates
-templates/mise/*.toml under the current directory: a limabean checkout, or
-your own templates folder.
+rewrite the pins, keeping comments and layout. Without files it updates the
+packs, templates/packs/*.toml, and any templates/mise/*.toml, under the
+current directory: a limabean checkout, or your own templates folder.
 
 Each pin stays within its major version (its minor below 1.0, where minors
-can break) unless you pass --major. Newer majors are listed either way.
+can break, and its vendor, like temurin- for Java) unless you pass --major.
+Newer majors are listed either way.
 
 Versions come from "mise latest", run on your Mac if mise is installed
 (brew install mise) or in a running VM with --vm, since every VM has mise.
@@ -42,15 +43,17 @@ VMs pick up new pins when they're rebuilt.`,
   # Without mise on the Mac
   limabean bump --vm dev
 
-  # Your own environment's pins, majors included
-  limabean bump ~/.config/limabean/templates/mise/node.toml --major`,
+  # One pack, majors included
+  limabean bump templates/packs/node.toml --major`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			files := args
 			if len(files) == 0 {
-				files, _ = filepath.Glob(filepath.Join("templates", "mise", "*.toml"))
+				packs, _ := filepath.Glob(filepath.Join("templates", "packs", "*.toml"))
+				envs, _ := filepath.Glob(filepath.Join("templates", "mise", "*.toml"))
+				files = append(packs, envs...)
 				if len(files) == 0 {
-					return errors.New("no templates/mise/*.toml here; run it in a limabean checkout or name the files")
+					return errors.New("no templates/packs/*.toml here; run it in a limabean checkout or name the files")
 				}
 			}
 			latest, err := a.latestLookup(ctx, vm)
@@ -130,7 +133,12 @@ func (a *App) bumpFile(ctx context.Context, path string, latest func(context.Con
 				defer wg.Done()
 				sem <- struct{}{}
 				defer func() { <-sem }()
-				newest, err := latest(ctx, p.Tool)
+				// A vendor-prefixed version (temurin-25…) stays with its vendor.
+				spec := p.Tool
+				if prefix := pins.Prefix(p.Version); prefix != "" {
+					spec += "@" + prefix
+				}
+				newest, err := latest(ctx, spec)
 				if err != nil {
 					errs[i] = err
 					return

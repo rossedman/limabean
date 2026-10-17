@@ -1,0 +1,5 @@
+# Node.js: the current LTS, pnpm and Bun.
+[tools]
+node = "24.22.0"
+pnpm = "12.14.0"
+bun = "1.4.3"

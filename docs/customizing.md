@@ -11,13 +11,13 @@ templates/
   scratch.yaml        an environment (built on layer-base)
   features/           idempotent provisioning scripts, one per capability
   files/              files written into the VM (zshrc, env.sh, editorconfig)
-  mise/               pinned tool versions
+  packs/              tool packs: pinned mise TOMLs, and apt lists
 ```
 
 | To… | Edit |
 |---|---|
-| Add or upgrade a CLI tool | [`mise/base.toml`](https://github.com/rossedman/limabean/blob/main/templates/mise/base.toml). Pin a version; `limabean bump` upgrades every pin within its major (`--major` for more), and a monthly workflow (`bump.yml`) opens a PR with the same. |
-| Add a system package | `packages=(…)` in [`features/apt-common.sh`](https://github.com/rossedman/limabean/blob/main/templates/features/apt-common.sh) |
+| Add or upgrade a CLI tool | A pack in [`packs/`](https://github.com/rossedman/limabean/tree/main/templates/packs), or a pack of your own in `~/.config/limabean/templates/packs/` ([details](packs.md#your-own-packs)). Pin a version; `limabean bump` upgrades every pin within its major (`--major` for more), and a monthly workflow (`bump.yml`) opens a PR with the same. |
+| Add a system package | A pack's `.apt` list, or for every VM `packages=(…)` in [`features/apt-common.sh`](https://github.com/rossedman/limabean/blob/main/templates/features/apt-common.sh) |
 | Change the prompt, aliases or shell options | [`files/zshrc`](https://github.com/rossedman/limabean/blob/main/templates/files/zshrc) |
 | Add an environment variable for every shell | [`files/env.sh`](https://github.com/rossedman/limabean/blob/main/templates/files/env.sh) |
 | Add a tool's zsh completion | a `gen` line in [`features/completions.sh`](https://github.com/rossedman/limabean/blob/main/templates/features/completions.sh) |

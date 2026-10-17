@@ -1,5 +1,5 @@
 // Package pins reads and rewrites the pinned tool versions in a mise TOML
-// file (templates/mise/*.toml), line by line, so comments and layout are
+// file (templates/packs/*.toml), line by line, so comments and layout are
 // kept: only the version strings change.
 package pins
 
@@ -55,18 +55,38 @@ func Rewrite(src string, versions map[string]string) string {
 	return strings.Join(lines, "\n")
 }
 
+// prefixRE matches a vendor prefix such as "temurin-" in java versions.
+var prefixRE = regexp.MustCompile(`^([a-z][a-z0-9]*-)[0-9]`)
+
+// Prefix is a version's vendor prefix without its dash ("temurin" for
+// "temurin-25.0.4+101.0.LTS"), or "". `mise latest tool@<prefix>` stays with
+// that vendor.
+func Prefix(version string) string {
+	if m := prefixRE.FindStringSubmatch(version); m != nil {
+		return strings.TrimSuffix(m[1], "-")
+	}
+	return ""
+}
+
 // Series is the range an upgrade stays in unless majors are allowed: the
-// major version, or major.minor below 1.0, where minors can break. It's
-// what `mise latest tool@<series>` takes. "" for versions it can't read.
+// major version, or major.minor below 1.0, where minors can break, after
+// any vendor prefix (temurin-25). It's what `mise latest tool@<series>`
+// takes. "" for versions it can't read.
 func Series(version string) string {
+	prefix := ""
+	if p := Prefix(version); p != "" {
+		prefix = p + "-"
+		version = strings.TrimPrefix(version, prefix)
+	}
 	parts := strings.SplitN(strings.TrimPrefix(version, "v"), ".", 3)
+	parts[len(parts)-1], _, _ = strings.Cut(parts[len(parts)-1], "+")
 	if _, err := strconv.Atoi(parts[0]); err != nil {
 		return ""
 	}
 	if parts[0] == "0" && len(parts) > 1 {
-		return "0." + parts[1]
+		return prefix + "0." + parts[1]
 	}
-	return parts[0]
+	return prefix + parts[0]
 }
 
 // Newer reports whether version a is newer than b, comparing dot-separated
@@ -76,6 +96,21 @@ func Newer(a, b string) bool {
 }
 
 func compare(a, b string) int {
+	if pa, pb := Prefix(a), Prefix(b); pa != pb {
+		return strings.Compare(pa, pb)
+	} else if pa != "" {
+		a, b = strings.TrimPrefix(a, pa+"-"), strings.TrimPrefix(b, pb+"-")
+	}
+	// Build metadata (+101.0.LTS) breaks ties between equal versions.
+	a, builda, _ := strings.Cut(a, "+")
+	b, buildb, _ := strings.Cut(b, "+")
+	if c := compareVersions(a, b); c != 0 {
+		return c
+	}
+	return compareVersions(builda, buildb)
+}
+
+func compareVersions(a, b string) int {
 	split := func(v string) ([]string, string) {
 		v = strings.TrimPrefix(v, "v")
 		main, pre, _ := strings.Cut(v, "-")

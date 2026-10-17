@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -94,16 +95,39 @@ func TestBump(t *testing.T) {
 		t.Error("a missing file should fail")
 	}
 
-	// Without files: templates/mise/*.toml in the current directory.
+	// Without files: templates/packs/*.toml (and templates/mise/*.toml) here.
 	t.Chdir(dir)
-	if _, err := h.run("", "bump"); err == nil || !strings.Contains(err.Error(), "no templates/mise") {
+	if _, err := h.run("", "bump"); err == nil || !strings.Contains(err.Error(), "no templates/packs") {
 		t.Errorf("no templates here: %v", err)
 	}
+	os.MkdirAll(filepath.Join(dir, "templates", "packs"), 0o755)
 	os.MkdirAll(filepath.Join(dir, "templates", "mise"), 0o755)
 	write()
-	os.Rename(file, filepath.Join(dir, "templates", "mise", "base.toml"))
-	if out := h.must("", "bump"); !strings.Contains(out, "templates/mise/base.toml: updated 2 pin(s)") {
+	os.Rename(file, filepath.Join(dir, "templates", "packs", "base.toml"))
+	os.WriteFile(filepath.Join(dir, "templates", "mise", "env.toml"), []byte("[tools]\ngo = \"1.27.2\"\n"), 0o644)
+	out = h.must("", "bump")
+	if !strings.Contains(out, "templates/packs/base.toml: updated 2 pin(s)") || !strings.Contains(out, "templates/mise/env.toml: all 1 pins are up to date") {
 		t.Errorf("default files:\n%s", out)
+	}
+}
+
+// A vendor-prefixed pin stays with its vendor and LTS line.
+func TestBumpPrefixedVersion(t *testing.T) {
+	h := newHarness(t)
+	bin := t.TempDir()
+	os.WriteFile(filepath.Join(bin, "mise"), []byte("#!/bin/sh\n"), 0o755)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	file := filepath.Join(t.TempDir(), "java.toml")
+	os.WriteFile(file, []byte("[tools]\njava = \"temurin-25.0.4+101.0.LTS\"\n"), 0o644)
+	h.world.latest["java@temurin"] = "temurin-27.0.0+35"
+	h.world.latest["java@temurin-25"] = "temurin-25.0.5+11.0.LTS"
+	h.world.latest["java"] = "27.0.0" // another vendor: never asked
+	out := h.must("", "bump", file)
+	if b, _ := os.ReadFile(file); !strings.Contains(string(b), `"temurin-25.0.5+11.0.LTS"`) || !strings.Contains(out, "temurin-27.0.0+35 available (--major)") {
+		t.Fatalf("got:\n%s\n%s", b, out)
+	}
+	if slices.Contains(h.world.calls, "mise latest java") {
+		t.Errorf("asked mise for java without the vendor: %v", h.world.calls)
 	}
 }
 

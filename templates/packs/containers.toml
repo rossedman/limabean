@@ -1,0 +1,5 @@
+# Containers: act (GitHub Actions locally), dive (image layers) and skopeo.
+# Docker itself is in every VM.
+[tools]
+act = "0.2.89"
+dive = "0.13.1"

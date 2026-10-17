@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -132,6 +133,7 @@ func (a *App) limaStep(ctx context.Context, title string, fn func(context.Contex
 // createOptions are the choices for a new VM.
 type createOptions struct {
 	Name, Env string
+	Packs     []string // besides core, which layer-base installs
 }
 
 // create builds a VM, finishes its updates, installs its secrets and
@@ -142,6 +144,10 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		return err
 	}
 	tmpl, err := templates.Path(root, o.Env)
+	if err != nil {
+		return err
+	}
+	packSets, err := packProvision(root, o.Packs)
 	if err != nil {
 		return err
 	}
@@ -159,6 +165,7 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	if err != nil {
 		return err
 	}
+	opts.Sets = append(opts.Sets, packSets...)
 	if disk != "" {
 		opts.Params["codeDisk"] = disk
 		opts.Sets = append(opts.Sets, fmt.Sprintf(`.additionalDisks += [{"name": %q, "format": true, "fsType": "ext4"}]`, disk))
@@ -186,6 +193,12 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	}
 	if err := a.saveEnv(o.Name, o.Env); err != nil {
 		return err
+	}
+	if err := a.savePacks(o.Name, o.Packs); err != nil {
+		return err
+	}
+	if len(o.Packs) > 0 {
+		a.UI.OK("Packs: core, %s", strings.Join(o.Packs, ", "))
 	}
 	inst, err := a.vm(ctx, o.Name)
 	if err != nil {
@@ -409,7 +422,8 @@ func (a *App) prune(ctx context.Context) {
 	}
 	entries, _ := os.ReadDir(a.stateDir)
 	for _, e := range entries {
-		if name, ok := strings.CutSuffix(e.Name(), ".env"); ok && !exists[name] {
+		name := strings.TrimSuffix(strings.TrimSuffix(e.Name(), ".env"), ".packs")
+		if name != e.Name() && !exists[name] {
 			_ = os.Remove(filepath.Join(a.stateDir, e.Name()))
 		}
 	}
@@ -437,6 +451,7 @@ func (a *App) envOf(name string) string {
 // file and the Keychain items limabean created for it.
 func (a *App) forget(ctx context.Context, name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
+	_ = os.Remove(filepath.Join(a.stateDir, name+".packs"))
 	_ = os.RemoveAll(a.networkDir(name))
 	if disk := codeDiskName(name); a.hasCodeDisk(ctx, name) {
 		if out, err := a.Lima.DiskDelete(ctx, disk); err != nil {
@@ -586,4 +601,61 @@ func (a *App) prepareCodeDisk(ctx context.Context, vm string) (string, error) {
 		return "", err
 	}
 	return disk, nil
+}
+
+// packProvision returns the limactl --set expressions that write the packs'
+// mise TOMLs and apt lists into a new VM.
+func packProvision(root string, names []string) ([]string, error) {
+	all, err := templates.Packs(root)
+	if err != nil {
+		return nil, err
+	}
+	var sets []string
+	for _, name := range names {
+		i := slices.IndexFunc(all, func(p templates.Pack) bool { return p.Name == name })
+		if i < 0 {
+			return nil, fmt.Errorf("unknown pack %q (see: limabean packs)", name)
+		}
+		add := func(path, content string) {
+			c, _ := json.Marshal(content)
+			sets = append(sets, fmt.Sprintf(`.provision += [{"mode": "data", "path": %q, "content": %s}]`, path, c))
+		}
+		add("/etc/limabean/mise/50-"+name+".toml", all[i].TOML)
+		if list := all[i].AptList(); list != "" {
+			add("/etc/limabean/apt/"+name+".list", list)
+		}
+	}
+	return sets, nil
+}
+
+// resolvePacks works out a VM's packs: base (its saved packs, or the PACKS
+// setting), plus with, minus without.
+func (a *App) resolvePacks(base, with, without []string) ([]string, error) {
+	root, err := a.templatesRoot()
+	if err != nil {
+		return nil, err
+	}
+	all, err := templates.Packs(root)
+	if err != nil {
+		return nil, err
+	}
+	return templates.ResolvePacks(all, base, with, without)
+}
+
+// savePacks remembers which packs a VM was built with, for rebuild.
+func (a *App) savePacks(name string, packs []string) error {
+	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(a.stateDir, name+".packs"), []byte(strings.Join(packs, ",")+"\n"), 0o644)
+}
+
+// packsOf returns the packs a VM was built with, and whether that's known
+// (VMs made before packs aren't).
+func (a *App) packsOf(name string) ([]string, bool) {
+	b, err := os.ReadFile(filepath.Join(a.stateDir, name+".packs"))
+	if err != nil {
+		return nil, false
+	}
+	return templates.SplitList(strings.TrimSpace(string(b))), true
 }

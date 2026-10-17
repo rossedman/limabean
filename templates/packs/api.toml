@@ -1,0 +1,4 @@
+# APIs: buf for protobuf and grpcurl for gRPC.
+[tools]
+buf = "1.74.0"
+grpcurl = "1.9.4"

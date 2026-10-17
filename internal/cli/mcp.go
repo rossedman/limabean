@@ -70,7 +70,8 @@ type (
 		Env    string   `json:"env,omitempty" jsonschema:"environment template; default scratch"`
 		CPUs   int      `json:"cpus,omitempty" jsonschema:"CPUs; default the template's"`
 		Memory int      `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's"`
-		Allow  []string `json:"allow,omitempty" jsonschema:"only let the VM reach these domains (and subdomains) or presets: claude, docker, github, go, npm, python, ubuntu"`
+		Allow  []string `json:"allow,omitempty" jsonschema:"only let the VM reach these domains (and subdomains) or presets: claude, docker, github, go, java, npm, python, ruby, rust, ubuntu"`
+		With   []string `json:"with,omitempty" jsonschema:"packs of tools to add to the defaults: rust, java, ruby, api, supply-chain, … (limabean packs lists them)"`
 		Locked bool     `json:"locked,omitempty" jsonschema:"take sudo and Docker away from the VM's user, so the allowlist can't be turned off from inside"`
 	}
 	mcpRun struct {
@@ -121,7 +122,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 			return cli(ctx, "ls", "--json")
 		})
-	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass allow (and locked) to make a sandbox that can only reach what the task needs.", false, &no),
+	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass with to add packs of tools (rust, java, ruby, …), and allow (and locked) to make a sandbox that can only reach what the task needs.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpCreate) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name, in.Env); err != nil {
 				return nil, nil, err
@@ -143,6 +144,12 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			for _, d := range in.Allow {
 				args = append(args, "--allow="+d)
+			}
+			for _, p := range in.With {
+				if err := checkNames(p); err != nil {
+					return nil, nil, err
+				}
+				args = append(args, "--with="+p)
 			}
 			if in.Locked {
 				args = append(args, "--locked")

@@ -1,6 +1,6 @@
 name: bump
 
-# Once a month, update the pinned tool versions in templates/mise/*.toml
+# Once a month, update the pinned tool versions in templates/packs/*.toml
 # with `limabean bump` and open a pull request with the changes.
 #
 # Needs "Allow GitHub Actions to create and approve pull requests" in the

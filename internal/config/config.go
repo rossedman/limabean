@@ -27,9 +27,13 @@ const (
 	KeyAWSDir        = "aws_dir"
 	KeyIDE           = "ide"
 	KeyCodeDisk      = "code_disk"
+	KeyPacks         = "packs"
 	KeyPlain         = "plain"
 	KeyTemplates     = "templates"
 )
+
+// DefaultPacks are the packs new VMs get unless PACKS says otherwise.
+const DefaultPacks = "go,python,node,kubernetes,infra,containers,db"
 
 // Config is the resolved settings.
 type Config struct {
@@ -42,6 +46,7 @@ type Config struct {
 	AWSDir        string // mounted read-only at ~/.aws in VMs; "": never
 	IDE           string // editor command for `limabean code`, e.g. code or cursor
 	CodeDisk      int    // GiB of the disk holding CodeDir in new VMs; 0: none
+	Packs         string // packs new VMs get besides core, comma-separated
 }
 
 // DefaultPath is ~/.config/limabean/config.
@@ -64,6 +69,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyAWSDir, "~/.aws")
 	v.SetDefault(KeyIDE, "code")
 	v.SetDefault(KeyCodeDisk, "50")
+	v.SetDefault(KeyPacks, DefaultPacks)
 	v.SetEnvPrefix("LIMABEAN")
 	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
 	v.AllowEmptyEnv(true)
@@ -112,6 +118,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		AWSDir:        v.GetString(KeyAWSDir),
 		IDE:           strings.TrimSpace(v.GetString(KeyIDE)),
 		CodeDisk:      codeDisk,
+		Packs:         strings.TrimSpace(v.GetString(KeyPacks)),
 	}, nil
 }
 
@@ -165,7 +172,11 @@ AWS_DIR=%q
 # Editor that limabean code opens VMs in: code (VS Code), cursor, or another
 # editor with VS Code's --remote flag.
 IDE=%q
-`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, claude, c.AWSDir, c.IDE)
+
+# Packs of tools new VMs get besides core (limabean packs lists them);
+# new --with/--without adjust it per VM.
+PACKS=%q
+`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, claude, c.AWSDir, c.IDE, c.Packs)
 	return os.WriteFile(c.Path, []byte(body), 0o600)
 }
 

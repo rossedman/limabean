@@ -106,7 +106,7 @@ something goes wrong.
 | Tool | Does |
 |---|---|
 | `list_vms` | Lists VMs: status, environment, size, secrets, network |
-| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `allow`, `locked`. It gets your shared secrets |
+| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` ([packs](packs.md) beyond the defaults), `allow`, `locked`. It gets your shared secrets |
 | `start_vm`, `stop_vm` | Starts or stops a VM |
 | `run_in_vm` | Runs a shell command in a running VM and returns the exit code and output |
 | `clone_repo` | Clones a repository into `~/code` with ghq |

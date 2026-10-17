@@ -1,0 +1,4 @@
+# Rust: the stable toolchain through rustup, and cargo-binstall.
+[tools]
+rust = "1.99.1"
+cargo-binstall = "1.25.3"
