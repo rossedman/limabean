@@ -110,6 +110,11 @@ func guessGitConfigDir(home, current string) string {
 		return current
 	}
 	dir := filepath.Dir(target)
+	// Resolve home too, so a symlinked home (or /var → /private/var on
+	// macOS) still compares equal to the resolved target.
+	if real, err := filepath.EvalSymlinks(home); err == nil {
+		home = real
+	}
 	if rel, err := filepath.Rel(home, dir); err == nil && !strings.HasPrefix(rel, "..") {
 		return "~/" + rel
 	}
