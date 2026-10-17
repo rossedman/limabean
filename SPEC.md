@@ -46,13 +46,13 @@ build three layers:
 
 ```
 templates/
-  layer-os.yaml       # layer 1: Ubuntu 24.04, CPU/mem/disk, ssh agent forwarding, containerd
-  layer-base.yaml     # layer 2: base: layer-os + apt + mise tools + git + docker alias + zsh + editorconfig
+  layer-os.yaml       # layer 1: Ubuntu 24.04, CPU/mem/disk, ssh agent forwarding, zsh
+  layer-base.yaml     # layer 2: base: layer-os + apt + Docker + mise tools + git + zsh + editorconfig
   scratch.yaml        # layer 3: base: layer-base, nothing else (throwaway sandbox)
   go.yaml             #          base: layer-base + mise/go.toml
   python.yaml  k8s.yaml  ...
   features/           # idempotent shell scripts, one per capability
-    zsh-install.sh  apt-common.sh  mise.sh  completions.sh  git.sh  nerdctl.sh  shell.sh
+    zsh-install.sh  apt-common.sh  mise.sh  completions.sh  git.sh  docker.sh  shell.sh
   files/              # static files written into the VM (zshrc, env.sh, editorconfig)
   mise/               # tool versions; base.toml + one per environment
     base.toml  go.toml  python.toml
@@ -220,15 +220,14 @@ and an opt-in `--mount` can come later if rebuilds start to hurt.
 - **D3 Shell config portability.** For when dotfiles return: shell configs
   often assume macOS (`/opt/homebrew`, `pbcopy`). They need
   `[[ $OSTYPE == darwin* ]]` guards to work in both places.
-- **D4 Container runtime. Decided: Lima's rootless containerd + nerdctl**
-  (`containerd.user: true`), with `docker` symlinked to `nerdctl` by
-  `features/nerdctl.sh`. Lima installs and upgrades it, so there's no install
-  script to maintain. Known gaps: tools that need a real Docker daemon socket
-  (for example testcontainers), and kind's nerdctl provider, which is
-  experimental. To switch to Docker Engine, add a system feature script and set
-  `containerd.user: false`. If you do, set `SocketUser` on `docker.socket`:
-  a docker group added during first boot doesn't reach Lima's already-open SSH
-  session.
+- **D4 Container runtime. Decided: Docker Engine** (`features/docker.sh`,
+  from Docker's apt repository, with the buildx and compose plugins), and
+  Lima's containerd/nerdctl turned off (`containerd.user: false`). An earlier
+  version used Lima's rootless nerdctl with `docker` symlinked to it. That was
+  less to maintain, but it couldn't run the full Docker CLI and plugin
+  ecosystem, custom BuildKit frontends, or kind's default provider. The VM user
+  owns `docker.socket` through a systemd `SocketUser` drop-in, because a docker
+  group added during first boot doesn't reach Lima's already-open SSH session.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 
@@ -248,7 +247,7 @@ heavy extras most VMs don't need.
 ## Milestones
 
 1. ✅ `layer-os.yaml` + `layer-base.yaml` + the `apt-common`, `mise`, `git` and
-   `nerdctl`/`shell` features, plus the global editorconfig. `scratch` boots, and `ssh lima-scratch` has every tool.
+   `docker`/`shell` features, plus the global editorconfig. `scratch` boots, and `ssh lima-scratch` has every tool.
 2. A second environment, to exercise per-environment mise TOML files.
 3. ✅ `bin/limabean`: `init`, `doctor`, `new`, `ls`, `ssh`, `get`, `stop`,
    `rebuild` and `rm`, with the unsaved-work guard.

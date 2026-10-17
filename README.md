@@ -177,10 +177,11 @@ Ubuntu 24.04, with:
 - **apt:** git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   venv, skopeo
-- **Containers:** rootless containerd, nerdctl and BuildKit, installed and
-  managed by Lima. `docker` is a symlink to `nerdctl`, so `docker run`,
-  `docker build` and `docker compose` work. Tools that need a real Docker
-  daemon socket won't. kind runs with `KIND_EXPERIMENTAL_PROVIDER=nerdctl`.
+- **Docker Engine** from Docker's apt repository, with the buildx and compose
+  plugins. BuildKit is the default builder, so custom Dockerfile syntaxes
+  (`# syntax=docker/dockerfile:1`) and other BuildKit features work. Your user
+  owns the socket, so `docker` needs no sudo, and kind, testcontainers and
+  other tools that expect a Docker daemon work as they do on a Mac.
 - **mise** ([templates/mise/base.toml](templates/mise/base.toml), all
   versions pinned): go, goreleaser, golangci-lint, uv, kubectl, helm, kind,
   k9s, terraform, aws-cli, cosign, syft, grype, ripgrep, fd, fzf, bat, gh, ghq,
@@ -220,7 +221,7 @@ Also included:
 - tab completion for almost every installed tool. Most is generated at boot
   into `~/.local/share/zsh/completions` by
   [completions.sh](templates/features/completions.sh): gh, kubectl, helm, kind,
-  k9s, docker/nerdctl, mise, go, goreleaser, golangci-lint, uv, pip, cosign,
+  k9s, docker, mise, go, goreleaser, golangci-lint, uv, pip, cosign,
   syft, grype, glow, gum, svu, rg, fd, bat, yq and ghq. aws and terraform use
   their own completers. git, ssh, make, tmux and others come with zsh.
 

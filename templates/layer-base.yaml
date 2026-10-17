@@ -23,6 +23,8 @@ provision:
   file: ./features/zsh-install.sh
 - mode: system
   file: ./features/apt-common.sh
+- mode: system
+  file: ./features/docker.sh
 - mode: data
   path: /etc/limabean/mise/00-base.toml
   file: ./mise/base.toml
@@ -49,8 +51,6 @@ provision:
   file: ./features/completions.sh
 - mode: user
   file: ./features/git.sh
-- mode: user
-  file: ./features/nerdctl.sh
 - mode: user
   file: ./features/shell.sh
 
