@@ -55,6 +55,9 @@ type App struct {
 	launchctl func(ctx context.Context, args ...string) ([]byte, error)
 	// How `code` starts the editor; tests replace it.
 	openEditor func(ctx context.Context, ide string, args ...string) error
+	// How `ports` and `open` reach the Mac's side; tests replace them.
+	macListens func(port int) bool
+	openURL    func(ctx context.Context, url string) error
 
 	// Persistent flags.
 	configPath   string
@@ -76,6 +79,8 @@ func NewApp(version string, embedded fs.FS) *App {
 		attachSSH:   attach,
 		launchctl:   runLaunchctl,
 		openEditor:  openEditor,
+		macListens:  macListens,
+		openURL:     openURL,
 	}
 }
 
