@@ -28,7 +28,7 @@ gen kubectl       kubectl completion zsh
 gen helm          helm completion zsh
 gen kind          kind completion zsh
 gen k9s           k9s completion zsh
-gen nerdctl       nerdctl completion zsh      # `docker` reuses it (see zshrc)
+gen docker        docker completion zsh
 gen mise          mise completion zsh
 gen goreleaser    goreleaser completion zsh
 gen golangci-lint golangci-lint completion zsh
