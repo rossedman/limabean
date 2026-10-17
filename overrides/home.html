@@ -1,0 +1,233 @@
+{#- The landing page. Everything renders in the tabs block, outside Material's
+    content grid, so sections can run edge to edge. -#}
+{% extends "main.html" %}
+
+{% set gh = "https://github.com/rossedman/limabean" %}
+{% set docs = gh ~ "/blob/main/docs/" %}
+{% set install = "go install github.com/rossedman/limabean/cmd/limabean@latest" %}
+
+{% block tabs %}
+{{ super() }}
+<div class="lb">
+
+  <!-- Hero -->
+  <section class="lb-hero">
+    <div class="lb-grid" aria-hidden="true"></div>
+    <div class="lb-wrap lb-hero__inner">
+      <div class="lb-hero__text">
+        <img class="lb-hero__logo" src="{{ 'assets/site/bean.svg' | url }}" alt="">
+        <h1 class="lb-title">lima<span>bean</span></h1>
+        <p class="lb-tagline">Disposable Linux dev VMs for macOS,<br><b>ready for SSH and Claude.</b></p>
+        <div class="lb-install">
+          <span class="lb-install__prompt">$</span>
+          <code>{{ install }}</code>
+          <button class="lb-copy" data-copy="{{ install }}" aria-label="Copy install command">
+            {% include ".icons/material/content-copy.svg" %}
+          </button>
+        </div>
+        <div class="lb-cta">
+          <a class="lb-btn lb-btn--primary" href="#quick-start">Get started {% include ".icons/material/arrow-right.svg" %}</a>
+          <a class="lb-btn" href="{{ gh }}">{% include ".icons/material/github.svg" %} View on GitHub</a>
+        </div>
+      </div>
+
+      <div class="lb-term" aria-label="A terminal creating a VM with limabean">
+        <div class="lb-term__bar"><i></i><i></i><i></i><span>~ zsh</span></div>
+        <div class="lb-term__body" data-typing>
+          <div><span class="p">$</span> <span class="c" data-type>limabean new dev</span></div>
+          <div class="o"><span class="p">  ✓</span> Created <span class="ok">dev</span> from scratch</div>
+          <div class="o"><span class="p">  ✓</span> Packages up to date</div>
+          <div class="o"><span class="p">  ✓</span> Installed 2 secret(s)</div>
+          <div class="o"><span class="p">  ✓</span> Added to Claude Desktop</div>
+          <div><span class="p">$</span> <span class="c" data-type>ssh lima-dev</span></div>
+          <div><span class="ok">dev</span><span class="d">:</span><span class="s">~/code</span> <span class="p">❯</span> <span class="c" data-type>docker compose up</span><span class="lb-caret"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="lb-wrap lb-stats">
+      <li><b>~1 min</b><span>from command to shell</span></li>
+      <li><b>30+</b><span>pinned CLI tools</span></li>
+      <li><b>0</b><span>SSH keys copied in</span></li>
+      <li><b>100%</b><span>plain Lima underneath</span></li>
+    </ul>
+  </section>
+
+  <!-- Features -->
+  <section class="lb-section">
+    <div class="lb-wrap">
+      <p class="lb-eyebrow">Why limabean</p>
+      <h2>A fresh Linux box whenever you want one.<br><span>Nothing to lose when you throw it away.</span></h2>
+      <div class="lb-features">
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/lightning-bolt.svg" %}</div>
+          <h3>One command per VM</h3>
+          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity, ready in about a minute.</p>
+        </article>
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/package-variant-closed.svg" %}</div>
+          <h3>Batteries included</h3>
+          <p>Docker Engine, Go, Python, Kubernetes tooling, Terraform and 30+ CLI tools, every version pinned with mise.</p>
+        </article>
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/shield-lock-outline.svg" %}</div>
+          <h3>Keys stay on your Mac</h3>
+          <p>Pushes go through your forwarded ssh-agent. A scoped GitHub token lives in your Keychain, and git and AWS config are mounted read-only.</p>
+        </article>
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/key-chain-variant.svg" %}</div>
+          <h3>Secrets without files</h3>
+          <p>API keys come from your Keychain, 1Password, environment variables or commands. You pick which ones a VM gets when you create it.</p>
+        </article>
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/robot-happy-outline.svg" %}</div>
+          <h3>Built for Claude</h3>
+          <p>Each running VM shows up in Claude Desktop as an SSH connection. Claude works with the VM's tools and can't touch files on your Mac.</p>
+        </article>
+        <article class="lb-card">
+          <div class="lb-card__icon">{% include ".icons/material/delete-restore.svg" %}</div>
+          <h3>Safe to throw away</h3>
+          <p><code>rm</code> and <code>rebuild</code> refuse to run while you have unpushed work, so a disposable VM never takes your commits with it.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick start -->
+  <section class="lb-section lb-section--alt" id="quick-start">
+    <div class="lb-wrap lb-split">
+      <div>
+        <p class="lb-eyebrow">Quick start</p>
+        <h2>Zero to a shell<br><span>in four commands.</span></h2>
+        <p class="lb-lede">limabean is a single binary with its VM templates built in. All it needs is macOS and
+          <a href="https://lima-vm.io">Lima</a> 2.0 or newer. Prebuilt binaries for Apple Silicon and Intel are on the
+          <a href="{{ gh }}/releases">releases page</a>.</p>
+        <a class="lb-btn" href="{{ docs }}getting-started.md">{% include ".icons/material/book-open-page-variant-outline.svg" %} Full getting-started guide</a>
+      </div>
+      <ol class="lb-steps">
+        <li>
+          <h4>Install Lima and limabean</h4>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> brew install lima
+<span class="p">$</span> {{ install }}</code></pre>
+        </li>
+        <li>
+          <h4>Set up once</h4>
+          <p>Saves your settings, fixes <code>~/.ssh/config</code> and checks everything with <code>doctor</code>.</p>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean init</code></pre>
+        </li>
+        <li>
+          <h4>Optional: give VMs GitHub access</h4>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> gh auth token --hostname github.com | limabean github login --with-token</code></pre>
+        </li>
+        <li>
+          <h4>Create a VM and jump in</h4>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean new dev
+<span class="p">$</span> limabean ssh dev   <span class="d"># or: ssh lima-dev</span></code></pre>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="lb-section">
+    <div class="lb-wrap">
+      <p class="lb-eyebrow">How it works</p>
+      <h2>Layered Lima templates.<br><span>No magic.</span></h2>
+      <p class="lb-lede lb-lede--center">Every VM is built from ordinary Lima YAML and shell scripts, composed in layers. <code>limactl</code> always works, and you can add your own environments without rebuilding limabean.</p>
+      <figure class="lb-figure">
+        <img src="{{ 'assets/how-it-works.png' | url }}" alt="Your Mac connects to the Lima VM over ssh lima-dev, forwards its ssh-agent and mounts the git config read-only. The VM is built from an OS layer, a base layer and an environment." loading="lazy">
+      </figure>
+      <div class="lb-layers">
+        <div><span class="lb-tag">layer-os</span><p>Ubuntu 26.04 LTS on Apple's Virtualization framework, VM size, agent forwarding, zsh as the login shell.</p></div>
+        <div><span class="lb-tag">layer-base</span><p>What every VM gets: Docker Engine, mise-pinned tools, shell setup and the read-only git config mount.</p></div>
+        <div><span class="lb-tag">environment</span><p><code>scratch</code> out of the box, or your own in <code>~/.config/limabean/templates/</code>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Commands -->
+  <section class="lb-section lb-section--alt">
+    <div class="lb-wrap">
+      <p class="lb-eyebrow">Commands</p>
+      <h2>A small CLI that<br><span>stays out of the way.</span></h2>
+      <p class="lb-lede lb-lede--center">Leave out a VM name and you pick one from a list. Every command has <code>--help</code> with examples.</p>
+      <div class="lb-cmds">
+        <div class="lb-cmdgroup">
+          <h3>VMs</h3>
+          <dl>
+            <dt>new</dt><dd>Create a VM, choosing its secrets</dd>
+            <dt>ls</dt><dd>List VMs</dd>
+            <dt>ssh</dt><dd>Open a shell, starting the VM if needed</dd>
+            <dt>get</dt><dd>Clone a repository into the VM with ghq</dd>
+            <dt>start / stop</dt><dd>Start or stop a VM</dd>
+            <dt>rebuild</dt><dd>Recreate from the current templates</dd>
+            <dt>rm</dt><dd>Delete a VM</dd>
+          </dl>
+        </div>
+        <div class="lb-cmdgroup">
+          <h3>Secrets</h3>
+          <dl>
+            <dt>secrets ls</dt><dd>List secrets and where values come from</dd>
+            <dt>secrets set</dt><dd>Keychain, 1Password, env var or command</dd>
+            <dt>secrets rm</dt><dd>Remove a secret</dd>
+            <dt>secrets edit</dt><dd>Edit a secrets file in your editor</dd>
+            <dt>secrets sync</dt><dd>Install secrets in running VMs</dd>
+          </dl>
+        </div>
+        <div class="lb-cmdgroup">
+          <h3>Access &amp; setup</h3>
+          <dl>
+            <dt>init</dt><dd>Git config, code directory, SSH, GitHub</dd>
+            <dt>doctor</dt><dd>Check everything VMs depend on</dd>
+            <dt>github login</dt><dd>Save a scoped token for gh and the API</dd>
+            <dt>github status</dt><dd>Account, expiry and which VMs have it</dd>
+            <dt>claude sync</dt><dd>Register running VMs in Claude Desktop</dd>
+          </dl>
+        </div>
+      </div>
+      <p class="lb-center"><a class="lb-link" href="{{ docs }}cli.md">Full CLI reference {% include ".icons/material/arrow-right.svg" %}</a></p>
+    </div>
+  </section>
+
+  <!-- Docs -->
+  <section class="lb-section">
+    <div class="lb-wrap">
+      <p class="lb-eyebrow">Documentation</p>
+      <h2>Go deeper.</h2>
+      <div class="lb-docs">
+        {% for path, name, blurb in [
+          ("getting-started.md", "Getting started", "Install, requirements, first VM"),
+          ("cli.md", "CLI reference", "Commands, settings, unsaved-work protection"),
+          ("inside-a-vm.md", "Inside a VM", "Tools, Docker, shell, paths, updates"),
+          ("secrets.md", "Secrets", "Keychain, 1Password, env vars and commands"),
+          ("github.md", "GitHub access", "A scoped token for gh, kept in your Keychain"),
+          ("claude-desktop.md", "Claude Desktop", "How VMs become SSH connections"),
+          ("customizing.md", "Customizing", "Templates, tools and environments"),
+          ("troubleshooting.md", "Troubleshooting", "When something doesn't work"),
+        ] %}
+        <a class="lb-doc" href="{{ docs }}{{ path }}">
+          <b>{{ name }}</b><span>{{ blurb }}</span>
+          {% include ".icons/material/arrow-right.svg" %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing call to action -->
+  <section class="lb-final">
+    <div class="lb-grid" aria-hidden="true"></div>
+    <div class="lb-wrap">
+      <img class="lb-final__logo" src="{{ 'assets/site/bean.svg' | url }}" alt="">
+      <h2>Plant a fresh VM.</h2>
+      <p class="lb-lede lb-lede--center">Free and open source under the MIT license.</p>
+      <div class="lb-cta lb-cta--center">
+        <a class="lb-btn lb-btn--primary" href="#quick-start">Get started {% include ".icons/material/arrow-right.svg" %}</a>
+        <a class="lb-btn" href="{{ gh }}/releases">Download a release</a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block content %}{% endblock %}
