@@ -22,6 +22,8 @@ provision:
 - mode: dependency
   file: ./features/zsh-install.sh
 - mode: system
+  file: ./features/apt-upgrade.sh
+- mode: system
   file: ./features/apt-common.sh
 - mode: system
   file: ./features/docker.sh
