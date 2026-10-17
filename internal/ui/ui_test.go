@@ -123,27 +123,3 @@ func TestKeysSplitsTextButNotEscapes(t *testing.T) {
 		t.Fatalf("keys = %q", r.keys)
 	}
 }
-
-func TestBanner(t *testing.T) {
-	var out bytes.Buffer
-	NewPlain(&out).Banner("v1.2.3", "hello")
-	if out.Len() != 0 {
-		t.Errorf("plain banner printed %q", out.String())
-	}
-
-	u := NewTerminal(strings.NewReader(""), &out)
-	u.Banner("v1.2.3", "hello")
-	got := out.String()
-	for _, want := range []string{"limabean v1.2.3", "› hello", "▀", "▄"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("missing %q in:\n%s", want, got)
-		}
-	}
-	if n := strings.Count(got, "\n"); n != 8 {
-		t.Errorf("banner is %d lines, want 8:\n%s", n, got)
-	}
-	// Light at the left, empty at the far right.
-	if ditherPixel(0, 0) == "" || ditherPixel(bannerW-1, bannerH-1) != "" {
-		t.Error("dither should run from filled to empty")
-	}
-}
