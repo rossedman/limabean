@@ -29,13 +29,30 @@ repository you can reach.
 
 | Command | What it does |
 |---|---|
-| `limabean github login` | Checks the token with GitHub, saves it to the Keychain and installs it in running VMs. Reads from a prompt, or from stdin: `op read … \| limabean github login` |
+| `limabean github login [--with-token]` | Checks the token with GitHub, saves it to the Keychain and installs it in running VMs. Prompts for the token, or reads it from stdin with `--with-token` |
 | `limabean github status` | Shows the token's account and expiry, and which VMs have it |
 | `limabean github sync` | Installs the saved token in every running VM, after rotating it or starting a stopped VM |
 | `limabean github logout` | Removes the token from the Keychain and from running VMs |
 
 `limabean doctor` reports the token's account and expiry, and flags a token
 that has expired or been revoked.
+
+## Passing the token on stdin
+
+`--with-token` reads the token from stdin instead of prompting, the same as
+`gh auth login --with-token`. Use it in scripts or with a password manager:
+
+```bash
+op read "op://Private/GitHub limabean/token" | limabean github login --with-token
+security find-generic-password -s my-github-token -w | limabean github login --with-token
+gh auth token --hostname github.com | limabean github login --with-token
+```
+
+The last line reuses your host `gh` login, which is quick but usually broadly
+scoped (see above), so limabean warns about it. With `--with-token` and nothing
+piped in, limabean stops and says so instead of waiting. Surrounding whitespace
+and a missing trailing newline are fine. Even without the flag, a token piped
+into `limabean github login` is read from stdin.
 
 ## How it works
 

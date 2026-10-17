@@ -514,14 +514,27 @@ cmd_github() {
   local token
   case ${1:-} in
     login)
-      if [ -t 0 ]; then
+      # --with-token (as in `gh auth login --with-token`): read the token from
+      # stdin, e.g. `gh auth token --hostname github.com | limabean github login --with-token`.
+      # Without it, a terminal gets a hidden prompt and a pipe is read anyway.
+      local with_token=0
+      case ${2:-} in
+        "") ;;
+        --with-token) with_token=1 ;;
+        *) die "usage: limabean github login [--with-token]" ;;
+      esac
+      if [ $with_token -eq 1 ] && [ -t 0 ]; then
+        die "--with-token reads the token from stdin; pipe it in: … | limabean github login --with-token"
+      fi
+      if [ $with_token -eq 0 ] && [ -t 0 ]; then
         echo "Create a fine-grained token limited to the repositories you'll use in VMs:"
         echo "  https://github.com/settings/personal-access-tokens/new"
         echo "Give it an expiry and only the permissions you need (for example Contents and"
         echo "Pull requests: read and write). It's stored in your macOS Keychain."
         read -r -s -p "Token: " token; echo
       else
-        read -r token   # e.g. from a password manager: … | limabean github login
+        read -r token || true
+        token=$(printf '%s' "$token" | tr -d '[:space:]')
       fi
       [ -n "$token" ] || die "no token given"
       gh_check "$token" || die "GitHub rejected that token"
@@ -565,7 +578,7 @@ cmd_github() {
       gh_each uninstall
       hint "Revoke it on GitHub too: https://github.com/settings/personal-access-tokens"
       ;;
-    *) die "usage: limabean github login|status|sync|logout" ;;
+    *) die "usage: limabean github login [--with-token]|status|sync|logout" ;;
   esac
 }
 
@@ -589,7 +602,9 @@ VMs
   rm <name> [--force]        delete a VM
 
 GitHub
-  github login               save a GitHub token in your Keychain and install it in VMs
+  github login [--with-token]
+                             save a GitHub token in your Keychain and install it in VMs
+                             (--with-token: read it from stdin)
   github status              show the token's account and expiry, and which VMs have it
   github sync                install the saved token in every running VM
   github logout              remove the token from the Keychain and VMs
