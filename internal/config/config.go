@@ -26,6 +26,7 @@ const (
 	KeyClaudeDesktop = "claude_desktop"
 	KeyAWSDir        = "aws_dir"
 	KeyIDE           = "ide"
+	KeyCodeDisk      = "code_disk"
 	KeyPlain         = "plain"
 	KeyTemplates     = "templates"
 )
@@ -40,6 +41,7 @@ type Config struct {
 	ClaudeDesktop bool   // register VMs as SSH connections in Claude Desktop
 	AWSDir        string // mounted read-only at ~/.aws in VMs; "": never
 	IDE           string // editor command for `limabean code`, e.g. code or cursor
+	CodeDisk      int    // GiB of the disk holding CodeDir in new VMs; 0: none
 }
 
 // DefaultPath is ~/.config/limabean/config.
@@ -61,6 +63,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyClaudeDesktop, "yes")
 	v.SetDefault(KeyAWSDir, "~/.aws")
 	v.SetDefault(KeyIDE, "code")
+	v.SetDefault(KeyCodeDisk, "50")
 	v.SetEnvPrefix("LIMABEAN")
 	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
 	v.AllowEmptyEnv(true)
@@ -91,6 +94,14 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		}
 		cpus = n
 	}
+	codeDisk := 0
+	if s := strings.TrimSpace(v.GetString(KeyCodeDisk)); s != "" {
+		n, err := strconv.Atoi(strings.TrimSuffix(s, "GiB"))
+		if err != nil || n < 0 {
+			return nil, fmt.Errorf("CODE_DISK must be a size in GiB, like 50, or empty, got %q", s)
+		}
+		codeDisk = n
+	}
 	return &Config{
 		Path:          path,
 		GitConfigDir:  v.GetString(KeyGitConfigDir),
@@ -100,6 +111,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		ClaudeDesktop: yes(v.GetString(KeyClaudeDesktop)),
 		AWSDir:        v.GetString(KeyAWSDir),
 		IDE:           strings.TrimSpace(v.GetString(KeyIDE)),
+		CodeDisk:      codeDisk,
 	}, nil
 }
 
@@ -120,6 +132,10 @@ func (c *Config) Save() error {
 	if c.CPUs > 0 {
 		cpus = strconv.Itoa(c.CPUs)
 	}
+	codeDisk := ""
+	if c.CodeDisk > 0 {
+		codeDisk = strconv.Itoa(c.CodeDisk)
+	}
 	claude := "no"
 	if c.ClaudeDesktop {
 		claude = "yes"
@@ -131,6 +147,10 @@ GIT_CONFIG_DIR=%q
 
 # Where ghq clones repositories inside VMs.
 CODE_DIR=%q
+
+# GiB of the disk that holds CODE_DIR in new VMs, so repositories survive
+# limabean rebuild. Empty: CODE_DIR is on the VM's own disk.
+CODE_DISK=%q
 
 # VM size; empty uses the template default (4 CPUs, 8 GiB).
 CPUS=%q
@@ -145,7 +165,7 @@ AWS_DIR=%q
 # Editor that limabean code opens VMs in: code (VS Code), cursor, or another
 # editor with VS Code's --remote flag.
 IDE=%q
-`, c.GitConfigDir, c.CodeDir, cpus, c.Memory, claude, c.AWSDir, c.IDE)
+`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, claude, c.AWSDir, c.IDE)
 	return os.WriteFile(c.Path, []byte(body), 0o600)
 }
 

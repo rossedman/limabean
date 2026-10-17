@@ -87,7 +87,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/delete-restore.svg" %}</div>
           <h3>Safe to throw away</h3>
-          <p><code>rm</code> and <code>rebuild</code> refuse to run while you have unpushed work, so a disposable VM never takes your commits with it.</p>
+          <p><code>~/code</code> lives on its own disk, so <code>rebuild</code> keeps your repositories, and <code>rm</code> refuses to run while you have unpushed work.</p>
         </article>
       </div>
     </div>
@@ -160,7 +160,7 @@
             <dt>ssh</dt><dd>Open a shell, starting the VM if needed</dd>
             <dt>get</dt><dd>Clone a repository into the VM with ghq</dd>
             <dt>start / stop</dt><dd>Start or stop a VM</dd>
-            <dt>rebuild</dt><dd>Recreate from the current templates</dd>
+            <dt>rebuild</dt><dd>Recreate from the current templates, keeping <code>~/code</code></dd>
             <dt>rm</dt><dd>Delete a VM</dd>
           </dl>
         </div>

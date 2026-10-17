@@ -12,6 +12,9 @@ param:
   # Where ghq clones repositories inside the VM, e.g.
   # ~/code/github.com/<owner>/<repo>.
   codeDir: "~/code"
+  # Lima disk mounted over codeDir so it survives a rebuild; limabean
+  # passes it when the CODE_DISK setting is on. Empty: none.
+  codeDisk: ""
 
 mounts:
 - location: "{{.Param.gitConfigDir}}"
@@ -27,6 +30,8 @@ provision:
   file: ./features/apt-common.sh
 - mode: system
   file: ./features/docker.sh
+- mode: system
+  file: ./features/code-disk.sh
 - mode: data
   path: /etc/limabean/mise/00-base.toml
   file: ./mise/base.toml

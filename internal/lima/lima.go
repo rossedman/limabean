@@ -207,6 +207,35 @@ func (c *Client) Delete(ctx context.Context, name string) ([]byte, error) {
 	return c.Runner.Output(ctx, nil, true, c.limactl(), "delete", "--force", name)
 }
 
+// DiskExists reports whether a Lima disk (limactl disk create) exists.
+func (c *Client) DiskExists(ctx context.Context, name string) (bool, error) {
+	out, err := c.Runner.Output(ctx, nil, false, c.limactl(), "disk", "list", "--json")
+	if err != nil {
+		return false, fmt.Errorf("limactl disk list: %w", err)
+	}
+	sc := bufio.NewScanner(bytes.NewReader(out))
+	for sc.Scan() {
+		var d struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(sc.Bytes(), &d) == nil && d.Name == name {
+			return true, nil
+		}
+	}
+	return false, sc.Err()
+}
+
+// DiskCreate creates a raw disk of size (e.g. "50GiB"); vz converts other
+// formats to raw anyway.
+func (c *Client) DiskCreate(ctx context.Context, name, size string) ([]byte, error) {
+	return c.Runner.Output(ctx, nil, true, c.limactl(), "disk", "create", name, "--size", size, "--format", "raw")
+}
+
+// DiskDelete deletes a disk that no VM is using.
+func (c *Client) DiskDelete(ctx context.Context, name string) ([]byte, error) {
+	return c.Runner.Output(ctx, nil, true, c.limactl(), "disk", "delete", name)
+}
+
 // SSHArgs returns the ssh arguments for a VM. They use the VM's own
 // ssh.config, so they work whether or not ~/.ssh/config includes Lima's
 // host entries, and whatever LIMA_HOME is.

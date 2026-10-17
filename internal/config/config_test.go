@@ -42,6 +42,9 @@ func TestLoadBashConfig(t *testing.T) {
 	if c.IDE != "code" {
 		t.Errorf("IDE default = %q (missing from older configs)", c.IDE)
 	}
+	if c.CodeDisk != 50 {
+		t.Errorf("CODE_DISK default = %d (missing from older configs)", c.CodeDisk)
+	}
 }
 
 func TestDefaultsWhenMissing(t *testing.T) {
@@ -80,7 +83,7 @@ func TestBadCPUs(t *testing.T) {
 
 func TestSaveRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sub", "config")
-	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor"}
+	want := &Config{Path: path, GitConfigDir: "~/dots/git", CodeDir: "~/work", CPUs: 6, Memory: "12", ClaudeDesktop: false, AWSDir: "", IDE: "cursor", CodeDisk: 0}
 	if err := want.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -93,6 +96,31 @@ func TestSaveRoundTrip(t *testing.T) {
 	}
 	if fi, _ := os.Stat(path); fi.Mode().Perm() != 0o600 {
 		t.Errorf("mode = %v", fi.Mode().Perm())
+	}
+}
+
+func TestCodeDisk(t *testing.T) {
+	for in, want := range map[string]int{"": 0, "0": 0, "80": 80, "120GiB": 120} {
+		t.Setenv("LIMABEAN_CODE_DISK", in)
+		c, err := Load(New(), filepath.Join(t.TempDir(), "x"))
+		if err != nil || c.CodeDisk != want {
+			t.Errorf("CODE_DISK=%q: %d, %v", in, c.CodeDisk, err)
+		}
+	}
+	for _, bad := range []string{"big", "-5"} {
+		t.Setenv("LIMABEAN_CODE_DISK", bad)
+		if _, err := Load(New(), filepath.Join(t.TempDir(), "x")); err == nil || !strings.Contains(err.Error(), "CODE_DISK") {
+			t.Errorf("CODE_DISK=%q: %v", bad, err)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "config")
+	if err := (&Config{Path: path, CodeDisk: 75}).Save(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	os.Unsetenv("LIMABEAN_CODE_DISK")
+	if c, err := Load(New(), path); err != nil || c.CodeDisk != 75 {
+		t.Errorf("saved CODE_DISK: %v, %v", c, err)
 	}
 }
 

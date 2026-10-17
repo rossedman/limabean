@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -150,6 +152,14 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		CPUs:     a.Cfg.CPUs,
 		Memory:   a.Cfg.Memory,
 	}
+	disk, err := a.prepareCodeDisk(ctx, o.Name)
+	if err != nil {
+		return err
+	}
+	if disk != "" {
+		opts.Params["codeDisk"] = disk
+		opts.Sets = append(opts.Sets, fmt.Sprintf(`.additionalDisks += [{"name": %q, "format": true, "fsType": "ext4"}]`, disk))
+	}
 	// AWS CLI config, read-only: a writable mount would let the VM change
 	// ~/.aws/config, whose credential_process runs commands on the Mac.
 	aws := ""
@@ -165,6 +175,9 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		return err
 	}
 	a.UI.OK("Created %s from %s", a.UI.Code(o.Name), o.Env)
+	if disk != "" {
+		a.UI.OK("%s is on its own disk, kept when the VM is rebuilt", a.Cfg.CodeDir)
+	}
 	if aws != "" {
 		a.UI.OK("Mounted %s read-only at ~/.aws", aws)
 	}
@@ -402,10 +415,18 @@ func (a *App) envOf(name string) string {
 }
 
 // forget removes everything limabean keeps about a deleted VM: its saved
-// environment, its Claude Desktop entry, its own secrets file and the
-// Keychain items limabean created for it.
-func (a *App) forget(name string) {
+// environment, its Claude Desktop entry, its code disk, its own secrets
+// file and the Keychain items limabean created for it.
+func (a *App) forget(ctx context.Context, name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
+	if disk := codeDiskName(name); a.hasCodeDisk(ctx, name) {
+		if out, err := a.Lima.DiskDelete(ctx, disk); err != nil {
+			a.UI.Warn("Couldn't delete %s's code disk %s: %v %s", name, disk, err, strings.TrimSpace(string(out)))
+			a.UI.Hint("limactl disk delete " + disk)
+		} else {
+			a.UI.OK("Deleted %s's code disk", name)
+		}
+	}
 	a.claudeRemove(name)
 	file := secrets.VMFile(a.Cfg.Dir(), name)
 	list, _ := secrets.LoadFile(file)
@@ -450,7 +471,10 @@ func (a *App) completeVMs(_ *cobra.Command, args []string, _ string) ([]string, 
 
 // hasLeftovers reports whether limabean still keeps something for a VM
 // that no longer exists.
-func (a *App) hasLeftovers(name string) bool {
+func (a *App) hasLeftovers(ctx context.Context, name string) bool {
+	if a.hasCodeDisk(ctx, name) {
+		return true
+	}
 	if _, err := os.Stat(secrets.VMFile(a.Cfg.Dir(), name)); err == nil {
 		return true
 	}
@@ -503,3 +527,44 @@ func padRight(s string, n int) string {
 
 // contextT keeps spinner callbacks short.
 type contextT = context.Context
+
+// codeDiskName is the Lima disk that holds a VM's code directory. Lima
+// labels a disk's filesystem lima-<name> and formats it on any boot that
+// can't find that label, and ext4 labels hold 16 bytes, so the name must
+// stay within 11: a longer one would be cut short and the disk erased on
+// every boot. A hash of the VM name keeps it short and unique.
+func codeDiskName(vm string) string {
+	sum := sha256.Sum256([]byte(vm))
+	return "code-" + hex.EncodeToString(sum[:3])
+}
+
+// hasCodeDisk reports whether a VM has a code disk (false if Lima can't
+// say).
+func (a *App) hasCodeDisk(ctx context.Context, vm string) bool {
+	ok, err := a.Lima.DiskExists(ctx, codeDiskName(vm))
+	return err == nil && ok
+}
+
+// prepareCodeDisk returns the disk to mount over a new VM's code
+// directory: the one it already has (after a rebuild), or a new one of
+// CODE_DISK GiB. "" means none: CODE_DISK is off and there's no disk.
+func (a *App) prepareCodeDisk(ctx context.Context, vm string) (string, error) {
+	disk := codeDiskName(vm)
+	ok, err := a.Lima.DiskExists(ctx, disk)
+	if err != nil {
+		return "", err
+	}
+	if ok {
+		return disk, nil
+	}
+	if a.Cfg.CodeDisk == 0 {
+		return "", nil
+	}
+	size := fmt.Sprintf("%dGiB", a.Cfg.CodeDisk)
+	if err := a.limaStep(ctx, fmt.Sprintf("Creating a %s disk for %s", size, a.Cfg.CodeDir), func(ctx context.Context) ([]byte, error) {
+		return a.Lima.DiskCreate(ctx, disk, size)
+	}); err != nil {
+		return "", err
+	}
+	return disk, nil
+}
