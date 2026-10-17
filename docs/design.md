@@ -319,8 +319,12 @@ An opt-in `--mount` of a host directory (B) is still open.
     minutes by default, an hour at most) and returns the last 100 KiB.
   What a VM can reach (its secrets, GitHub with its token, the network)
   an agent in it can reach too; scoping that is per-VM secrets' job.
-- **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
-  needed. It's the default on Apple Silicon.
+- **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
+  `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
+  `linux/amd64` containers run on Apple Silicon without a prefix (Lima
+  registers it with the `F` flag, which Docker needs). On Intel Macs Lima
+  logs that Rosetta is unavailable and boots normally. QEMU user-mode
+  emulation was the alternative: slower, and one more package to install.
 
 ## Environments
 

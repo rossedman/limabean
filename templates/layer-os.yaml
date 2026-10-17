@@ -7,6 +7,14 @@ base:
 - template:_images/ubuntu-26.04
 
 vmType: vz
+# Rosetta runs x86_64 Linux binaries and linux/amd64 containers on Apple
+# Silicon; binfmt registers it so they run without a prefix. On Intel Macs
+# Lima logs that it's unavailable and boots normally.
+vmOpts:
+  vz:
+    rosetta:
+      enabled: true
+      binfmt: true
 cpus: 4
 memory: 8GiB
 disk: 50GiB
