@@ -14,7 +14,8 @@ Lima, so `limactl` always works alongside it.
 | `limabean stop <name>` | Stops a VM |
 | `limabean rebuild <name> [--force]` | Deletes and recreates the VM from the current templates, keeping its environment |
 | `limabean rm <name> [--force]` | Deletes a VM and its Claude Desktop entry |
-| `limabean github login\|status\|sync\|logout` | Manages the GitHub token that VMs use for `gh` and the API ([details](github.md)) |
+| `limabean github login [--with-token]` | Saves a GitHub token for VMs to the Keychain. `--with-token` reads it from stdin, e.g. `gh auth token \| limabean github login --with-token` ([details](github.md)) |
+| `limabean github status\|sync\|logout` | Shows, reinstalls or removes the GitHub token ([details](github.md)) |
 | `limabean claude sync` | Registers every VM in Claude Desktop and removes entries for deleted VMs |
 
 ## Unsaved work is protected
