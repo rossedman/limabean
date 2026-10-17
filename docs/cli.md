@@ -17,6 +17,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](#idle-vms-are-stopped-automatically) |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, secrets and, on its own disk, `~/code` |
 | `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets |
+| `limabean snapshot save\|ls\|restore\|rm` | Saves a VM's disks, `~/code` included, and [rolls back](#snapshots) to them |
 | `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
@@ -70,6 +71,21 @@ Quiet background work, such as idle containers or a long command run over
 `ssh` without a terminal, doesn't keep a VM running. Run
 `limabean stop --idle 2h --dry-run` to see what would stop and why the
 rest are kept. The agent's output is in `~/Library/Logs/limabean-autostop.log`.
+
+## Snapshots
+
+`limabean snapshot save dev before-refactor` saves the VM's system disk and,
+when `~/code` is on its own disk, that too. `limabean snapshot restore dev
+before-refactor` puts both back exactly as they were, which makes it safe to
+let Claude try something drastic. Leave out the name to save under the date
+and time, or to restore the latest.
+
+Lima's own `limactl snapshot` doesn't support the `vz` VMs limabean uses,
+so limabean copies the disk files itself as APFS clones (`cp -c`). That
+takes seconds and only uses space for blocks that change afterwards, but the
+VM has to be shut down while it happens; limabean starts it again if it was
+running. Snapshots live in the VM's Lima directory, so `rm` and `rebuild`
+delete them.
 
 ## Settings
 

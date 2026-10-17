@@ -293,6 +293,14 @@ An opt-in `--mount` of a host directory (B) is still open.
   resolves them on the Mac and writes `export` lines (mode 600) into each VM.
   The GitHub token is one of these secrets. Values never reach argv or a Lima
   template.
+- **D13 Snapshots. Decided: APFS clones of the disk files.** Lima 2.2's
+  `vz` driver returns "unimplemented" for `limactl snapshot`, which only
+  works with QEMU. With the VM stopped, limabean clones `disk` (or
+  `diffdisk`), `vz-efi` and the code disk's `datadisk` with `cp -c` into
+  `<instance>/limabean-snapshots/<tag>/`. Restores clone each file beside
+  its original and rename it into place, so a failure never leaves a
+  half-written disk. Live snapshots (memory included) would need
+  Virtualization.framework's save/restore, which Lima doesn't expose.
 - **D5 vmType.** `vz` with `rosetta` enabled lets you run x86 binaries when
   needed. It's the default on Apple Silicon.
 
