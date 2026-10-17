@@ -72,7 +72,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 		}
 	}
 	add("setup", newInitCmd(a), newDoctorCmd(a), newBumpCmd(a))
-	add("vms", newNewCmd(a), newUpCmd(a), newRunCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCpCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newCloneCmd(a), newRmCmd(a), newSnapshotCmd(a), newAutostopCmd(a))
+	add("vms", newNewCmd(a), newUpCmd(a), newRunCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCpCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newCloneCmd(a), newRmCmd(a), newSnapshotCmd(a), newImagesCmd(a), newAutostopCmd(a))
 	add("access", newSecretsCmd(a), newGitHubCmd(a), newNetworkCmd(a), newClaudeCmd(a), newMCPCmd(a))
 	root.AddCommand(newCompletionCmd(a), newVersionCmd(a))
 	return root

@@ -102,10 +102,14 @@ Settings that only make sense on the Mac are overridden in the VM:
 ## Your first VM
 
 ```bash
-limabean new dev                       # about a minute; longer the first time while Lima downloads Ubuntu
+limabean new dev                       # a few minutes the first time; later VMs are copies of an image
 limabean ssh dev ssh -T git@github.com # should greet you by your GitHub username
 limabean get dev owner/repo            # clone into ~/code/github.com/owner/repo
 ```
+
+The first VM provisions everything from scratch, and builds an
+[image](lifecycle.md#fast-vms-images) of itself in the background. Every
+later VM like it is a copy of that image, so it only has to boot.
 
 For `gh` and the GitHub API inside VMs, add a scoped token once with
 `limabean github login`; see [GitHub access](github.md).

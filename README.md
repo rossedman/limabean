@@ -17,7 +17,8 @@ Claude Desktop as an SSH connection.
 
 **Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
 
-- **One command per VM.** `limabean new dev` is ready in about a minute,
+- **One command per VM, ready as fast as it boots.** New VMs are APFS
+  copies of a provisioned image, so `limabean new dev` only has to boot,
   and `limabean up` builds the VM a repository's `.limabean.yaml` describes.
 - **Batteries included, in packs.** Docker, Go, Python, Node, Kubernetes,
   Terraform and 30+ CLI tools by default, every version pinned; add Rust,
@@ -123,6 +124,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean clone <name> <new>` | Copy a VM, `~/code` and all, in seconds |
 | `limabean rm [name]` | Delete a VM |
 | `limabean snapshot save\|ls\|restore\|rm` | Save a VM, `~/code` included, and roll back to it later |
+| `limabean images ls\|build\|prune` | The images new VMs are copied from, so they only have to boot |
 | `limabean autostop on\|off\|status` | Stop idle VMs, and delete `--ttl` ones, in the background |
 
 **Secrets and access**

@@ -26,6 +26,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean clone <name> <new>` | Copies a VM in seconds: system, packs, `~/code`, secrets and network policy ([details](lifecycle.md#clones)) |
 | `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets; `--expired` deletes every VM past its `--ttl` |
 | `limabean snapshot save\|ls\|restore\|rm` | Saves a VM's disks, `~/code` included, and [rolls back](lifecycle.md#snapshots) to them |
+| `limabean images ls\|build\|rm\|prune` | Manages the [images](lifecycle.md#fast-vms-images) new VMs are copied from |
 | `limabean autostop on\|off\|status\|run` | Stops idle VMs and deletes expired ones every 10 minutes in the background, through a launchd agent ([details](lifecycle.md#idle-vms-stop-by-themselves)) |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
@@ -66,6 +67,7 @@ MEMORY=""                        # GiB; empty: template default (8); flag: new -
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
 PACKS="go,python,node,kubernetes,infra,containers,db"   # packs new VMs get; flag: new --with/--without
+IMAGES="yes"                     # copy new VMs from a provisioned image; no: provision each one
 IDE="code"                       # editor limabean code opens: code, cursor, …; flag: code --ide
 ```
 

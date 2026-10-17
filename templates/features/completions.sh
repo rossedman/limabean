@@ -1,13 +1,21 @@
 #!/bin/bash
 # Generate zsh completions for the installed tools into one fpath directory
-# (~/.zshrc adds it). Generated once per boot rather than on every shell
-# start, so shells start fast. Runs after mise.sh, on every boot.
+# (~/.zshrc adds it). Generated at boot rather than on every shell start, so
+# shells start fast, and only when the tools changed, so boots are fast too.
+# Runs after mise.sh, on every boot.
 set -eux -o pipefail
 
 # shellcheck source=/dev/null
 . ~/.config/limabean/env.sh
 dir=~/.local/share/zsh/completions
 mkdir -p "$dir"
+
+# The tools are the packs' pinned versions, Docker and pip: unchanged since
+# the last run (always, in a VM copied from an image), there's nothing to do.
+stamp=$({ cat /etc/limabean/mise/*.toml; docker --version; pip3 --version; } 2>/dev/null | sha256sum | cut -d' ' -f1)
+if [ "$(cat "$dir/.stamp" 2>/dev/null)" = "$stamp" ]; then
+  exit 0
+fi
 
 # gen <name> <command…>: write _<name> from the command's output, starting at
 # its #compdef line (zsh ignores the file unless that's line 1). Skip the tool,
@@ -57,3 +65,4 @@ ghq_comp=$(find "$(mise where ghq)" -path '*/zsh/_ghq' | head -1)
 
 # Force zsh to rebuild its completion cache on the next shell start.
 rm -f ~/.zcompdump*
+echo "$stamp" > "$dir/.stamp"

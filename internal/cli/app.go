@@ -62,6 +62,8 @@ type App struct {
 	// How `ports` and `open` reach the Mac's side; tests replace them.
 	macListens func(port int) bool
 	openURL    func(ctx context.Context, url string) error
+	// How image builds start in the background; tests replace it.
+	spawn func(args ...string) error
 
 	// Persistent flags.
 	configPath   string
@@ -87,6 +89,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		miseLatest:  miseLatest,
 		macListens:  macListens,
 		openURL:     openURL,
+		spawn:       spawn,
 	}
 }
 

@@ -90,7 +90,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/lightning-bolt.svg" %}</div>
           <h3>One command per VM</h3>
-          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity, ready in about a minute. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes.</p>
+          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity. It's a copy of a ready-made image, so it only has to boot. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/package-variant-closed.svg" %}</div>
@@ -202,6 +202,7 @@
             <dt>clone</dt><dd>Copy a VM, <code>~/code</code> and all, in seconds</dd>
             <dt>rm</dt><dd>Delete a VM</dd>
             <dt>snapshot save / restore</dt><dd>Checkpoint a VM and roll back to it</dd>
+            <dt>images</dt><dd>The ready-made images new VMs are copied from</dd>
             <dt>autostop on</dt><dd>Stop VMs nobody has used for a while</dd>
           </dl>
         </div>
