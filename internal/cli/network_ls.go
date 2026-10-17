@@ -35,15 +35,22 @@ allowed alongside an allowlist, for the clock.`,
 				return err
 			}
 			a.UI.Section(name, p.summary())
-			if p.open() {
+			switch {
+			case p.Learn:
+				a.UI.OK("Learning: it can reach any host, and its lookups are recorded")
+				a.UI.Hint("See them: limabean network log "+name, "Allow them: limabean network learn "+name+" --done")
+				if len(p.Allow) > 0 {
+					a.UI.Info("Allowed once learning ends: %s", strings.Join(p.Allow, ", "))
+				}
+			case p.open():
 				a.UI.OK("Open: it can reach any host")
-			} else {
+			default:
 				a.UI.OK("Allowlist: only these domains and their subdomains")
 				a.UI.Hint(strings.Join(p.Allow, "\n"))
 			}
 			if p.Locked {
 				a.UI.OK("Locked: its user has no sudo or Docker")
-			} else if !p.open() {
+			} else if !p.open() && !p.Learn {
 				a.UI.Warn("Not locked: anything in it can use sudo to turn the allowlist off")
 				a.UI.Hint("limabean network lock " + name)
 			}

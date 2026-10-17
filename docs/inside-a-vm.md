@@ -94,6 +94,17 @@ installed. With one, everything goes over https with the token, so it works
 in Claude Desktop sessions too. Without one, repositories are fetched over
 https and pushed over SSH through your forwarded agent.
 
+## Copying files
+
+`limabean cp` copies files between your Mac and a VM, or between VMs. A VM
+path is `<vm>:<path>`, relative to the VM user's home directory:
+
+```bash
+limabean cp ./notes.md dev:
+limabean cp -r dev:code/github.com/me/app/dist ./dist
+limabean cp dev:report.html agent:
+```
+
 ## AWS
 
 If `~/.aws` exists on your Mac, it's mounted read-only at `~/.aws` in new

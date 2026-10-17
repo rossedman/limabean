@@ -8,6 +8,8 @@
 # it. network.conf holds lines of:
 #   allow <domain>   the domain and its subdomains may be reached
 #   locked           the VM user loses sudo and Docker, so can't undo this
+#   learn            the network is open, and every DNS lookup is recorded,
+#                    to find out what an allowlist needs (allow lines wait)
 # With no allow lines the network is open.
 #
 # How the allowlist holds: dnsmasq answers only allowed domains (anything
@@ -15,6 +17,9 @@
 # addresses it returns to nftables sets; nftables drops every other packet
 # leaving the VM or its containers, and only dnsmasq may reach the upstream
 # DNS server.
+#
+# dnsmasq records each lookup in $run/dns.log, readable by the VM's user,
+# for "limabean network log". It lasts until the VM restarts.
 set -euo pipefail
 
 conf=${LIMABEAN_NETWORK_CONF:-/mnt/host/limabean/network.conf}
@@ -38,6 +43,7 @@ fi
 
 allowed=()
 locked=no
+learn=no
 if [ -r "$conf" ]; then
   while read -r word arg _; do
     case "$word" in
@@ -49,12 +55,13 @@ if [ -r "$conf" ]; then
         fi
         ;;
       locked) locked=yes ;;
+      learn) learn=yes ;;
     esac
   done < "$conf"
 fi
 
 # The clock needs NTP whatever else is allowed.
-if [ "${#allowed[@]}" -gt 0 ]; then
+if [ "${#allowed[@]}" -gt 0 ] && [ "$learn" = no ]; then
   allowed+=(ntp.ubuntu.com)
 fi
 
@@ -77,6 +84,13 @@ start_dns() {
     exit 1
   fi
   printf '%s\n' "${upstream[@]}" > "$run/upstream"
+  # dnsmasq keeps an existing log file's mode, so the VM's user can read it.
+  if [ "$learn" = yes ] && [ ! -e "$run/learning" ]; then
+    rm -f "$run/dns.log"
+    touch "$run/learning"
+  fi
+  [ "$learn" = yes ] || rm -f "$run/learning"
+  [ -e "$run/dns.log" ] || install -m 0644 -o "$dns_user" -g "$(id -gn "$dns_user")" /dev/null "$run/dns.log"
   {
     echo "# Written by limabean-network."
     echo "user=$dns_user"
@@ -87,11 +101,17 @@ start_dns() {
     echo "no-resolv"
     echo "no-hosts"
     echo "cache-size=1000"
-    echo "address=/#/"
-    for d in "${allowed[@]}"; do
-      for u in "${upstream[@]}"; do echo "server=/$d/$u"; done
-      echo "nftset=/$d/4#inet#limabean#allow4,6#inet#limabean#allow6"
-    done
+    echo "log-queries"
+    echo "log-facility=$run/dns.log"
+    if [ "$learn" = yes ]; then
+      for u in "${upstream[@]}"; do echo "server=$u"; done
+    else
+      echo "address=/#/"
+      for d in "${allowed[@]}"; do
+        for u in "${upstream[@]}"; do echo "server=/$d/$u"; done
+        echo "nftset=/$d/4#inet#limabean#allow4,6#inet#limabean#allow6"
+      done
+    fi
   } > "$f.new"
   mv "$f.new" "$f"
   stop_dns
@@ -238,7 +258,12 @@ unlock() {
 
 # --- apply ---------------------------------------------------------------
 
-if [ "${#allowed[@]}" -gt 0 ]; then
+if [ "$learn" = yes ]; then
+  firewall_off
+  start_dns
+  docker_dns on
+  echo "limabean-network: open, recording lookups"
+elif [ "${#allowed[@]}" -gt 0 ]; then
   start_dns
   firewall_on
   docker_dns on
@@ -247,6 +272,7 @@ else
   firewall_off
   restore_dns
   docker_dns off
+  rm -f "$run/learning"
   echo "limabean-network: open"
 fi
 

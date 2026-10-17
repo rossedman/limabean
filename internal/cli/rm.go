@@ -2,13 +2,14 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
 func newRmCmd(a *App) *cobra.Command {
-	var force bool
+	var force, expired bool
 	cmd := &cobra.Command{
 		Use:     "rm [name]",
 		Aliases: []string{"delete"},
@@ -24,18 +25,30 @@ stops and lists them. In a terminal it then asks you to confirm. --force
 skips both.
 
 A VM already deleted with "limactl delete" can still be named: rm cleans up
-what's left of it.`,
+what's left of it.
+
+--expired deletes every VM made with "new --ttl" whose time is up, without
+checks; the autostop agent does this every 10 minutes.`,
 		Example: `  limabean rm dev
 
   # Pick the VM from a list
   limabean rm
 
   # No checks, no questions
-  limabean rm scratch --force`,
+  limabean rm scratch --force
+
+  # Every VM past its --ttl
+  limabean rm --expired`,
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			if expired {
+				if len(args) > 0 {
+					return errors.New("--expired deletes every expired VM; leave out the name")
+				}
+				return a.removeExpired(ctx)
+			}
 			name, err := a.vmArg(ctx, args, "delete")
 			if err != nil {
 				return err
@@ -82,5 +95,6 @@ what's left of it.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip the unsaved-work check and the confirmation")
+	cmd.Flags().BoolVar(&expired, "expired", false, "delete every VM whose --ttl is up")
 	return cmd
 }

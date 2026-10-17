@@ -17,8 +17,10 @@ func newAutostopOnCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "on",
 		Short: "Stop VMs that nobody has used for a while",
-		Long: `Install a launchd agent that runs "limabean stop --idle <after>" every 10
-minutes while you're logged in. Running it again changes the limit.
+		Long: `Install a launchd agent that runs "limabean autostop run --idle <after>"
+every 10 minutes while you're logged in: it stops VMs nobody has used for
+that long, and deletes VMs made with "new --ttl" once they expire. Running
+it again changes the limit.
 
 The agent runs the limabean on your PATH (so upgrades are picked up) and
 finds limactl where it is now. Its output goes to
@@ -35,7 +37,7 @@ finds limactl where it is now. Its output goes to
 			if err != nil {
 				return errors.New("limactl isn't on your PATH (brew install lima)")
 			}
-			program := []string{a.selfPath(), "stop", "--idle", shortDuration(after), "--plain"}
+			program := []string{a.selfPath(), "autostop", "run", "--idle", shortDuration(after), "--plain"}
 			if a.configPath != "" {
 				cfg, err := filepath.Abs(a.configPath)
 				if err != nil {

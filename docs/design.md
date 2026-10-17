@@ -363,3 +363,7 @@ heavy extras most VMs don't need.
    `bump.yml`), ✅ CI (`limactl
    tmpl validate` + shellcheck), and ✅ a persistent `~/code` disk so
    rebuilds keep repositories.
+6. ✅ Agent workflows: project files (`.limabean.yaml`, `up`), throwaway VMs
+   (`--ttl`, `run --rm`), copy-on-write clones (`clone`, over `limactl
+   clone`), learning allowlists from DNS lookups (`network learn`/`log`),
+   `cp`, and a `claude` pack.

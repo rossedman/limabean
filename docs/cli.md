@@ -9,23 +9,28 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
-| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--with` and `--without` change its [packs](packs.md); `--allow` and `--locked` set its [network policy](network.md) |
+| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--with` and `--without` change its [packs](packs.md); `--allow`, `--locked` and `--learn` set its [network policy](network.md); `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
+| `limabean up` | Creates or starts the VM a repository's [`.limabean.yaml`](projects.md) describes, clones the repository and runs its setup |
+| `limabean run [flags] -- <cmd>` | Creates a VM, runs one command in it (in a fresh clone with `--repo`), and with `--rm` deletes it after; exits with the command's status ([details](lifecycle.md#throwaway-vms)) |
 | `limabean packs` | Lists the [packs](packs.md) of tools a VM can get and which new VMs get by default; `--json` for scripts |
-| `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host; `--json` prints them for scripts |
+| `limabean ls` | Lists VMs with status, environment, size, number of secrets, network and SSH host, and when throwaway ones expire; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
+| `limabean cp <src>… <dst>` | Copies files between the Mac and VMs; VM paths are `<vm>:<path>`, `-r` for directories |
 | `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code, Cursor or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor |
 | `limabean ports [name]` | Lists the TCP ports programs in the VM listen on and whether each reaches your Mac's localhost; `--json` for scripts |
 | `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
 | `limabean stop [name]` | Stops a VM and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](lifecycle.md#idle-vms-stop-by-themselves) |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, packs (`--with`/`--without` change them), secrets and, on its own disk, `~/code` |
-| `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets |
+| `limabean clone <name> <new>` | Copies a VM in seconds: system, packs, `~/code`, secrets and network policy ([details](lifecycle.md#clones)) |
+| `limabean rm [name]` | Deletes a VM, its `~/code` disk, its Claude Desktop entry and its own secrets; `--expired` deletes every VM past its `--ttl` |
 | `limabean snapshot save\|ls\|restore\|rm` | Saves a VM's disks, `~/code` included, and [rolls back](lifecycle.md#snapshots) to them |
-| `limabean autostop on\|off\|status` | Runs `stop --idle` every 10 minutes in the background, through a launchd agent ([details](lifecycle.md#idle-vms-stop-by-themselves)) |
+| `limabean autostop on\|off\|status\|run` | Stops idle VMs and deletes expired ones every 10 minutes in the background, through a launchd agent ([details](lifecycle.md#idle-vms-stop-by-themselves)) |
 | `limabean secrets ls\|set\|rm\|edit\|sync` | Manages the environment variables and secrets VMs get ([details](secrets.md)) |
 | `limabean github login\|status\|sync\|logout` | Manages the GitHub token VMs use ([details](github.md)) |
 | `limabean network ls\|allow\|rm\|open\|lock\|unlock` | Manages a VM's [network allowlist and lock](network.md) |
+| `limabean network learn\|log` | Records what a VM looks up to [build its allowlist](network.md#learn-what-a-vm-needs), and shows what was blocked |
 | `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
 | `limabean mcp` | Runs an MCP server so Claude can manage VMs ([details](mcp.md)) |
 | `limabean completion <shell>` | Prints a tab-completion script for bash, zsh, fish or PowerShell |

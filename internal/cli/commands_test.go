@@ -152,7 +152,7 @@ func TestAutostop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"<string>--idle</string>\n    <string>1h30m</string>", "<string>--plain</string>", "<string>--config</string>", "<string>" + bin + ":", "<integer>600</integer>", "limabean-autostop.log"} {
+	for _, want := range []string{"<string>autostop</string>\n    <string>run</string>", "<string>--idle</string>\n    <string>1h30m</string>", "<string>--plain</string>", "<string>--config</string>", "<string>" + bin + ":", "<integer>600</integer>", "limabean-autostop.log"} {
 		if !strings.Contains(string(body), want) {
 			t.Errorf("plist missing %q:\n%s", want, body)
 		}
@@ -173,9 +173,18 @@ func TestAutostop(t *testing.T) {
 	if !h.world.called("launchctl bootout gui/") || !h.world.called("launchctl bootstrap gui/") || autostopAfter(mustRead(t, plist)) != "2h" {
 		t.Fatalf("on again: %v", h.world.calls)
 	}
-	if out := h.must("", "autostop", "status"); !strings.Contains(out, "nobody has used for 2h are stopped") {
+	if out := h.must("", "autostop", "status"); !strings.Contains(out, "nobody has used for 2h are stopped") || !strings.Contains(out, "--ttl are deleted") {
 		t.Fatalf("status:\n%s", out)
 	}
+	// An agent from before --ttl ran stop --idle.
+	old := strings.Replace(string(mustRead(t, plist)), "<string>autostop</string>\n    <string>run</string>", "<string>stop</string>", 1)
+	if err := os.WriteFile(plist, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out := h.must("", "autostop", "status"); !strings.Contains(out, "installed before new --ttl") {
+		t.Fatalf("status of an old agent:\n%s", out)
+	}
+	h.must("", "autostop", "on")
 	h.world.agentLoaded = false
 	if out, err := h.run("", "autostop", "status"); err == nil || !strings.Contains(out, "installed but not loaded") {
 		t.Fatalf("status when unloaded: %v\n%s", err, out)
@@ -287,6 +296,10 @@ func TestSSHAndGet(t *testing.T) {
 	h.must("", "ssh", "dev", "ls", "-la")
 	if !h.world.called("limactl start --tty=false dev") || !h.world.called("exec ssh dev ls -la") {
 		t.Fatalf("ssh should start the VM, then exec: %v", h.world.calls)
+	}
+	h.must("", "ssh", "dev", "--", "ls", "--all")
+	if !h.world.called("exec ssh dev ls --all") {
+		t.Fatalf("a -- after the name isn't part of the command: %v", h.world.calls)
 	}
 	h.must("", "get", "dev", "acme/repo", "-p")
 	if !h.world.called("attach ssh dev ghq get -p acme/repo") {

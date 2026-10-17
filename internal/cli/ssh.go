@@ -38,6 +38,10 @@ doesn't include Lima's host entries.`,
 			if len(args) > 1 {
 				command = args[1:]
 			}
+			// Flags aren't parsed after the name, so a -- is still here.
+			if len(command) > 0 && command[0] == "--" {
+				command = command[1:]
+			}
 			inst, err := a.vm(ctx, name)
 			if err != nil {
 				return err

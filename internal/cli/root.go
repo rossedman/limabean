@@ -72,7 +72,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 		}
 	}
 	add("setup", newInitCmd(a), newDoctorCmd(a), newBumpCmd(a))
-	add("vms", newNewCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newRmCmd(a), newSnapshotCmd(a), newAutostopCmd(a))
+	add("vms", newNewCmd(a), newUpCmd(a), newRunCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCpCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newCloneCmd(a), newRmCmd(a), newSnapshotCmd(a), newAutostopCmd(a))
 	add("access", newSecretsCmd(a), newGitHubCmd(a), newNetworkCmd(a), newClaudeCmd(a), newMCPCmd(a))
 	root.AddCommand(newCompletionCmd(a), newVersionCmd(a))
 	return root
@@ -93,6 +93,10 @@ func Execute(version string, embedded fs.FS, args []string) int {
 	case errors.Is(err, errSilent):
 		return 1
 	}
+	var code exitCode
+	if errors.As(err, &code) {
+		return int(code)
+	}
 	u := a.UI
 	if u == nil {
 		u = ui.New(true)
@@ -103,3 +107,8 @@ func Execute(version string, embedded fs.FS, args []string) int {
 
 // errSilent fails a command whose problems were already printed.
 var errSilent = errors.New("failed")
+
+// exitCode makes limabean exit with a command's own status (run).
+type exitCode int
+
+func (c exitCode) Error() string { return fmt.Sprintf("the command exited with status %d", int(c)) }

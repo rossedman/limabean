@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -31,6 +32,12 @@ long an unused VM is stopped. To see what it would do right now, run
 				return errSilent
 			}
 			a.UI.OK("VMs nobody has used for %s are stopped (checked every %s)", after, shortDuration(autostopInterval))
+			if bytes.Contains(plist, []byte("<string>run</string>")) {
+				a.UI.OK("VMs made with new --ttl are deleted when they expire")
+			} else {
+				a.UI.Warn("This agent was installed before new --ttl, so it doesn't delete expired VMs")
+				a.UI.Hint("Update it with: limabean autostop on --after " + after)
+			}
 			a.UI.Hint("Log: "+shortPath(autostopLog()), "Preview: limabean stop --idle "+after+" --dry-run")
 			return nil
 		},

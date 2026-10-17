@@ -1,0 +1,4 @@
+# Claude Code, to run agents inside the VM (claude -p for headless runs).
+# Log in with a secret: ANTHROPIC_API_KEY, or CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`.
+[tools]
+claude = "2.1.301"

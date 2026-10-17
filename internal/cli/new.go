@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -15,7 +16,8 @@ import (
 
 func newNewCmd(a *App) *cobra.Command {
 	var secretFlags, allowFlags, withPacks, withoutPacks []string
-	var locked bool
+	var locked, learn bool
+	var ttl time.Duration
 	cmd := &cobra.Command{
 		Use:     "new [name] [environment]",
 		Aliases: []string{"create"},
@@ -51,6 +53,12 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 
   # Bigger than the template default
   limabean new k8s --cpus 8 --memory 16
+
+  # Record what it reaches, then allow just that (limabean network learn)
+  limabean new agent --learn
+
+  # A throwaway VM, deleted in four hours
+  limabean new spike --ttl 4h
 
   # The default packs, plus Rust and Java, without Kubernetes
   limabean new api --with rust,java --without kubernetes
@@ -100,28 +108,15 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 			} else if exists {
 				return fmt.Errorf("a VM named %q already exists", o.Name)
 			}
-			for _, s := range flagSecrets {
-				if err := secrets.Put(secrets.VMFile(a.Cfg.Dir(), o.Name), s.Name, s.Ref); err != nil {
-					return err
-				}
-			}
-			packs, err := a.resolvePacks(templates.SplitList(a.Cfg.Packs), withPacks, withoutPacks)
-			if err != nil {
+			if err := a.prepareVM(&o, vmChoices{secrets: flagSecrets, with: withPacks, without: withoutPacks, allow: allowFlags, locked: locked, learn: learn}); err != nil {
 				return err
-			}
-			o.Packs = packs
-			if len(allowFlags) > 0 || locked {
-				domains, err := expandAllow(allowFlags)
-				if err != nil {
-					return err
-				}
-				if err := a.savePolicy(o.Name, netPolicy{Locked: locked, Allow: domains}); err != nil {
-					return err
-				}
 			}
 
 			a.prune(ctx)
 			if err := a.create(ctx, o); err != nil {
+				return err
+			}
+			if err := a.setTTL(ctx, o.Name, ttl); err != nil {
 				return err
 			}
 			lines := []string{a.UI.Code(o.Name) + " is ready", "", "ssh lima-" + o.Name + "     or: limabean ssh " + o.Name}
@@ -137,7 +132,9 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	f.StringSliceVar(&withPacks, "with", nil, "add these packs to the defaults, e.g. rust,java (see: limabean packs)")
 	f.StringSliceVar(&withoutPacks, "without", nil, "leave these packs out, e.g. kubernetes")
 	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
+	f.BoolVar(&learn, "learn", false, "record the domains the VM looks up, to build its allowlist (see: limabean network learn --help)")
 	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
+	f.DurationVar(&ttl, "ttl", 0, "delete the VM, whatever is in it, once it's this old, e.g. 2h (needs: limabean autostop on)")
 	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 4)")
 	f.String("memory", "", "memory in GiB (default: the template's, 8)")
 	_ = a.V.BindPFlag(config.KeyCPUs, f.Lookup("cpus"))
@@ -258,4 +255,35 @@ func completeEnvs(a *App) func(*cobra.Command, []string, string) ([]string, cobr
 		envs, _ := templates.Envs(root)
 		return envs, cobra.ShellCompDirectiveNoFileComp
 	}
+}
+
+// vmChoices are what a new VM gets besides its name and environment.
+type vmChoices struct {
+	secrets       []secrets.Secret // its own, as NAME=reference
+	with, without []string         // packs, on top of the PACKS setting
+	allow         []string         // domains and presets; none: open
+	locked, learn bool
+}
+
+// prepareVM saves what a VM gets before it's created: its own secrets, its
+// network policy, and its packs, which it puts in o.
+func (a *App) prepareVM(o *createOptions, c vmChoices) error {
+	packs, err := a.resolvePacks(templates.SplitList(a.Cfg.Packs), c.with, c.without)
+	if err != nil {
+		return err
+	}
+	o.Packs = packs
+	domains, err := expandAllow(c.allow)
+	if err != nil {
+		return err
+	}
+	for _, s := range c.secrets {
+		if err := secrets.Put(secrets.VMFile(a.Cfg.Dir(), o.Name), s.Name, s.Ref); err != nil {
+			return err
+		}
+	}
+	if len(domains) > 0 || c.locked || c.learn {
+		return a.savePolicy(o.Name, netPolicy{Locked: c.locked, Learn: c.learn, Allow: domains})
+	}
+	return nil
 }

@@ -86,3 +86,24 @@ func TestRunUsesVMsSSHConfigAndStdin(t *testing.T) {
 		t.Fatalf("secret must go on stdin, not argv: %q", got)
 	}
 }
+
+func TestCloneAndCopyArgs(t *testing.T) {
+	f := &fakeRunner{}
+	c := &Client{Runner: f}
+	ctx := context.Background()
+	_, _ = c.Clone(ctx, "dev", "dev-2", `.param.x = "y"`)
+	_, _ = c.Copy(ctx, true, "./dist", "dev:code/")
+	_, _ = c.Copy(ctx, false, "dev:a", "b")
+	got := make([]string, len(f.calls))
+	for i, call := range f.calls {
+		got[i] = strings.Join(call, " ")
+	}
+	want := []string{
+		`limactl clone --tty=false --set .param.x = "y" dev dev-2`,
+		"limactl copy -r -- ./dist dev:code/",
+		"limactl copy -- dev:a b",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

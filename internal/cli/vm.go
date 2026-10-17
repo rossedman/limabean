@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -422,7 +423,7 @@ func (a *App) prune(ctx context.Context) {
 	}
 	entries, _ := os.ReadDir(a.stateDir)
 	for _, e := range entries {
-		name := strings.TrimSuffix(strings.TrimSuffix(e.Name(), ".env"), ".packs")
+		name := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(e.Name(), ".env"), ".packs"), ".expires")
 		if name != e.Name() && !exists[name] {
 			_ = os.Remove(filepath.Join(a.stateDir, e.Name()))
 		}
@@ -452,6 +453,7 @@ func (a *App) envOf(name string) string {
 func (a *App) forget(ctx context.Context, name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
 	_ = os.Remove(filepath.Join(a.stateDir, name+".packs"))
+	_ = os.Remove(filepath.Join(a.stateDir, name+".expires"))
 	_ = os.RemoveAll(a.networkDir(name))
 	if disk := codeDiskName(name); a.hasCodeDisk(ctx, name) {
 		if out, err := a.Lima.DiskDelete(ctx, disk); err != nil {
@@ -658,4 +660,66 @@ func (a *App) packsOf(name string) ([]string, bool) {
 		return nil, false
 	}
 	return templates.SplitList(strings.TrimSpace(string(b))), true
+}
+
+// setTTL makes a VM expire ttl from now (0: never), and says whether
+// anything will delete it then.
+func (a *App) setTTL(ctx context.Context, name string, ttl time.Duration) error {
+	if ttl == 0 {
+		return nil
+	}
+	if ttl < time.Minute {
+		return errors.New("--ttl needs a duration of a minute or more, e.g. 2h")
+	}
+	expires := time.Now().Add(ttl).Truncate(time.Second)
+	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(a.stateDir, name+".expires"), []byte(expires.Format(time.RFC3339)+"\n"), 0o644); err != nil {
+		return err
+	}
+	a.UI.OK("%s is deleted at %s", name, expires.Format("15:04 Mon"))
+	if !a.autostopExpires(ctx) {
+		a.UI.Warn("Nothing deletes expired VMs yet")
+		a.UI.Hint("limabean autostop on   (or later: limabean rm --expired)")
+	}
+	return nil
+}
+
+// expiryOf returns when a VM expires, if it does.
+func (a *App) expiryOf(name string) (time.Time, bool) {
+	b, err := os.ReadFile(filepath.Join(a.stateDir, name+".expires"))
+	if err != nil {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(string(b)))
+	return t, err == nil
+}
+
+// removeExpired deletes every VM past its --ttl, whatever is in it.
+func (a *App) removeExpired(ctx context.Context) error {
+	list, err := a.vms(ctx)
+	if err != nil {
+		return err
+	}
+	failed := false
+	for _, inst := range list {
+		t, ok := a.expiryOf(inst.Name)
+		if !ok || time.Now().Before(t) {
+			continue
+		}
+		if err := a.limaStep(ctx, "Deleting "+inst.Name+", which expired at "+t.Format("15:04"), func(ctx context.Context) ([]byte, error) {
+			return a.Lima.Delete(ctx, inst.Name)
+		}); err != nil {
+			a.UI.Warn("%v", err)
+			failed = true
+			continue
+		}
+		a.forget(ctx, inst.Name)
+		a.UI.OK("Deleted %s (expired)", a.UI.Code(inst.Name))
+	}
+	if failed {
+		return errSilent
+	}
+	return nil
 }

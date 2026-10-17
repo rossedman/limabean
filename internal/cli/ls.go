@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -20,8 +21,9 @@ type lsEntry struct {
 	MemoryGiB int64    `json:"memoryGiB"`
 	Secrets   int      `json:"secrets"`
 	SSHHost   string   `json:"sshHost"`
-	Network   string   `json:"network"` // e.g. "open", "3 domain(s), locked"
-	Packs     []string `json:"packs"`   // besides core; null if it was made before packs
+	Network   string   `json:"network"`           // e.g. "open", "3 domain(s), locked"
+	Packs     []string `json:"packs"`             // besides core; null if it was made before packs
+	Expires   string   `json:"expires,omitempty"` // when new --ttl deletes it, RFC 3339
 }
 
 func newLsCmd(a *App) *cobra.Command {
@@ -70,6 +72,9 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 						Network: a.networkSummary(inst),
 						Packs:   a.packsOrNil(inst.Name),
 					})
+					if t, ok := a.expiryOf(inst.Name); ok {
+						entries[len(entries)-1].Expires = t.Format(time.RFC3339)
+					}
 				}
 				enc := json.NewEncoder(out)
 				enc.SetIndent("", "  ")
@@ -92,6 +97,12 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 				})
 			}
 			a.UI.Table([]string{"NAME", "STATUS", "ENV", "CPUS", "MEMORY", "SECRETS", "NETWORK", "SSH HOST"}, rows)
+			// Not in plain output, where scripts read the rows.
+			for _, inst := range list {
+				if t, ok := a.expiryOf(inst.Name); ok && a.UI.Prompting {
+					a.UI.Hint(fmt.Sprintf("%s is deleted in %s (--ttl)", inst.Name, roughDuration(max(time.Until(t), 0))))
+				}
+			}
 			return nil
 		},
 	}

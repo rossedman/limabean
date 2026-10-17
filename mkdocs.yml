@@ -25,9 +25,10 @@ nav:
       - Claude Desktop SSH connections: claude-desktop.md
   - Guides:
       - Sandboxes: network.md
-      - Rebuilds, snapshots and autostop: lifecycle.md
+      - Rebuilds, clones and snapshots: lifecycle.md
       - Inside a VM: inside-a-vm.md
       - Packs: packs.md
+      - Projects: projects.md
       - Secrets: secrets.md
       - GitHub access: github.md
       - Customizing: customizing.md
