@@ -257,6 +257,7 @@ type harness struct {
 	world  *fakeWorld
 	dir    string // config dir
 	claude string // settings.json
+	bin    string // on PATH: stand-ins for programs
 	github *httptest.Server
 }
 
@@ -291,7 +292,23 @@ func newHarness(t *testing.T) *harness {
 	}
 	t.Setenv("HOME", home)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	h.bin = bin
+	// No editors but the ones a test installs: never the machine's /Applications.
+	apps := filepath.Join(dir, "Applications")
+	was := applicationDirs
+	applicationDirs = func() []string { return []string{apps} }
+	t.Cleanup(func() { applicationDirs = was })
 	return h
+}
+
+// installEditors puts stand-ins for editors' command line tools on PATH.
+func (h *harness) installEditors(names ...string) {
+	h.t.Helper()
+	for _, n := range names {
+		if err := os.WriteFile(filepath.Join(h.bin, n), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			h.t.Fatal(err)
+		}
+	}
 }
 
 // run executes limabean with args and stdin, returning its output.
@@ -373,8 +390,8 @@ func (h *harness) app(u *ui.UI) *App {
 		}
 		return os.WriteFile(dst, b, 0o644)
 	}
-	a.openEditor = func(_ context.Context, ide string, args ...string) error {
-		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
+	a.openEditor = func(_ context.Context, path string, args ...string) error {
+		h.world.calls = append(h.world.calls, "editor "+filepath.Base(path)+" "+strings.Join(args, " "))
 		return nil
 	}
 	a.macListens = func(port int) bool { return h.world.macPorts[port] }

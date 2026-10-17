@@ -327,6 +327,7 @@ func TestSSHAndGet(t *testing.T) {
 
 func TestCode(t *testing.T) {
 	h := newHarness(t)
+	h.installEditors("code", "cursor")
 	h.world.vms["dev"] = "Stopped"
 	h.world.ghq = "/home/me.linux/code/github.com/rossedman/limabean\n" +
 		"/home/me.linux/code/github.com/rossedman/limabean-docs\n" +
@@ -415,19 +416,78 @@ func TestCodeHelpers(t *testing.T) {
 			t.Errorf("repoQuery(%q) = %q, want %q", in, got, want)
 		}
 	}
-	t.Setenv("PATH", t.TempDir())
-	for ide, want := range map[string]string{"code": "Install 'code'", "cursor": "Install 'cursor'", "zed": "zed isn't on your PATH"} {
-		if err := openEditor(context.Background(), ide); err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("openEditor(%s): %v", ide, err)
+}
+
+// The editor: the one named if it's installed, else the first installed of
+// code, code-insiders, cursor, windsurf and codium, on PATH or in an app.
+func TestPickEditor(t *testing.T) {
+	bin, apps := t.TempDir(), t.TempDir()
+	t.Setenv("PATH", bin)
+	was := applicationDirs
+	applicationDirs = func() []string { return []string{apps} }
+	t.Cleanup(func() { applicationDirs = was })
+	install := func(path string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+			t.Fatal(err)
 		}
 	}
-	bin := t.TempDir()
-	if err := os.WriteFile(filepath.Join(bin, "code"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
+
+	if _, _, err := pickEditor(""); err == nil || !strings.Contains(err.Error(), "no editor found") {
+		t.Errorf("none installed: %v", err)
 	}
-	t.Setenv("PATH", bin)
-	if err := openEditor(context.Background(), "code", "--remote", "ssh-remote+lima-dev", "/x"); err != nil {
-		t.Errorf("openEditor with code on PATH: %v", err)
+	if _, _, err := pickEditor("zed"); err == nil || !strings.Contains(err.Error(), "zed isn't on your PATH") {
+		t.Errorf("zed, none installed: %v", err)
+	}
+
+	// VS Code Insiders, its command never put on PATH.
+	insiders := filepath.Join(apps, "Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders")
+	install(insiders)
+	for _, named := range []string{"", "code", "code-insiders", "zed"} {
+		if ide, path, err := pickEditor(named); err != nil || ide != "code-insiders" || path != insiders {
+			t.Errorf("pickEditor(%q) = %s %s %v", named, ide, path, err)
+		}
+	}
+
+	// code on PATH comes first; a named editor still wins.
+	install(filepath.Join(bin, "code"))
+	if ide, path, _ := pickEditor(""); ide != "code" || path != filepath.Join(bin, "code") {
+		t.Errorf("first installed: %s %s", ide, path)
+	}
+	if ide, _, _ := pickEditor("code-insiders"); ide != "code-insiders" {
+		t.Errorf("named: %s", ide)
+	}
+	if err := openEditor(context.Background(), filepath.Join(bin, "code"), "--remote", "ssh-remote+lima-dev", "/x"); err != nil {
+		t.Errorf("openEditor: %v", err)
+	}
+}
+
+func TestCodeFallsBackToAnInstalledEditor(t *testing.T) {
+	h := newHarness(t)
+	h.installEditors("code-insiders")
+	h.world.vms["dev"] = "Running"
+	t.Setenv("LIMABEAN_IDE", "code") // what limabean init used to write
+	out := h.must("", "code", "dev")
+	if !h.world.called("editor code-insiders --remote ssh-remote+lima-dev /home/me.linux/code") {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+	if !strings.Contains(out, "code isn't installed, so this opens code-insiders") || !strings.Contains(out, `IDE="code-insiders"`) {
+		t.Errorf("out:\n%s", out)
+	}
+	t.Setenv("LIMABEAN_IDE", "")
+	if out := h.must("", "code", "dev"); strings.Contains(out, "isn't installed") {
+		t.Errorf("no IDE set, no warning:\n%s", out)
+	}
+}
+
+func TestCodeWithoutAnEditor(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	if _, err := h.run("", "code", "dev"); err == nil || !strings.Contains(err.Error(), "no editor found") {
+		t.Errorf("no editor: %v", err)
 	}
 }
 

@@ -72,7 +72,7 @@ its `dotenv` format, so configs written by the bash `init` keep working.
 | `IMAGES` | `yes` | | `LIMABEAN_IMAGES` |
 | `CLAUDE_DESKTOP` | `yes` | | `LIMABEAN_CLAUDE_DESKTOP` |
 | `AWS_DIR` | `~/.aws` | | `LIMABEAN_AWS_DIR` |
-| `IDE` | `code` | `--ide` on `code` | `LIMABEAN_IDE` |
+| `IDE` | empty: the first installed | `--ide` on `code` | `LIMABEAN_IDE` |
 
 Global flags: `--config`, `--plain` (also `LIMABEAN_PLAIN=1`), `--templates`
 (use a templates directory instead of the embedded copy, for development).

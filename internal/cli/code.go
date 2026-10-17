@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -31,10 +32,13 @@ Without one, the editor opens ~/code.
 With a single argument that isn't a VM's name, it's taken as a repository
 and you pick the VM.
 
-The editor is the IDE setting (code by default), or --ide. Any editor whose
-command line takes VS Code's --remote flag works: code, code-insiders,
-cursor, windsurf. It connects to lima-<name> through ~/.ssh/config, so that
-needs Lima's Include (limabean doctor checks it).`,
+The editor is the IDE setting, or --ide: code, code-insiders, cursor,
+windsurf, codium, or any other editor whose command line takes VS Code's
+--remote flag. Without one, or when the one named isn't installed,
+limabean opens the first of those it finds. It finds an editor on your
+PATH or inside its app in /Applications, so "Install 'code' command in
+PATH" isn't needed. It connects to lima-<name> through ~/.ssh/config, so
+that needs Lima's Include (limabean doctor checks it).`,
 		Example: `  # dev's ~/code in VS Code
   limabean code dev
 
@@ -42,11 +46,12 @@ needs Lima's Include (limabean doctor checks it).`,
   limabean code dev limabean
   limabean code dev rossedman/limabean
 
-  # In Cursor, this time
+  # In Cursor, or VS Code Insiders, this time
   limabean code dev limabean --ide cursor
+  limabean code dev --ide code-insiders
 
-  # Always use Cursor
-  echo 'IDE="cursor"' >> ~/.config/limabean/config`,
+  # Always use VS Code Insiders
+  echo 'IDE="code-insiders"' >> ~/.config/limabean/config`,
 		Args:              cobra.MaximumNArgs(2),
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -71,15 +76,19 @@ needs Lima's Include (limabean doctor checks it).`,
 				a.UI.Warn("~/.ssh/config doesn't include Lima's host entries, so the editor may not find lima-%s", name)
 				a.UI.Hint("limabean init   (or see: limabean doctor)")
 			}
-			ide := a.Cfg.IDE
-			if ide == "" {
-				ide = "code"
+			ide, path, err := pickEditor(a.Cfg.IDE)
+			if err != nil {
+				return err
+			}
+			if a.Cfg.IDE != "" && ide != a.Cfg.IDE {
+				a.UI.Warn("%s isn't installed, so this opens %s", a.Cfg.IDE, ide)
+				a.UI.Hint(fmt.Sprintf("To make it the default: IDE=%q in ~/.config/limabean/config", ide))
 			}
 			a.UI.Info("Opening %s in %s", a.UI.Code(name+":"+dir), ide)
-			return a.openEditor(ctx, ide, "--remote", "ssh-remote+lima-"+name, dir)
+			return a.openEditor(ctx, path, "--remote", "ssh-remote+lima-"+name, dir)
 		},
 	}
-	cmd.Flags().String("ide", "", "editor command to open, e.g. code or cursor (default: the IDE setting, or code)")
+	cmd.Flags().String("ide", "", "editor to open, e.g. code-insiders or cursor (default: the IDE setting, or the first one installed)")
 	_ = a.V.BindPFlag(config.KeyIDE, cmd.Flags().Lookup("ide"))
 	return cmd
 }
@@ -174,20 +183,63 @@ func homeQuote(p string) string {
 	return secrets.ShellQuote(p)
 }
 
+// editors take VS Code's --remote flag; limabean looks for them in this
+// order when none is named, or the one named isn't installed.
+var editors = []string{"code", "code-insiders", "cursor", "windsurf", "codium"}
+
+// editorApps is where each editor's command line tool sits inside its app,
+// for when "Install ... command in PATH" was never run.
+var editorApps = map[string]string{
+	"code":          "Visual Studio Code.app/Contents/Resources/app/bin/code",
+	"code-insiders": "Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
+	"cursor":        "Cursor.app/Contents/Resources/app/bin/cursor",
+	"windsurf":      "Windsurf.app/Contents/Resources/app/bin/windsurf",
+	"codium":        "VSCodium.app/Contents/Resources/app/bin/codium",
+}
+
+// applicationDirs are where macOS apps are installed; tests replace it.
+var applicationDirs = func() []string {
+	home, _ := os.UserHomeDir()
+	return []string{"/Applications", filepath.Join(home, "Applications")}
+}
+
+// findEditor returns the command for an editor: on PATH, or inside its app.
+func findEditor(ide string) (string, bool) {
+	if path, err := lookPath(ide); err == nil {
+		return path, true
+	}
+	if app, ok := editorApps[ide]; ok {
+		for _, dir := range applicationDirs() {
+			if path := filepath.Join(dir, app); fileExists(path) {
+				return path, true
+			}
+		}
+	}
+	return "", false
+}
+
+// pickEditor returns the editor to open and its command: the one named if
+// it's installed, else the first of editors that is.
+func pickEditor(named string) (ide, path string, err error) {
+	if named != "" {
+		if path, ok := findEditor(named); ok {
+			return named, path, nil
+		}
+	}
+	for _, ide := range editors {
+		if path, ok := findEditor(ide); ok {
+			return ide, path, nil
+		}
+	}
+	if named != "" && !slices.Contains(editors, named) {
+		return "", "", fmt.Errorf("%s isn't on your PATH, and none of %s is installed", named, strings.Join(editors, ", "))
+	}
+	return "", "", fmt.Errorf("no editor found: limabean code opens %s, on your PATH or in /Applications", strings.Join(editors, ", "))
+}
+
 // openEditor runs the editor's command line tool, which hands the window to
 // the running app and returns.
-func openEditor(ctx context.Context, ide string, args ...string) error {
-	path, err := lookPath(ide)
-	if err != nil {
-		hint := ""
-		switch filepath.Base(ide) {
-		case "code", "code-insiders":
-			hint = `; in VS Code, run "Shell Command: Install 'code' command in PATH" from the Command Palette`
-		case "cursor":
-			hint = `; in Cursor, run "Shell Command: Install 'cursor' command in PATH" from the Command Palette`
-		}
-		return fmt.Errorf("%s isn't on your PATH%s", ide, hint)
-	}
+func openEditor(ctx context.Context, path string, args ...string) error {
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	return cmd.Run()

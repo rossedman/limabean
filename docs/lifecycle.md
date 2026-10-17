@@ -157,7 +157,7 @@ back. A VM counts as in use while:
 - a terminal in it (a shell, tmux, `limabean ssh`) had input or output
   within the limit. A detached tmux pane that is printing counts; one that
   sits silent doesn't.
-- Claude Desktop, VS Code or Cursor is connected to it.
+- Claude Desktop or an editor is connected to it.
 - its 5-minute load average is 1 or more, as during a build or with busy
   containers.
 - it started less than the limit ago.
