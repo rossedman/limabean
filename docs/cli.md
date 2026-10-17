@@ -9,7 +9,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets |
-| `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host |
+| `limabean ls` | Lists VMs with status, environment, size, number of secrets and SSH host; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
 | `limabean start [name]` | Starts a stopped VM and adds it back to Claude Desktop |
