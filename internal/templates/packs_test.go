@@ -25,7 +25,7 @@ func TestRepositoryPacks(t *testing.T) {
 			t.Errorf("%s installs nothing", p.Name)
 		}
 	}
-	for _, want := range []string{"core", "go", "python", "node", "kubernetes", "infra", "containers", "db", "api", "supply-chain", "rust", "java", "ruby"} {
+	for _, want := range []string{"core", "go", "python", "node", "kubernetes", "infra", "containers", "db", "api", "supply-chain", "rust", "java", "ruby", "claude"} {
 		if _, ok := byName[want]; !ok {
 			t.Errorf("missing pack %s", want)
 		}

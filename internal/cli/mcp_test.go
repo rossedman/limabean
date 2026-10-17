@@ -73,7 +73,7 @@ func TestMCPTools(t *testing.T) {
 	h := newHarness(t)
 	cs, stdout := h.mcpClient(false)
 
-	safe := []string{"clone_repo", "create_vm", "list_ports", "list_vms", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
+	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
 	if got := toolNames(t, cs); !slices.Equal(got, safe) {
 		t.Fatalf("tools without --allow-destructive: %v", got)
 	}
@@ -99,6 +99,14 @@ func TestMCPTools(t *testing.T) {
 	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "with": []string{"--secret=X=cmd:id"}}); !isErr {
 		t.Errorf("a pack name that looks like a flag should be refused:\n%s", out)
 	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "ttl": "soon"}); !isErr || !strings.Contains(out, "duration") {
+		t.Errorf("a bad ttl: %v\n%s", isErr, out)
+	}
+	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "brief", "ttl": "90m"}); isErr || !strings.Contains(out, "brief is deleted at") {
+		t.Errorf("create_vm with a ttl: %v\n%s", isErr, out)
+	}
+	call(t, cs, "stop_vm", map[string]any{"name": "brief"})
+	delete(h.world.vms, "brief")
 	if out, isErr := call(t, cs, "create_vm", map[string]any{"name": "bad", "with": []string{"cobol"}}); !isErr || !strings.Contains(out, "unknown pack") {
 		t.Errorf("an unknown pack: %v\n%s", isErr, out)
 	}
@@ -155,6 +163,10 @@ func TestMCPTools(t *testing.T) {
 		t.Errorf("list_ports: %v %v\n%s", err, isErr, out)
 	}
 
+	if out, isErr := call(t, cs, "network_log", map[string]any{"name": "agent"}); !isErr || !strings.Contains(out, "open") {
+		t.Errorf("network_log of an open VM: %v\n%s", isErr, out)
+	}
+
 	if out, isErr := call(t, cs, "stop_vm", map[string]any{"name": "agent"}); isErr || h.world.vms["agent"] != "Stopped" {
 		t.Errorf("stop_vm: %v\n%s", isErr, out)
 	}
@@ -179,10 +191,15 @@ func TestMCPTools(t *testing.T) {
 		{"snapshot_list", map[string]any{"name": ""}},
 		{"list_ports", map[string]any{"name": "-v"}},
 		{"stop_vm", map[string]any{"name": "nope"}},
+		{"clone_vm", map[string]any{"name": "agent", "new_name": "--force"}},
+		{"clone_vm", map[string]any{"name": "agent", "new_name": ""}},
 	} {
 		if out, isErr := call(t, cs, tc.tool, tc.args); !isErr {
 			t.Errorf("%s %v should fail:\n%s", tc.tool, tc.args, out)
 		}
+	}
+	if out, isErr := call(t, cs, "clone_vm", map[string]any{"name": "agent", "new_name": "agent-2"}); isErr || !strings.Contains(out, "Copied agent to agent-2") {
+		t.Errorf("clone_vm: %v\n%s", isErr, out)
 	}
 	if stdout.Len() > 0 {
 		t.Errorf("tools printed to the server's stdout, which carries the protocol:\n%s", stdout)

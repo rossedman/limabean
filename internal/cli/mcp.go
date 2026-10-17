@@ -71,8 +71,13 @@ type (
 		CPUs   int      `json:"cpus,omitempty" jsonschema:"CPUs; default the template's"`
 		Memory int      `json:"memory,omitempty" jsonschema:"memory in GiB; default the template's"`
 		Allow  []string `json:"allow,omitempty" jsonschema:"only let the VM reach these domains (and subdomains) or presets: claude, docker, github, go, java, npm, python, ruby, rust, ubuntu"`
-		With   []string `json:"with,omitempty" jsonschema:"packs of tools to add to the defaults: rust, java, ruby, api, supply-chain, … (limabean packs lists them)"`
+		With   []string `json:"with,omitempty" jsonschema:"packs of tools to add to the defaults: claude, rust, java, ruby, api, supply-chain, … (limabean packs lists them)"`
 		Locked bool     `json:"locked,omitempty" jsonschema:"take sudo and Docker away from the VM's user, so the allowlist can't be turned off from inside"`
+		TTL    string   `json:"ttl,omitempty" jsonschema:"delete the VM, whatever is in it, once it's this old, e.g. 2h or 90m; for scratch work that should clean itself up"`
+	}
+	mcpCloneVM struct {
+		Name    string `json:"name" jsonschema:"the VM to copy"`
+		NewName string `json:"new_name" jsonschema:"name for the copy: letters, digits and dashes"`
 	}
 	mcpRun struct {
 		Name    string `json:"name" jsonschema:"the VM to run in; it must be running"`
@@ -122,7 +127,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 			return cli(ctx, "ls", "--json")
 		})
-	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass with to add packs of tools (rust, java, ruby, …), and allow (and locked) to make a sandbox that can only reach what the task needs.", false, &no),
+	mcp.AddTool(s, tool("create_vm", "Create a VM", "Create and boot a new Ubuntu VM with the full toolchain (Docker, Go, Python, Kubernetes tools, …) and the user's shared secrets. Takes a minute or more. Pass with to add packs of tools (claude, rust, java, ruby, …), allow (and locked) to make a sandbox that can only reach what the task needs, and ttl to have it deleted later.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpCreate) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name, in.Env); err != nil {
 				return nil, nil, err
@@ -154,11 +159,27 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			if in.Locked {
 				args = append(args, "--locked")
 			}
+			if in.TTL != "" {
+				if _, err := time.ParseDuration(in.TTL); err != nil {
+					return nil, nil, fmt.Errorf("ttl %q: use a duration such as 2h or 90m", in.TTL)
+				}
+				args = append(args, "--ttl="+in.TTL)
+			}
 			args = append(args, "--", in.Name)
 			if in.Env != "" {
 				args = append(args, in.Env)
 			}
 			return cli(ctx, args...)
+		})
+	mcp.AddTool(s, tool("clone_vm", "Copy a VM", "Make a new VM that starts as an exact copy of another: system, packs, ~/code (with uncommitted work), secrets and network policy. Takes seconds; the source VM is shut down briefly and started again. Use it to try risky changes on a copy, or to give several attempts the same starting point.", false, &no),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpCloneVM) (*mcp.CallToolResult, any, error) {
+			if err := checkNames(in.Name, in.NewName); err != nil {
+				return nil, nil, err
+			}
+			if in.NewName == "" {
+				return nil, nil, errors.New("new_name is required")
+			}
+			return cli(ctx, "clone", "--", in.Name, in.NewName)
 		})
 	mcp.AddTool(s, tool("start_vm", "Start a VM", "Start a stopped VM.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
@@ -195,6 +216,13 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 				return nil, nil, err
 			}
 			return cli(ctx, "ports", "--json", "--", in.Name)
+		})
+	mcp.AddTool(s, tool("network_log", "Show a VM's DNS lookups", "List the names a running VM with an allowlist looked up since it started, as JSON, and whether each was allowed. When something fails to reach a host in a sandbox, the blocked name is here; the user can allow it with limabean network allow.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
+			if err := checkNames(in.Name); err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "network", "log", "--json", "--", in.Name)
 		})
 	mcp.AddTool(s, tool("snapshot_save", "Save a snapshot", "Save a VM's system and ~/code as a snapshot to roll back to later. The VM is shut down for a few seconds and started again.", false, &no),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpSnapshot) (*mcp.CallToolResult, any, error) {

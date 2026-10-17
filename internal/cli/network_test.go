@@ -152,3 +152,92 @@ func TestNetworkCommands(t *testing.T) {
 		t.Errorf("unknown lines are ignored:\n%s", out)
 	}
 }
+
+func TestNetworkLearnAndLog(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.world.vms["open"] = "Running"
+	if _, err := h.run("", "network", "log", "open"); err == nil || !strings.Contains(err.Error(), "isn't recorded") && !strings.Contains(err.Error(), "aren't recorded") {
+		t.Errorf("log of an open VM: %v", err)
+	}
+	if _, err := h.run("", "network", "learn", "open", "--done"); err == nil || !strings.Contains(err.Error(), "isn't learning") {
+		t.Errorf("--done without learning: %v", err)
+	}
+
+	out := h.must("", "new", "agent", "--learn", "--allow", "github")
+	if !strings.Contains(out, "Network: learning") || !strings.Contains(h.read(filepath.Join("network", "agent", "network.conf")), "learn\n") {
+		t.Fatalf("new --learn:\n%s", out)
+	}
+	if out := h.must("", "network", "ls", "agent"); !strings.Contains(out, "Learning") || !strings.Contains(out, "github.com") {
+		t.Errorf("ls while learning:\n%s", out)
+	}
+	if _, err := h.run("", "network", "learn", "agent", "--done"); err != nil {
+		t.Errorf("--done with only an allowlist so far should keep it: %v", err)
+	}
+	h.must("", "network", "learn", "agent")
+
+	h.world.lookups = "      4 registry.npmjs.org\n      2 api.github.com\n      1 files.pythonhosted.org.\n      1 ntp.ubuntu.com\n      3 www.example.co.uk\n      1 localhost\n garbage\n"
+	out = h.must("", "network", "log", "agent")
+	for _, want := range []string{"registry.npmjs.org", "4", "seen", "learn agent --done", "example.co.uk", "npmjs.org", "pythonhosted.org"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log while learning missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "localhost") {
+		t.Errorf("names without a dot are left out:\n%s", out)
+	}
+
+	out = h.must("", "network", "learn", "agent", "--done")
+	if !strings.Contains(out, "Allowed: example.co.uk, npmjs.org, pythonhosted.org") {
+		t.Errorf("--done:\n%s", out)
+	}
+	conf := h.read(filepath.Join("network", "agent", "network.conf"))
+	if strings.Contains(conf, "learn") || !strings.Contains(conf, "allow npmjs.org\n") || !strings.Contains(conf, "allow github.com\n") || strings.Contains(conf, "api.github.com") {
+		t.Errorf("network.conf after --done:\n%s", conf)
+	}
+
+	h.world.lookups = "      1 api.github.com\n      2 evil.example.com\n"
+	out = h.must("", "network", "log", "agent", "--blocked")
+	if strings.Contains(out, "api.github.com") || !strings.Contains(out, "evil.example.com") || !strings.Contains(out, "blocked") || !strings.Contains(out, "network allow agent example.com") {
+		t.Errorf("log --blocked:\n%s", out)
+	}
+	var entries []lookupEntry
+	if err := json.Unmarshal([]byte(h.must("", "network", "log", "agent", "--json")), &entries); err != nil || len(entries) != 2 || !entries[0].Allowed || entries[1].Allowed {
+		t.Errorf("log --json: %v %+v", err, entries)
+	}
+	h.world.lookups = ""
+	if out := h.must("", "network", "log", "agent"); !strings.Contains(out, "No lookups") {
+		t.Errorf("empty log:\n%s", out)
+	}
+	h.must("", "network", "learn", "agent")
+	if _, err := h.run("", "network", "learn", "agent", "--done"); err != nil {
+		t.Errorf("--done keeping the allowlist: %v", err)
+	}
+	h.must("", "network", "open", "agent")
+	h.must("", "network", "learn", "agent")
+	if _, err := h.run("", "network", "learn", "agent", "--done"); err == nil || !strings.Contains(err.Error(), "nothing was looked up") {
+		t.Errorf("--done with nothing: %v", err)
+	}
+	h.world.sshFail = true
+	if _, err := h.run("", "network", "log", "agent"); err == nil {
+		t.Error("an unreachable VM should fail")
+	}
+	h.world.sshFail = false
+	h.world.vms["agent"] = "Stopped"
+	for _, args := range [][]string{{"network", "log", "agent"}, {"network", "learn", "agent", "--done"}} {
+		if _, err := h.run("", args...); err == nil || !strings.Contains(err.Error(), "stopped") {
+			t.Errorf("%v on a stopped VM: %v", args, err)
+		}
+	}
+	if out := h.must("", "network", "open", "agent"); !strings.Contains(out, "open") || strings.Contains(h.read(filepath.Join("network", "agent", "network.conf")), "learn") {
+		t.Errorf("open should end learning:\n%s", out)
+	}
+}
+
+func TestBaseDomain(t *testing.T) {
+	for in, want := range map[string]string{"a.b.github.com": "github.com", "github.com": "github.com", "x.example.co.uk": "example.co.uk", "example.co.uk": "example.co.uk", "deep.cdn.example.com.au": "example.com.au", "a.io": "a.io", "x.y.io": "y.io"} {
+		if got := baseDomain(in); got != want {
+			t.Errorf("baseDomain(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

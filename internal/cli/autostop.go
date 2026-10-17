@@ -20,9 +20,10 @@ func newAutostopCmd(a *App) *cobra.Command {
 		Use:   "autostop",
 		Short: "Stop VMs automatically when nobody is using them",
 		Long: `Stop idle VMs in the background, so forgotten ones don't hold on to memory
-and battery. "autostop on" installs a launchd agent in your login session
-that runs "limabean stop --idle <after>" every 10 minutes; see
-"limabean stop --help" for what counts as in use.
+and battery, and delete VMs made with "new --ttl" once they expire.
+"autostop on" installs a launchd agent in your login session that runs
+"limabean autostop run" every 10 minutes; see "limabean stop --help" for
+what counts as in use.
 
 A stopped VM keeps its disk. "limabean ssh", "code" and "start" bring it
 back, and Claude Desktop lists it again once it runs.`,
@@ -35,7 +36,7 @@ back, and Claude Desktop lists it again once it runs.`,
   limabean autostop status
   limabean autostop off`,
 	}
-	cmd.AddCommand(newAutostopOnCmd(a), newAutostopOffCmd(a), newAutostopStatusCmd(a))
+	cmd.AddCommand(newAutostopOnCmd(a), newAutostopOffCmd(a), newAutostopStatusCmd(a), newAutostopRunCmd(a))
 	return cmd
 }
 
@@ -99,6 +100,17 @@ func renderPlist(program []string, path string, interval time.Duration) []byte {
 </dict>
 </plist>
 `, autostopLabel, args.String(), esc(path), int(interval.Seconds()), esc(autostopLog()), esc(autostopLog()))
+}
+
+// autostopExpires reports whether the autostop agent deletes expired VMs
+// (agents installed before --ttl only stop idle ones).
+func (a *App) autostopExpires(ctx context.Context) bool {
+	plist, err := os.ReadFile(autostopPlist())
+	if err != nil || !bytes.Contains(plist, []byte("<string>run</string>")) {
+		return false
+	}
+	_, err = a.launchctl(ctx, "print", launchdTarget())
+	return err == nil
 }
 
 var plistIdleRE = regexp.MustCompile(`<string>--idle</string>\s*<string>([^<]+)</string>`)

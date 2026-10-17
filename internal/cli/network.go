@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,9 +45,14 @@ VMs created before this feature need a rebuild first.`,
   limabean network allow agent registry.npmjs.org
   limabean network rm agent python
   limabean network open agent
-  limabean network unlock agent`,
+  limabean network unlock agent
+
+  # Find out what an allowlist needs: record, work, then allow what was used
+  limabean network learn agent
+  limabean network log agent
+  limabean network learn agent --done`,
 	}
-	cmd.AddCommand(newNetworkLsCmd(a), newNetworkAllowCmd(a), newNetworkRmCmd(a), newNetworkOpenCmd(a), newNetworkLockCmd(a), newNetworkUnlockCmd(a))
+	cmd.AddCommand(newNetworkLsCmd(a), newNetworkAllowCmd(a), newNetworkRmCmd(a), newNetworkOpenCmd(a), newNetworkLockCmd(a), newNetworkUnlockCmd(a), newNetworkLearnCmd(a), newNetworkLogCmd(a))
 	return cmd
 }
 
@@ -111,15 +117,21 @@ func mapKeys(m map[string][]string) []string {
 // netPolicy is a VM's network.conf.
 type netPolicy struct {
 	Locked bool
+	Learn  bool     // open, recording lookups; Allow waits until learning ends
 	Allow  []string // sorted, unique
 }
 
-func (p netPolicy) open() bool { return len(p.Allow) == 0 }
+// open reports whether nothing is limited or recorded: the VM's DNS isn't
+// limabean's.
+func (p netPolicy) open() bool { return len(p.Allow) == 0 && !p.Learn }
 
 // summary describes the policy in a few words.
 func (p netPolicy) summary() string {
 	s := "open"
-	if !p.open() {
+	switch {
+	case p.Learn:
+		s = "learning"
+	case !p.open():
 		s = fmt.Sprintf("%d domain(s)", len(p.Allow))
 	}
 	if p.Locked {
@@ -145,6 +157,8 @@ func (a *App) loadPolicy(vm string) (netPolicy, error) {
 		switch {
 		case len(fields) == 1 && fields[0] == "locked":
 			p.Locked = true
+		case len(fields) == 1 && fields[0] == "learn":
+			p.Learn = true
 		case len(fields) == 2 && fields[0] == "allow":
 			p.Allow = append(p.Allow, fields[1])
 		}
@@ -163,6 +177,9 @@ func (a *App) savePolicy(vm string, p netPolicy) error {
 	fmt.Fprintf(&b, "# Network policy for %s, applied by limabean-network in the VM.\n# Change it with: limabean network --help\n", vm)
 	if p.Locked {
 		b.WriteString("locked\n")
+	}
+	if p.Learn {
+		b.WriteString("learn\n")
 	}
 	for _, d := range p.Allow {
 		fmt.Fprintf(&b, "allow %s\n", d)
@@ -216,4 +233,68 @@ func (a *App) changePolicy(ctx context.Context, vm string, change func(*netPolic
 	}
 	a.UI.OK("%s's network: %s", a.UI.Code(vm), p.summary())
 	return nil
+}
+
+// lookups returns how often a running VM looked up each name since it
+// started, from the log dnsmasq keeps while limabean manages its DNS.
+func (a *App) lookups(ctx context.Context, inst lima.Instance) (map[string]int, error) {
+	out, err := a.Lima.Run(ctx, inst, nil, dnsLogScript)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s's DNS log: %w", inst.Name, err)
+	}
+	counts := map[string]int{}
+	for line := range strings.Lines(string(out)) {
+		f := strings.Fields(line)
+		if len(f) != 2 {
+			continue
+		}
+		n, err := strconv.Atoi(f[0])
+		name := strings.ToLower(strings.TrimSuffix(f[1], "."))
+		if err == nil && netDomainRE.MatchString(name) {
+			counts[name] += n
+		}
+	}
+	return counts, nil
+}
+
+// dnsLogScript counts the names in the VM's DNS log (see
+// files/limabean-network), leaving out reverse lookups.
+const dnsLogScript = `f=/run/limabean-network/dns.log; [ -r "$f" ] || exit 0; awk '$5 ~ /^query\[/ && $5 != "query[PTR]" { print $6 }' "$f" | sort | uniq -c`
+
+// allows reports whether an allowlist lets a name resolve.
+func allows(list []string, name string) bool {
+	for _, d := range list {
+		if name == d || strings.HasSuffix(name, "."+d) {
+			return true
+		}
+	}
+	return false
+}
+
+// baseDomain is the registered domain a name belongs to: the last two
+// labels, or three under a country's second level (example.co.uk).
+func baseDomain(name string) string {
+	labels := strings.Split(name, ".")
+	n := 2
+	if len(labels) >= 3 && len(labels[len(labels)-1]) == 2 && slices.Contains([]string{"co", "com", "net", "org", "gov", "edu", "ac"}, labels[len(labels)-2]) {
+		n = 3
+	}
+	if len(labels) <= n {
+		return name
+	}
+	return strings.Join(labels[len(labels)-n:], ".")
+}
+
+// suggestAllow turns looked-up names that a list doesn't allow into the
+// domains to add, sorted.
+func suggestAllow(list []string, counts map[string]int) []string {
+	var out []string
+	for name := range counts {
+		if name == "ntp.ubuntu.com" || allows(list, name) {
+			continue
+		}
+		out = append(out, baseDomain(name))
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
 }

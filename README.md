@@ -17,7 +17,8 @@ Claude Desktop as an SSH connection.
 
 **Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
 
-- **One command per VM.** `limabean new dev` is ready in about a minute.
+- **One command per VM.** `limabean new dev` is ready in about a minute,
+  and `limabean up` builds the VM a repository's `.limabean.yaml` describes.
 - **Batteries included, in packs.** Docker, Go, Python, Node, Kubernetes,
   Terraform and 30+ CLI tools by default, every version pinned; add Rust,
   Java, Ruby and more with `--with`.
@@ -26,14 +27,16 @@ Claude Desktop as an SSH connection.
   read-only.
 - **Secrets without files.** API keys and tokens come from your Keychain,
   1Password, environment variables or commands, chosen when you create a VM.
-- **Sandboxes for agents.** Limit a VM to the domains its work needs and
-  lock it, so nothing inside, an agent included, can turn that off.
+- **Sandboxes for agents.** Limit a VM to the domains its work needs (learn
+  mode records them for you) and lock it, so nothing inside, an agent
+  included, can turn that off.
 - **Claude drives it.** With [MCP](docs/mcp.md), Claude creates VMs, clones
   repositories, runs builds and tests, and snapshots VMs, all without touching
   your Mac. Every VM is also an SSH connection in Claude Desktop.
 - **Safe to throw away.** `~/code` lives on its own disk, so `rebuild`
   keeps your repositories, and `rm` refuses to run while you have unpushed
-  work.
+  work. Clones take seconds, and `--ttl` or `run --rm` VMs delete
+  themselves.
 - **Plain Lima underneath.** Templates are ordinary YAML and shell, and
   `limactl` always works.
 
@@ -104,19 +107,23 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean new [name] [env]` | Create a VM, choosing its secrets; `--with rust` adds a pack |
+| `limabean up` | Create or start the VM a repository's `.limabean.yaml` describes |
+| `limabean run --rm -- <cmd>` | Run one command in a new VM, then delete it |
 | `limabean packs` | List the tool packs and which VMs get by default |
 | `limabean ls` | List VMs, or print them as JSON with `--json` |
 | `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
+| `limabean cp <src> <dst>` | Copy files between your Mac and a VM (`dev:path`) |
 | `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code or Cursor |
 | `limabean ports [name]` | List the ports a VM forwards to your Mac |
 | `limabean open [name] [port]` | Open a forwarded port in your browser |
 | `limabean start [name]` | Start a stopped VM |
 | `limabean stop [name]` | Stop a running VM, or with `--idle 2h` every VM nobody is using |
 | `limabean rebuild [name]` | Recreate a VM from the current templates, keeping `~/code` |
+| `limabean clone <name> <new>` | Copy a VM, `~/code` and all, in seconds |
 | `limabean rm [name]` | Delete a VM |
 | `limabean snapshot save\|ls\|restore\|rm` | Save a VM, `~/code` included, and roll back to it later |
-| `limabean autostop on\|off\|status` | Stop idle VMs automatically in the background |
+| `limabean autostop on\|off\|status` | Stop idle VMs, and delete `--ttl` ones, in the background |
 
 **Secrets and access**
 
@@ -132,6 +139,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean github sync` | Install the token in every running VM |
 | `limabean github logout` | Remove the token from the Keychain and VMs |
 | `limabean network ls\|allow\|rm\|open\|lock\|unlock` | Limit which domains a VM can reach, and lock it so that holds |
+| `limabean network learn\|log` | Record what a VM reaches to build its allowlist, and see what was blocked |
 | `limabean claude sync` | Register running VMs in Claude Desktop, remove the rest |
 | `limabean mcp` | Let Claude create, run and snapshot VMs, as an MCP server ([details](docs/mcp.md)) |
 
@@ -150,8 +158,9 @@ built from the [`docs/`](docs) folder:
 - [Getting started](docs/getting-started.md): install, requirements, first VM
 - [Claude and MCP](docs/mcp.md): let Claude create and drive VMs
 - [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
-- [Sandboxes](docs/network.md): network allowlists and locked VMs
-- [Rebuilds, snapshots and autostop](docs/lifecycle.md)
+- [Sandboxes](docs/network.md): network allowlists, learn mode and locked VMs
+- [Projects](docs/projects.md): `.limabean.yaml` and `limabean up`
+- [Rebuilds, clones and snapshots](docs/lifecycle.md): throwaway VMs and autostop too
 - [Inside a VM](docs/inside-a-vm.md): tools, Docker, shell, ports, paths
 - [Secrets](docs/secrets.md): API keys and settings from the Keychain, 1Password and more
 - [GitHub access](docs/github.md): a scoped token for `gh`, kept in your Keychain

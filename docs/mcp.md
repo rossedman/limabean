@@ -78,6 +78,10 @@ Claude picks the tools; you describe the task.
   fail, tell me what broke."*
 - *"Make a locked sandbox that can only reach GitHub and PyPI, clone
   acme/scraper into it and run it."*
+- *"Clone dev three times and try a different fix for the flaky test in each.
+  Tell me which one worked."*
+- *"Make a scratch VM that deletes itself in two hours and benchmark the
+  three JSON libraries in it."*
 - *"Stop every VM I'm not using."*
 
 Repositories go to `~/code/<host>/<owner>/<repo>` in the VM, so after
@@ -101,16 +105,22 @@ Pair it with snapshots: *"snapshot triage before you change anything"*, then
 restore from the command line (`limabean snapshot restore triage`) if
 something goes wrong.
 
+When something in the sandbox can't reach a host, Claude can see which name
+was blocked with `network_log`, and tell you; adding it is up to you
+(`limabean network allow triage <domain>`).
+
 ## Tools
 
 | Tool | Does |
 |---|---|
 | `list_vms` | Lists VMs: status, environment, size, secrets, network |
-| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` ([packs](packs.md) beyond the defaults), `allow`, `locked`. It gets your shared secrets |
+| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` ([packs](packs.md) beyond the defaults), `allow`, `locked`, and `ttl` to have it deleted later. It gets your shared secrets |
+| `clone_vm` | Copies a VM in seconds, `~/code` and all ([clones](lifecycle.md#clones)) |
 | `start_vm`, `stop_vm` | Starts or stops a VM |
 | `run_in_vm` | Runs a shell command in a running VM and returns the exit code and output |
 | `clone_repo` | Clones a repository into `~/code` with ghq |
 | `list_ports` | Lists the ports programs in a VM listen on, and which reach `http://localhost:<port>` on the Mac |
+| `network_log` | Lists the names a sandboxed VM looked up, and which its allowlist [blocked](network.md#whats-allowed) |
 | `snapshot_save`, `snapshot_list` | Saves and lists [snapshots](lifecycle.md#snapshots) |
 | `snapshot_restore`, `delete_vm`, `rebuild_vm` | Only with `--allow-destructive` |
 
@@ -139,6 +149,8 @@ server with `limabean mcp --allow-destructive`. Even then:
   Mac.
 - **Widen a VM's network.** It can create a restricted VM, but not change an
   existing VM's allowlist or lock.
+- **Delete a VM it didn't ask to be temporary.** `ttl` only applies to a VM
+  as `create_vm` makes it; no tool sets one on an existing VM.
 - **Pass names as flags.** VM names, environments, snapshot names and
   domains are checked before they reach limabean's command line, so a "name"
   like `--force` is refused.

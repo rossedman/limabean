@@ -211,6 +211,27 @@ func (c *Client) Delete(ctx context.Context, name string) ([]byte, error) {
 	return c.Runner.Output(ctx, nil, true, c.limactl(), "delete", "--force", name)
 }
 
+// Clone copies a stopped VM to a new one, with APFS clones of its disks,
+// changing the copy's configuration with --set yq expressions. The copy
+// isn't started.
+func (c *Client) Clone(ctx context.Context, src, dst string, sets ...string) ([]byte, error) {
+	args := []string{"clone", "--tty=false"}
+	for _, s := range sets {
+		args = append(args, "--set", s)
+	}
+	return c.Runner.Output(ctx, nil, true, c.limactl(), append(args, src, dst)...)
+}
+
+// Copy copies files between the Mac and VMs with limactl copy: VM paths
+// are written <vm>:<path>.
+func (c *Client) Copy(ctx context.Context, recursive bool, paths ...string) ([]byte, error) {
+	args := []string{"copy"}
+	if recursive {
+		args = append(args, "-r")
+	}
+	return c.Runner.Output(ctx, nil, true, c.limactl(), append(append(args, "--"), paths...)...)
+}
+
 // DiskExists reports whether a Lima disk (limactl disk create) exists.
 func (c *Client) DiskExists(ctx context.Context, name string) (bool, error) {
 	out, err := c.Runner.Output(ctx, nil, false, c.limactl(), "disk", "list", "--json")

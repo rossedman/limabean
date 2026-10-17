@@ -32,6 +32,7 @@ lists them. Claude can choose them too: [`create_vm`](mcp.md#tools) takes
 | `rust` | | rust (stable, through rustup), cargo-binstall |
 | `java` | | Temurin JDK (LTS), gradle, maven |
 | `ruby` | | ruby (precompiled), and the libraries native gems build against |
+| `claude` | | Claude Code, to run agents inside the VM |
 
 `core` holds the tools limabean and the shell rely on, so it can't be
 removed. Docker, Python 3 and the [apt basics](inside-a-vm.md#tools) are in
@@ -41,6 +42,24 @@ Every version is pinned in
 [`templates/packs/`](https://github.com/rossedman/limabean/tree/main/templates/packs).
 For another version in one project, use mise: `mise use node@22` or
 `mise use java@21`.
+
+## Claude Code in a VM
+
+The `claude` pack installs [Claude Code](https://code.claude.com) in the VM,
+so an agent can work there instead of on your Mac. Give it a key with a
+secret: `ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN` from
+`claude setup-token` on your Mac to use your subscription:
+
+```bash
+claude setup-token   # on the Mac; copy the token it prints
+limabean secrets set CLAUDE_CODE_OAUTH_TOKEN --vm agent
+limabean new agent --with claude --allow github --allow claude --locked
+limabean get agent me/app
+limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing test"'
+```
+
+With [`limabean run --rm`](lifecycle.md#throwaway-vms), the VM is gone when
+the task is done.
 
 ## Changing the defaults
 

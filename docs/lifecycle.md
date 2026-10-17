@@ -1,8 +1,9 @@
-# Rebuilds, snapshots and autostop
+# Rebuilds, clones and snapshots
 
 VMs are meant to be thrown away and recreated. limabean keeps that cheap:
-your repositories survive a rebuild, a snapshot rolls a VM back in seconds,
-and VMs nobody is using stop by themselves.
+your repositories survive a rebuild, a clone or a snapshot takes seconds,
+throwaway VMs delete themselves, and VMs nobody is using stop by
+themselves.
 
 ## Rebuilds keep `~/code`
 
@@ -49,6 +50,56 @@ seconds and only uses space for blocks that change afterwards, but the VM is
 shut down while it happens; limabean starts it again if it was running.
 Snapshots live in the VM's Lima directory, so `rm` and `rebuild` delete them.
 
+## Clones
+
+```bash
+limabean clone dev dev-experiment
+```
+
+A clone is a new VM that starts as an exact copy of another: its system,
+packs, secrets, network policy and `~/code`, uncommitted changes included.
+Like snapshots, the disks are APFS clones, so it takes seconds and the copy
+only uses space for what changes in it. The VM being copied is shut down for
+those seconds and started again. Snapshots aren't copied.
+
+Clone a VM to try something risky without touching the original, or to give
+several agents the same starting point and keep the one that worked:
+
+```bash
+for i in 1 2 3; do limabean clone agent agent-$i; done
+```
+
+Claude can clone VMs too, [through MCP](mcp.md#tools) (`clone_vm`).
+
+## Throwaway VMs
+
+```bash
+limabean new spike --ttl 4h                    # deleted in four hours
+limabean run --rm -- 'uname -a'                # a VM for one command
+limabean run --rm --repo me/app -- make test   # a clean checkout's tests
+```
+
+`--ttl` deletes a VM once it's that old, **whatever is in it**: there's no
+unsaved-work check, since that's what the TTL asked for. The
+[autostop agent](#idle-vms-stop-by-themselves) deletes expired VMs every 10
+minutes, so turn it on; `limabean rm --expired` does it by hand.
+`limabean ls` shows how long each has left.
+
+`limabean run` creates a VM, runs one command in it and, with `--rm`,
+deletes the VM when the command ends, whether it worked or not. limabean
+exits with the command's exit status, so it fits in scripts. `--repo` clones
+a repository first and runs the command in it. It takes the same `--with`,
+`--allow`, `--locked` and `--secret` flags as `new`:
+
+```bash
+# Claude Code on a task, in a locked sandbox, then gone
+limabean run --rm --with claude --allow github --allow claude --locked \
+  --repo me/app -- 'claude -p "make the tests pass" && git push'
+```
+
+Without `--rm` the VM is kept (named `run-<random>` unless you pass
+`--name`), and `--ttl` can delete it later.
+
 ## Idle VMs stop by themselves
 
 ```bash
@@ -58,9 +109,12 @@ limabean autostop status
 limabean autostop off
 ```
 
-`autostop on` installs a launchd agent that runs `limabean stop --idle 2h`
-every 10 minutes, so a VM you've forgotten about stops holding memory and
-battery. Its disks are kept, and `limabean ssh`, `code` or `start` brings it
+`autostop on` installs a launchd agent that runs
+`limabean autostop run --idle 2h` every 10 minutes: it deletes
+[expired VMs](#throwaway-vms), and stops VMs nobody is using, so one you've
+forgotten about stops holding memory and battery. An agent installed before
+limabean had `--ttl` only stops idle VMs: run `limabean autostop on` again
+(`autostop status` says if it's needed). Its disks are kept, and `limabean ssh`, `code` or `start` brings it
 back. A VM counts as in use while:
 
 - a terminal in it (a shell, tmux, `limabean ssh`) had input or output

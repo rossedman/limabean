@@ -34,6 +34,7 @@ type fakeWorld struct {
 	ss       string            // what ss -ltnpH prints in every VM
 	latest   map[string]string // mise latest <spec> answers, on the Mac or in a VM
 	activity map[string]string // VM → what stop --idle's check prints
+	lookups  string            // what the DNS log count prints in every VM
 
 	agentLoaded bool         // the autostop agent is loaded in launchd
 	macPorts    map[int]bool // ports that answer on the Mac's localhost
@@ -47,10 +48,13 @@ type fakeWorld struct {
 	failDiskCreate bool
 	failDiskDelete bool
 	failClone      bool            // snapshot copies fail
+	failLimaClone  bool            // limactl clone fails
 	oldVMs         map[string]bool // VMs created before network policies
 	failNetwork    bool            // applying a network policy fails
 	reboot         bool            // the first boot left /var/run/reboot-required
 	sshFail        bool            // every ssh call fails
+	attachErr      error           // what commands run on the terminal return
+	failDelete     bool            // limactl delete fails
 }
 
 func newFakeWorld() *fakeWorld {
@@ -103,7 +107,17 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			}
 			w.vms[args[1]] = "Stopped"
 		case "delete":
+			if w.failDelete {
+				return []byte("delete failed"), errors.New("exit status 1")
+			}
 			delete(w.vms, args[len(args)-1])
+		case "clone":
+			if w.failLimaClone {
+				return []byte("clone failed"), errors.New("exit status 1")
+			}
+			src, dst := args[len(args)-2], args[len(args)-1]
+			w.vms[dst] = "Stopped"
+			w.writeFile(filepath.Join(dst, "disk"), w.readFile(filepath.Join(src, "disk")))
 		case "disk":
 			switch args[1] {
 			case "list":
@@ -165,6 +179,8 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return []byte(v + "\n"), nil
 			}
 			return nil, errors.New("exit status 1")
+		case strings.Contains(remote, "dns.log"):
+			return []byte(w.lookups), nil
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
@@ -197,6 +213,9 @@ func (w *fakeWorld) Delete(s string) error {
 	delete(w.keychain, s)
 	return nil
 }
+
+// repoRoot holds the templates; absolute, as tests may change directory.
+var repoRoot, _ = filepath.Abs(filepath.Join("..", ".."))
 
 type harness struct {
 	t      *testing.T
@@ -277,7 +296,7 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 
 // app returns an App wired to the fake world.
 func (h *harness) app(u *ui.UI) *App {
-	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
+	a := NewApp("test", os.DirFS(repoRoot))
 	a.UI = u
 	a.execSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))
@@ -285,7 +304,7 @@ func (h *harness) app(u *ui.UI) *App {
 	}
 	a.attachSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "attach ssh "+inst.Name+" "+strings.Join(command, " "))
-		return nil
+		return h.world.attachErr
 	}
 	a.launchctl = func(_ context.Context, args ...string) ([]byte, error) {
 		h.world.calls = append(h.world.calls, "launchctl "+strings.Join(args, " "))

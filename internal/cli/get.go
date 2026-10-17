@@ -8,9 +8,8 @@ import (
 
 func newGetCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "get [name] <repo> [ghq flags...]",
-		Aliases: []string{"clone"},
-		Short:   "Clone a repository into a VM with ghq",
+		Use:   "get [name] <repo> [ghq flags...]",
+		Short: "Clone a repository into a VM with ghq",
 		Long: `Clone a repository into a VM's ~/code with ghq, which lays it out as
 ~/code/<host>/<owner>/<repo>. A stopped VM is started first.
 
