@@ -9,7 +9,7 @@ const IMAGES = JSON.stringify([{ name: 'limabean-img-1', env: 'scratch', packs: 
 const PORTS = JSON.stringify([{ port: 3000, process: 'node', forwarded: true, url: 'http://localhost:3000' }])
 
 // A Mac with limabean, beneath the plugin.
-function onMac(on: On, ran: string[], status: string[]) {
+function onMac(on: On, ran: string[], status: string[], binary = 'limabean') {
   const clock = mock.clock(on)
   mock.env(on, { HOME: '/Users/me', PATH: '/usr/bin' })
   on('fs.exists', () => ({ value: false }))
@@ -22,7 +22,7 @@ function onMac(on: On, ran: string[], status: string[]) {
       : args[0] === 'images' ? IMAGES
       : args[0] === 'ports' ? PORTS
       : ''
-    if (e.argv[0] !== 'limabean') throw new Error('not found')
+    if (e.argv[0] !== binary) throw new Error('not found')
     return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -68,4 +68,16 @@ test('draws a pane of the VMs, their ports and images', async ($, on) => {
     await ui.unmount()
   }
   expect(ran).toContain('limabean ports --json -- dev --plain')
+})
+
+test('uses limabean.binary when it is set', { options: { binary: '/opt/tools/limabean' } }, async ($, on) => {
+  const ran: string[] = []
+  const status: string[] = []
+  const clock = onMac(on, ran, status, '/opt/tools/limabean')
+  on('ui.panes', () => ({ value: [] }))
+  await $.session.start({ cwd: '/Users/me', surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  expect(ran[0]).toBe('/opt/tools/limabean version')
+  expect(ran.some(r => r.startsWith('limabean '))).toBe(false)
+  expect(status.at(-1)).toBe('limabean: 1 running · 1 stopped')
 })

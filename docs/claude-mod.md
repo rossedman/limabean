@@ -80,12 +80,34 @@ open. It changes nothing except what its Start and Stop buttons ask for.
 
 ## Settings
 
-Under `/config`, in the plugin's section:
+Most people set nothing: in a VM the mod finds everything itself, and on
+the Mac it finds limabean where Homebrew or `go install` put it. There are
+two settings, and they only appear in `/config` once the mod is installed
+(on the Mac, with the `/plugin install` line above):
 
-| Setting | Does |
-|---|---|
-| limabean binary | Where limabean is, if Claude Code starts without it on its PATH (as an app started from the Dock can). Empty: `limabean` on the PATH, then `/opt/homebrew/bin`, `/usr/local/bin`, `~/go/bin` and `~/.local/bin`. |
-| Preview | `mac` or `vm` shows sample data instead of real VMs, to see what the mod looks like. |
+| Setting | Values | Does |
+|---|---|---|
+| `limabean.binary` | a path; empty by default | Where limabean is, if the mod says it can't find it. Empty: `limabean` on the PATH, then `/opt/homebrew/bin`, `/usr/local/bin`, `~/go/bin` and `~/.local/bin`. |
+| `limabean.preview` | `off` (default), `mac`, `vm` | Sample data instead of real VMs, to see what the mod looks like: `mac` shows the status line and the pane, `vm` the band and what Claude is told inside a VM. |
+
+Set one at the prompt, and it applies at once:
+
+```
+/config limabean.binary=/opt/homebrew/bin/limabean
+/config limabean.preview=vm
+/config limabean.preview=off
+```
+
+`which limabean` in a terminal prints the path to use. Settings are kept in
+`~/.claude/settings.json`, under `pluginConfigs`:
+
+```json
+{
+  "pluginConfigs": {
+    "limabean": { "options": { "binary": "/opt/homebrew/bin/limabean" } }
+  }
+}
+```
 
 ## Limits
 

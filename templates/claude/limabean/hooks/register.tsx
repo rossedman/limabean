@@ -35,7 +35,7 @@ let binary: string | undefined
 let env: Record<string, string> = {}
 
 export const register: Register = (on, options) => {
-  configured = typeof options.limabean === 'string' ? options.limabean.trim() : ''
+  configured = typeof options.binary === 'string' ? options.binary.trim() : ''
   preview = options.preview === 'mac' || options.preview === 'vm' ? options.preview : 'off'
   binary = undefined
   env = {}
@@ -71,7 +71,7 @@ export const register: Register = (on, options) => {
       $.ui.status(undefined)
       return { text: F.insideSection(vm) }
     }
-    return { text: "limabean isn't here: this session runs neither in a limabean VM nor on a Mac with limabean on its PATH. Set the binary under /config if it's somewhere else." }
+    return { text: "limabean isn't here: this session runs neither in a limabean VM nor on a Mac with limabean on its PATH. If limabean is somewhere else: /config limabean.binary=/path/to/limabean" }
   })
 
   // Inside a VM, Claude learns where it runs before its first step.
