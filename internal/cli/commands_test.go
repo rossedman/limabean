@@ -500,6 +500,141 @@ func TestCodeDisk(t *testing.T) {
 	}
 }
 
+func TestSnapshots(t *testing.T) {
+	h := newHarness(t)
+	h.must("", "new", "dev")
+	disk := filepath.Join("_disks", codeDiskName("dev"), "datadisk")
+	h.world.writeFile(filepath.Join("dev", "vz-efi"), "efi v1")
+	h.world.writeFile(disk, "code v1")
+
+	if out := h.must("", "snapshot", "ls", "dev"); !strings.Contains(out, "dev has no snapshots") {
+		t.Fatalf("ls before saving:\n%s", out)
+	}
+	if _, err := h.run("", "snapshot", "restore", "dev"); err == nil {
+		t.Error("restore without snapshots should fail")
+	}
+
+	h.world.calls = nil
+	out := h.must("", "snapshot", "save", "dev", "before")
+	if !strings.Contains(out, "Saved dev as before (its system and ~/code)") || !strings.Contains(out, "Started dev again") {
+		t.Fatalf("save:\n%s", out)
+	}
+	calls := strings.Join(h.world.calls, "\n")
+	if stop, clone, start := strings.Index(calls, "limactl stop dev"), strings.Index(calls, "clone "), strings.LastIndex(calls, "limactl start --tty=false dev"); stop < 0 || clone < stop || start < clone {
+		t.Fatalf("save should stop, clone, then start: %v", h.world.calls)
+	}
+	// A stopped VM isn't started by a save.
+	h.world.vms["dev"] = "Stopped"
+	h.world.calls = nil
+	h.must("", "snapshot", "save", "dev")
+	if h.world.called("limactl start") || h.world.vms["dev"] != "Stopped" {
+		t.Fatalf("saving a stopped VM shouldn't start it: %v", h.world.calls)
+	}
+
+	out = h.must("", "snapshot", "ls", "dev")
+	if !strings.Contains(out, "before") || !strings.Contains(out, "system, ~/code") {
+		t.Fatalf("ls:\n%s", out)
+	}
+	var list []snapshotMeta
+	if err := json.Unmarshal([]byte(h.must("", "snapshot", "ls", "dev", "--json")), &list); err != nil || len(list) != 2 || list[0].Tag != "before" || !list[0].Code {
+		t.Fatalf("ls --json: %v %+v", err, list)
+	}
+	latest := list[1].Tag
+
+	// Claude makes a mess; restore brings everything back.
+	h.world.vms["dev"] = "Running"
+	h.world.writeFile(filepath.Join("dev", "disk"), "broken system")
+	h.world.writeFile(filepath.Join("dev", "vz-efi"), "efi v2")
+	h.world.writeFile(disk, "broken code")
+	out = h.must("", "snapshot", "restore", "dev", "before")
+	if h.world.readFile(filepath.Join("dev", "disk")) != "system of dev" || h.world.readFile(filepath.Join("dev", "vz-efi")) != "efi v1" || h.world.readFile(disk) != "code v1" {
+		t.Fatalf("restore didn't bring the disks back:\n%s", out)
+	}
+	if !strings.Contains(out, "Restored dev to before") || h.world.vms["dev"] != "Running" {
+		t.Fatalf("restore:\n%s", out)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(h.world.limaHome, "*", "*.limabean-restore")); len(matches) > 0 {
+		t.Errorf("restore left temporary files: %v", matches)
+	}
+	// Without a name, the latest; a terminal asks first.
+	if out, err := h.runTTY([]string{"n"}, "snapshot", "restore", "dev"); err != nil || !strings.Contains(out, "Kept dev as it is") {
+		t.Fatalf("restore, answered no: %v\n%s", err, out)
+	}
+	if out, err := h.runTTY(nil, "snapshot", "restore", "dev", "--force"); err != nil || !strings.Contains(out, "Restored dev to "+latest) {
+		t.Fatalf("restore the latest: %v\n%s", err, out)
+	}
+
+	// Saving under a taken name replaces it; a failed copy keeps the old one.
+	h.world.writeFile(disk, "code v2")
+	h.must("", "snapshot", "save", "dev", "before")
+	h.world.failClone = true
+	if _, err := h.run("", "snapshot", "save", "dev", "before"); err == nil {
+		t.Fatal("a failed copy should fail the save")
+	}
+	h.world.failClone = false
+	h.must("", "snapshot", "restore", "dev", "before")
+	if h.world.readFile(disk) != "code v2" {
+		t.Fatalf("the replaced snapshot should hold code v2, got %q", h.world.readFile(disk))
+	}
+
+	// A snapshot named like a temporary copy survives saves of its prefix.
+	h.must("", "snapshot", "save", "dev", "before.new")
+	h.must("", "snapshot", "save", "dev", "before")
+	if out := h.must("", "snapshot", "ls", "dev"); !strings.Contains(out, "before.new") {
+		t.Fatalf("saving before removed before.new:\n%s", out)
+	}
+	if out := h.must("", "snapshot", "rm", "dev", "before"); !strings.Contains(out, "Deleted snapshot before of dev") {
+		t.Fatalf("rm:\n%s", out)
+	}
+	for _, args := range [][]string{
+		{"snapshot", "rm", "dev", "before"},
+		{"snapshot", "rm", "dev", "../x"},
+		{"snapshot", "restore", "dev", "nope"},
+		{"snapshot", "save", "dev", "bad name"},
+		{"snapshot", "save", "nope"},
+		{"snapshot", "ls", "nope"},
+		{"snapshot", "restore", "nope"},
+		{"snapshot", "rm", "nope", "x"},
+	} {
+		if _, err := h.run("", args...); err == nil {
+			t.Errorf("limabean %v should fail", args)
+		}
+	}
+
+	// A VM whose code disk went away can't take a snapshot that includes one.
+	delete(h.world.disks, codeDiskName("dev"))
+	if _, err := h.run("", "snapshot", "restore", "dev", latest); err == nil || !strings.Contains(err.Error(), "no longer has a code disk") {
+		t.Errorf("restore without the code disk: %v", err)
+	}
+	// Without a disk file, there's nothing to snapshot.
+	h.world.vms["empty"] = "Stopped"
+	if _, err := h.run("", "snapshot", "save", "empty"); err == nil || !strings.Contains(err.Error(), "can't find empty's disk") {
+		t.Errorf("save without a disk: %v", err)
+	}
+	// A VM that won't start again is reported, not fatal.
+	h.world.vms["dev"] = "Running"
+	h.world.failStart = true
+	if out := h.must("", "snapshot", "save", "dev", "x"); !strings.Contains(out, "Couldn't start dev again") {
+		t.Errorf("save when the restart fails:\n%s", out)
+	}
+}
+
+func TestCloneFile(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// cp -c is macOS's; elsewhere it fails, and the error says why.
+	err := cloneFile(context.Background(), src, filepath.Join(dir, "dst"))
+	if err != nil && !strings.Contains(err.Error(), "APFS") {
+		t.Errorf("cloneFile error should mention APFS: %v", err)
+	}
+	if cloneFile(context.Background(), filepath.Join(dir, "missing"), filepath.Join(dir, "dst2")) == nil {
+		t.Error("cloning a missing file should fail")
+	}
+}
+
 // Real `ss -ltnpH` output, plus IPv6 lines.
 const ssOutput = `LISTEN 0      128    127.0.0.53:5353  0.0.0.0:* users:(("python3",pid=1917,fd=3))
 LISTEN 0      5       127.0.0.1:8766  0.0.0.0:* users:(("python3",pid=1913,fd=3))

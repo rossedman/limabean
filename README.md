@@ -84,6 +84,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean stop [name]` | Stop a running VM, or with `--idle 2h` every VM nobody is using |
 | `limabean rebuild [name]` | Recreate a VM from the current templates, keeping `~/code` |
 | `limabean rm [name]` | Delete a VM |
+| `limabean snapshot save\|ls\|restore\|rm` | Save a VM, `~/code` included, and roll back to it later |
 | `limabean autostop on\|off\|status` | Stop idle VMs automatically in the background |
 
 **Secrets and access**
@@ -100,6 +101,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean github sync` | Install the token in every running VM |
 | `limabean github logout` | Remove the token from the Keychain and VMs |
 | `limabean claude sync` | Register running VMs in Claude Desktop, remove the rest |
+| `limabean mcp` | Let Claude create, run and snapshot VMs, as an MCP server ([details](docs/claude-desktop.md#let-claude-manage-vms)) |
 
 **More**
 

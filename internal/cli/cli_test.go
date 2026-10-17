@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -39,10 +40,12 @@ type fakeWorld struct {
 	failStart bool // limactl start fails, with output
 	failStop  bool // limactl stop fails
 
+	limaHome       string          // where VM and disk directories live
 	disks          map[string]bool // Lima disks
 	failDiskList   bool
 	failDiskCreate bool
 	failDiskDelete bool
+	failClone      bool // snapshot copies fail
 	reboot         bool // the first boot left /var/run/reboot-required
 	sshFail        bool // every ssh call fails
 }
@@ -51,7 +54,7 @@ func newFakeWorld() *fakeWorld {
 	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}}
 }
 
-func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
+func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
 	w.calls = append(w.calls, name+" "+strings.Join(args, " "))
 	in := ""
 	if stdin != nil {
@@ -72,7 +75,7 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			sort.Strings(names) // limactl lists by name
 			for _, n := range names {
 				status := w.vms[n]
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, n)
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"sshConfigFile":"/lima/%s/ssh.config","config":{"provision":[{"path":"/etc/limabean/mise/00-base.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), n)
 			}
 			return []byte(b.String()), nil
 		case "start":
@@ -80,8 +83,9 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 				return []byte("level=fatal msg=\"boom from lima\""), errors.New("exit status 1")
 			}
 			for _, a := range args {
-				if strings.HasPrefix(a, "--name=") {
-					w.vms[strings.TrimPrefix(a, "--name=")] = "Running"
+				if name, ok := strings.CutPrefix(a, "--name="); ok {
+					w.vms[name] = "Running"
+					w.writeFile(filepath.Join(name, "disk"), "system of "+name)
 					return nil, nil
 				}
 			}
@@ -109,6 +113,7 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 					return []byte("disk create failed"), errors.New("exit status 1")
 				}
 				w.disks[args[2]] = true
+				w.writeFile(filepath.Join("_disks", args[2], "datadisk"), "empty code disk")
 			case "delete":
 				if w.failDiskDelete {
 					return []byte("disk is in use"), errors.New("exit status 1")
@@ -132,10 +137,18 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
-		case remote == "ss -ltnpH":
-			return []byte(w.ss), nil
+		case strings.HasPrefix(remote, "echo "):
+			return []byte(strings.TrimPrefix(remote, "echo ") + "\n"), nil
+		case remote == "false":
+			err := exec.Command("sh", "-c", "exit 3").Run()
+			return []byte("it failed\n"), err
+		case remote == "sleep":
+			<-ctx.Done()
+			return []byte("partial"), ctx.Err()
 		case remote == "sh -s": // stop --idle's check
 			return []byte(w.activity[vm]), nil
+		case remote == "ss -ltnpH":
+			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
 			return []byte(w.ghq), nil
 		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
@@ -179,6 +192,7 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	dir := t.TempDir()
 	h := &harness{t: t, world: newFakeWorld(), dir: filepath.Join(dir, "config"), claude: filepath.Join(dir, "claude", "settings.json")}
+	h.world.limaHome = filepath.Join(dir, "lima")
 	h.github = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") == "Bearer github_pat_good" {
 			_, _ = w.Write([]byte(`{"login":"octocat"}`))
@@ -233,6 +247,18 @@ func (h *harness) runForms(forms [][]string, args ...string) (string, error) {
 
 func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...string) (string, error) {
 	h.t.Helper()
+	a := h.app(u)
+	root := NewRootCmd(a)
+	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
+	root.SetIn(strings.NewReader(stdin))
+	root.SetOut(out)
+	root.SetErr(out)
+	err := root.ExecuteContext(context.Background())
+	return out.String(), err
+}
+
+// app returns an App wired to the fake world.
+func (h *harness) app(u *ui.UI) *App {
 	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
 	a.UI = u
 	a.execSSH = func(inst lima.Instance, command ...string) error {
@@ -255,6 +281,17 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 			h.world.agentLoaded = args[0] == "print"
 		}
 		return nil, nil
+	}
+	a.cloneFile = func(_ context.Context, src, dst string) error {
+		h.world.calls = append(h.world.calls, "clone "+filepath.Base(src))
+		if h.world.failClone {
+			return errors.New("not APFS")
+		}
+		b, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(dst, b, 0o644)
 	}
 	a.openEditor = func(_ context.Context, ide string, args ...string) error {
 		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
@@ -282,13 +319,20 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 			return secrets.RunCommand(ctx, name, args...)
 		},
 	}
-	root := NewRootCmd(a)
-	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
-	root.SetIn(strings.NewReader(stdin))
-	root.SetOut(out)
-	root.SetErr(out)
-	err := root.ExecuteContext(context.Background())
-	return out.String(), err
+	return a
+}
+
+// writeFile writes a file under the fake Lima home.
+func (w *fakeWorld) writeFile(rel, body string) {
+	p := filepath.Join(w.limaHome, rel)
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	_ = os.WriteFile(p, []byte(body), 0o644)
+}
+
+// readFile reads a file under the fake Lima home.
+func (w *fakeWorld) readFile(rel string) string {
+	b, _ := os.ReadFile(filepath.Join(w.limaHome, rel))
+	return string(b)
 }
 
 // called reports whether any recorded call starts with prefix.
