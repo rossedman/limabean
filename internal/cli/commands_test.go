@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -630,6 +632,116 @@ func TestCloneFile(t *testing.T) {
 	}
 	if cloneFile(context.Background(), filepath.Join(dir, "missing"), filepath.Join(dir, "dst2")) == nil {
 		t.Error("cloning a missing file should fail")
+	}
+}
+
+// Real `ss -ltnpH` output, plus IPv6 lines.
+const ssOutput = `LISTEN 0      128    127.0.0.53:5353  0.0.0.0:* users:(("python3",pid=1917,fd=3))
+LISTEN 0      5       127.0.0.1:8766  0.0.0.0:* users:(("python3",pid=1913,fd=3))
+LISTEN 0      128       0.0.0.0:22    0.0.0.0:*
+LISTEN 0      128       0.0.0.0:8768  0.0.0.0:*
+LISTEN 0      511          [::]:8768     [::]:* users:(("node",pid=7,fd=20))
+LISTEN 0      511         [::1]:5432     [::]:*
+LISTEN 0      4096            *:3000        *:* users:(("vite",pid=9,fd=3))
+`
+
+func TestParseListening(t *testing.T) {
+	got := parseListening(ssOutput + "garbage\nLISTEN 0 1 nocolon x\nLISTEN 0 1 1.2.3.4:x y\n")
+	want := []vmPort{{Port: 3000, Process: "vite"}, {Port: 5432}, {Port: 8766, Process: "python3"}, {Port: 8768, Process: "node"}}
+	if !slices.Equal(got, want) {
+		t.Fatalf("got %+v\nwant %+v", got, want)
+	}
+	if processName("nothing") != "" {
+		t.Error("processName without users")
+	}
+}
+
+func TestPortsAndOpen(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Running"
+	h.world.ss = ssOutput
+	h.world.macPorts[3000], h.world.macPorts[8766] = true, true
+
+	out := h.must("", "ports", "dev")
+	for _, want := range []string{"3000", "vite", "http://localhost:3000", "5432", "not forwarded"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("ports missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "5353") || strings.Contains(out, " 22 ") {
+		t.Errorf("ports lists ports Lima doesn't forward:\n%s", out)
+	}
+	var list []vmPort
+	if err := json.Unmarshal([]byte(h.must("", "ports", "dev", "--json")), &list); err != nil || len(list) != 4 || !list[0].Forwarded || list[1].Forwarded {
+		t.Fatalf("ports --json: %v %+v", err, list)
+	}
+
+	h.must("", "open", "dev", "8766")
+	if !h.world.called("open http://localhost:8766") {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+	if out := h.must("", "open", "dev", "9999"); !strings.Contains(out, "Nothing answers on localhost:9999") || !h.world.called("open http://localhost:9999") {
+		t.Errorf("open an unforwarded port:\n%s", out)
+	}
+	// One number that isn't a VM: a port of the only VM.
+	h.world.calls = nil
+	if _, err := h.runTTY(nil, "open", "3000"); err != nil || !h.world.called("open http://localhost:3000") {
+		t.Fatalf("open 3000: %v %v", err, h.world.calls)
+	}
+	// No port: several forwarded is an error in plain mode, a picker in a terminal.
+	if _, err := h.run("", "open", "dev"); err == nil || !strings.Contains(err.Error(), "several ports") {
+		t.Errorf("open with several ports: %v", err)
+	}
+	h.world.calls = nil
+	if _, err := h.runTTY([]string{ui.Down, ui.Enter}, "open", "dev"); err != nil || !h.world.called("open http://localhost:8766") {
+		t.Fatalf("picker: %v %v", err, h.world.calls)
+	}
+	delete(h.world.macPorts, 8766)
+	h.world.calls = nil
+	if h.must("", "open", "dev"); !h.world.called("open http://localhost:3000") {
+		t.Fatalf("the only forwarded port: %v", h.world.calls)
+	}
+	h.world.macPorts = map[int]bool{}
+	if _, err := h.run("", "open", "dev"); err == nil || !strings.Contains(err.Error(), "nothing in dev is forwarded") {
+		t.Errorf("nothing forwarded: %v", err)
+	}
+
+	h.world.ss = ""
+	if out := h.must("", "ports", "dev"); !strings.Contains(out, "Nothing in dev is listening") {
+		t.Errorf("no ports:\n%s", out)
+	}
+	for _, args := range [][]string{{"open", "dev", "http"}, {"open", "dev", "70000"}, {"open", "nope"}, {"open", "nope", "80"}, {"ports", "nope"}} {
+		if _, err := h.run("", args...); err == nil {
+			t.Errorf("limabean %v should fail", args)
+		}
+	}
+	h.world.vms["dev"] = "Stopped"
+	for _, args := range [][]string{{"ports", "dev"}, {"open", "dev", "80"}} {
+		if _, err := h.run("", args...); err == nil || !strings.Contains(err.Error(), "dev is stopped") {
+			t.Errorf("limabean %v on a stopped VM: %v", args, err)
+		}
+	}
+	h.world.vms["dev"] = "Running"
+	h.world.sshFail = true
+	for _, args := range [][]string{{"ports", "dev"}, {"open", "dev"}} {
+		if _, err := h.run("", args...); err == nil {
+			t.Errorf("limabean %v should fail when ssh does", args)
+		}
+	}
+}
+
+func TestMacListens(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := l.Addr().(*net.TCPAddr).Port
+	if !macListens(port) {
+		t.Error("a listening port should answer")
+	}
+	l.Close()
+	if macListens(port) {
+		t.Error("a closed port shouldn't answer")
 	}
 }
 

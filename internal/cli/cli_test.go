@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -30,9 +31,11 @@ type fakeWorld struct {
 	keychain map[string]string
 	unsaved  string            // what the unsaved-work check prints
 	ghq      string            // what ghq list -p prints in every VM
+	ss       string            // what ss -ltnpH prints in every VM
 	activity map[string]string // VM → what stop --idle's check prints
 
-	agentLoaded bool // the autostop agent is loaded in launchd
+	agentLoaded bool         // the autostop agent is loaded in launchd
+	macPorts    map[int]bool // ports that answer on the Mac's localhost
 
 	failStart bool // limactl start fails, with output
 	failStop  bool // limactl stop fails
@@ -48,10 +51,10 @@ type fakeWorld struct {
 }
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}}
 }
 
-func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
+func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
 	w.calls = append(w.calls, name+" "+strings.Join(args, " "))
 	in := ""
 	if stdin != nil {
@@ -134,8 +137,18 @@ func (w *fakeWorld) Output(_ context.Context, stdin io.Reader, _ bool, name stri
 			return nil, errors.New("exit 1") // nothing to restart for
 		case remote == "bash -s": // the unsaved-work check
 			return []byte(w.unsaved), nil
+		case strings.HasPrefix(remote, "echo "):
+			return []byte(strings.TrimPrefix(remote, "echo ") + "\n"), nil
+		case remote == "false":
+			err := exec.Command("sh", "-c", "exit 3").Run()
+			return []byte("it failed\n"), err
+		case remote == "sleep":
+			<-ctx.Done()
+			return []byte("partial"), ctx.Err()
 		case remote == "sh -s": // stop --idle's check
 			return []byte(w.activity[vm]), nil
+		case remote == "ss -ltnpH":
+			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):
 			return []byte(w.ghq), nil
 		case strings.HasSuffix(remote, "&& pwd"): // code's code directory
@@ -234,6 +247,18 @@ func (h *harness) runForms(forms [][]string, args ...string) (string, error) {
 
 func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...string) (string, error) {
 	h.t.Helper()
+	a := h.app(u)
+	root := NewRootCmd(a)
+	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
+	root.SetIn(strings.NewReader(stdin))
+	root.SetOut(out)
+	root.SetErr(out)
+	err := root.ExecuteContext(context.Background())
+	return out.String(), err
+}
+
+// app returns an App wired to the fake world.
+func (h *harness) app(u *ui.UI) *App {
 	a := NewApp("test", os.DirFS(filepath.Join("..", "..")))
 	a.UI = u
 	a.execSSH = func(inst lima.Instance, command ...string) error {
@@ -272,6 +297,11 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 		h.world.calls = append(h.world.calls, "editor "+ide+" "+strings.Join(args, " "))
 		return nil
 	}
+	a.macListens = func(port int) bool { return h.world.macPorts[port] }
+	a.openURL = func(_ context.Context, url string) error {
+		h.world.calls = append(h.world.calls, "open "+url)
+		return nil
+	}
 	a.Lima = &lima.Client{Runner: h.world}
 	a.Keychain = h.world
 	a.Claude = claude.Settings{Path: h.claude}
@@ -289,13 +319,7 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 			return secrets.RunCommand(ctx, name, args...)
 		},
 	}
-	root := NewRootCmd(a)
-	root.SetArgs(append([]string{"--config", filepath.Join(h.dir, "config")}, args...))
-	root.SetIn(strings.NewReader(stdin))
-	root.SetOut(out)
-	root.SetErr(out)
-	err := root.ExecuteContext(context.Background())
-	return out.String(), err
+	return a
 }
 
 // writeFile writes a file under the fake Lima home.

@@ -57,6 +57,9 @@ type App struct {
 	openEditor func(ctx context.Context, ide string, args ...string) error
 	// How snapshots copy disks; tests replace it.
 	cloneFile func(ctx context.Context, src, dst string) error
+	// How `ports` and `open` reach the Mac's side; tests replace them.
+	macListens func(port int) bool
+	openURL    func(ctx context.Context, url string) error
 
 	// Persistent flags.
 	configPath   string
@@ -79,6 +82,8 @@ func NewApp(version string, embedded fs.FS) *App {
 		launchctl:   runLaunchctl,
 		openEditor:  openEditor,
 		cloneFile:   cloneFile,
+		macListens:  macListens,
+		openURL:     openURL,
 	}
 }
 
