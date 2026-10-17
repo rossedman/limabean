@@ -60,8 +60,9 @@ func (a *App) cloneVM(ctx context.Context, src, dst string) error {
 	if err != nil {
 		return err
 	}
-	// The copy mounts its own policy and its own code disk.
-	sets := []string{fmt.Sprintf(`.param.networkDir = %q | (.mounts[] | select(.mountPoint == "/mnt/host/limabean") | .location) = %q`, a.networkDir(dst), a.networkDir(dst))}
+	// The copy mounts its own policy and its own code disk. The policy mount's
+	// location is {{.Param.networkDir}}, so setting the param is enough.
+	sets := []string{fmt.Sprintf(`.param.networkDir = %q`, a.networkDir(dst))}
 	code := a.hasCodeDisk(ctx, src)
 	if code {
 		sets = append(sets, fmt.Sprintf(`.param.codeDisk = %q | (.additionalDisks[] | select(.name == %q) | .name) = %q`, codeDiskName(dst), codeDiskName(src), codeDiskName(dst)))
@@ -131,8 +132,12 @@ func (a *App) cloneCodeDisk(ctx context.Context, src lima.Instance, dst string) 
 	return os.Rename(tmp, target)
 }
 
-// discardClone removes what a failed clone left behind.
+// discardClone removes what a failed clone left behind: limactl clone
+// copies the VM before it checks the copy's settings, so the copy may exist.
 func (a *App) discardClone(ctx context.Context, dst string, code bool) {
+	if _, ok, _ := a.Lima.Get(ctx, dst); ok {
+		_, _ = a.Lima.Delete(ctx, dst)
+	}
 	_ = os.RemoveAll(a.networkDir(dst))
 	if code {
 		_, _ = a.Lima.DiskDelete(ctx, codeDiskName(dst))

@@ -20,7 +20,7 @@ func TestClone(t *testing.T) {
 		"limactl stop dev",
 		"limactl disk create " + codeDiskName("dev-2"),
 		"clone datadisk",
-		`.param.networkDir = "` + filepath.Join(h.dir, "network", "dev-2"),
+		`.param.networkDir = "` + filepath.Join(h.dir, "network", "dev-2") + `"`,
 		`select(.name == "` + codeDiskName("dev") + `") | .name) = "` + codeDiskName("dev-2") + `"`,
 		"dev dev-2",
 		"limactl start --tty=false dev-2",
@@ -70,6 +70,15 @@ func TestClone(t *testing.T) {
 	if h.world.vms["dev"] != "Running" {
 		t.Errorf("dev should be started again after a failed clone")
 	}
+	h.world.failLimaClone = false
+	h.world.rejectClone = true
+	if _, err := h.run("", "clone", "dev", "dev-5"); err == nil {
+		t.Fatal("a rejected limactl clone should fail")
+	}
+	if _, ok := h.world.vms["dev-5"]; ok {
+		t.Errorf("a rejected copy should be deleted: %v", h.world.vms)
+	}
+	h.world.rejectClone = false
 	h.world.failLimaClone = false
 	h.world.failClone = true
 	if _, err := h.run("", "clone", "dev", "dev-4"); err == nil || h.world.disks[codeDiskName("dev-4")] {

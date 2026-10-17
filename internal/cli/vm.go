@@ -779,10 +779,14 @@ func (a *App) removeExpired(ctx context.Context) error {
 // cloneImage creates a VM as a copy of an image, with the VM's own
 // settings (opts' params, size and the expressions in own) in place of the
 // image's, and boots it.
+//
+// Only the params change: the mounts keep their {{.Param.…}} locations.
+// Writing a path into a mount instead leaves its param unused, which Lima
+// rejects ("field `param` key … is not used").
 func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, own []string) error {
 	sets := []string{
-		fmt.Sprintf(`.param.gitConfigDir = %q | (.mounts[] | select(.mountPoint == "/mnt/host/git") | .location) = %q`, opts.Params["gitConfigDir"], opts.Params["gitConfigDir"]),
-		fmt.Sprintf(`.param.networkDir = %q | (.mounts[] | select(.mountPoint == "/mnt/host/limabean") | .location) = %q`, opts.Params["networkDir"], opts.Params["networkDir"]),
+		fmt.Sprintf(`.param.gitConfigDir = %q`, opts.Params["gitConfigDir"]),
+		fmt.Sprintf(`.param.networkDir = %q`, opts.Params["networkDir"]),
 		fmt.Sprintf(`.param.codeDir = %q`, opts.Params["codeDir"]),
 	}
 	if disk := opts.Params["codeDisk"]; disk != "" {
@@ -806,6 +810,12 @@ func (a *App) cloneImage(ctx context.Context, im image, opts lima.StartOptions, 
 		return a.Lima.Clone(ctx, true, im.Name, opts.Name, sets...)
 	})
 	if err != nil {
+		// limactl clone copies the image before it checks the new settings,
+		// so a failure can leave a stopped VM that has the image's open
+		// network. Don't leave it behind.
+		if _, ok, _ := a.Lima.Get(ctx, opts.Name); ok {
+			_, _ = a.Lima.Delete(ctx, opts.Name)
+		}
 		return err
 	}
 	im.Used = time.Now()
