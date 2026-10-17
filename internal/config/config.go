@@ -59,6 +59,8 @@ func New() *viper.Viper {
 	v.SetDefault(KeyClaudeDesktop, "yes")
 	v.SetDefault(KeyAWSDir, "~/.aws")
 	v.SetEnvPrefix("LIMABEAN")
+	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
+	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 	return v
 }

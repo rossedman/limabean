@@ -1,8 +1,10 @@
 # Layer 1: operating system and VM shape. No host mounts: code lives in the VM.
 minimumLimaVersion: 2.0.0
 
+# Ubuntu 26.04 LTS: systemd 259, with Varlink (varlinkctl, io.systemd.*).
+# 24.04's systemd 255 is too old for Varlink tools such as vlx (v257+).
 base:
-- template:_images/ubuntu-24.04
+- template:_images/ubuntu-26.04
 
 vmType: vz
 cpus: 4

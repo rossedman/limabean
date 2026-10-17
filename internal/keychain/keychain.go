@@ -1,6 +1,10 @@
 // Package keychain stores generic passwords in the macOS login Keychain
 // through the `security` command. Values are passed on stdin, never as
 // arguments, so they don't appear in process listings.
+//
+// `security` reads a password from the terminal when it has one, prompting
+// "password data for new item:" and ignoring stdin. So it always runs in a
+// new session without a controlling terminal, where it reads stdin instead.
 package keychain
 
 import (
@@ -11,6 +15,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strings"
+	"syscall"
 )
 
 // ErrNotFound means there's no item for the service.
@@ -40,9 +45,16 @@ func (k Keychain) bin() string {
 	return "security"
 }
 
+// command runs security detached from the terminal (see the package doc).
+func (k Keychain) command(args ...string) *exec.Cmd {
+	cmd := exec.Command(k.bin(), args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	return cmd
+}
+
 // Get returns the item's value.
 func (k Keychain) Get(service string) (string, error) {
-	cmd := exec.Command(k.bin(), "find-generic-password", "-a", k.Account, "-s", service, "-w")
+	cmd := k.command("find-generic-password", "-a", k.Account, "-s", service, "-w")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", ErrNotFound
@@ -56,7 +68,7 @@ func (k Keychain) Set(service, value string) error {
 	if strings.Contains(value, "\n") {
 		return errors.New("Keychain values can't contain newlines")
 	}
-	cmd := exec.Command(k.bin(), "add-generic-password", "-U", "-a", k.Account, "-s", service, "-w")
+	cmd := k.command("add-generic-password", "-U", "-a", k.Account, "-s", service, "-w")
 	cmd.Stdin = strings.NewReader(value + "\n" + value + "\n")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -71,7 +83,7 @@ func (k Keychain) Set(service, value string) error {
 
 // Delete removes the item. Deleting a missing item returns ErrNotFound.
 func (k Keychain) Delete(service string) error {
-	if err := exec.Command(k.bin(), "delete-generic-password", "-a", k.Account, "-s", service).Run(); err != nil {
+	if err := k.command("delete-generic-password", "-a", k.Account, "-s", service).Run(); err != nil {
 		return ErrNotFound
 	}
 	return nil
