@@ -59,6 +59,9 @@ type fakeWorld struct {
 	attachErr      error           // what commands run on the terminal return
 	failDelete     bool            // limactl delete fails
 	spawnErr       error           // starting a background build fails
+	extensions     string          // what the editor's --list-extensions prints
+	extensionsErr  error           // --list-extensions fails
+	installExtErr  error           // --install-extension fails
 	bootless       bool            // the next start or clone --start succeeds without booting
 	neverBoots     bool            // every start succeeds without booting
 	diskGiB        map[string]int  // VM → its system disk's size
@@ -70,7 +73,7 @@ type fakeWorld struct {
 var limaMountOverwrite = regexp.MustCompile(`\.param\.(\w+) = .*\(\.mounts\[\] \| select\([^)]*\) \| \.location\) =`)
 
 func newFakeWorld() *fakeWorld {
-	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}, diskGiB: map[string]int{}}
+	return &fakeWorld{vms: map[string]string{}, sshStdin: map[string]string{}, keychain: map[string]string{}, activity: map[string]string{}, disks: map[string]bool{}, macPorts: map[int]bool{}, oldVMs: map[string]bool{}, latest: map[string]string{}, diskGiB: map[string]int{}, extensions: "ms-vscode-remote.remote-ssh\n"}
 }
 
 func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name string, args ...string) ([]byte, error) {
@@ -393,6 +396,16 @@ func (h *harness) app(u *ui.UI) *App {
 	a.openEditor = func(_ context.Context, path string, args ...string) error {
 		h.world.calls = append(h.world.calls, "editor "+filepath.Base(path)+" "+strings.Join(args, " "))
 		return nil
+	}
+	a.editorOutput = func(_ context.Context, path string, args ...string) ([]byte, error) {
+		h.world.calls = append(h.world.calls, "editor "+filepath.Base(path)+" "+strings.Join(args, " "))
+		switch {
+		case args[0] == "--list-extensions":
+			return []byte(h.world.extensions), h.world.extensionsErr
+		case h.world.installExtErr != nil:
+			return []byte("network down"), h.world.installExtErr
+		}
+		return nil, nil
 	}
 	a.macListens = func(port int) bool { return h.world.macPorts[port] }
 	a.spawn = func(args ...string) error {
