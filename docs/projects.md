@@ -68,17 +68,9 @@ project gets the same VM.
 
 ### In your editor
 
-limabean publishes a [JSON Schema](limabean.schema.json) for the file.
-Editors with the YAML language server (VS Code and Cursor with the
-[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
-Zed, Neovim and others) then complete keys, pack names and network
-presets, and flag a typo or a refused name while you type. Files written by
-`limabean recipes` already start with the line that turns it on; add it to
-a file you wrote by hand:
-
-```yaml
-# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
-```
+Your editor can complete the file's keys and flag mistakes as you type: see
+[Editor support](#editor-support). Files written by `limabean recipes`
+already have the line that turns it on.
 
 ## Every day
 
@@ -324,6 +316,113 @@ A repository can also keep its own `.claude/settings.json` with
 the clone after you trust the folder. Use `claude:` in `.limabean.yaml` for
 what the VM should have whichever folder Claude opens, and for VMs that
 Claude only uses headless.
+
+## Editor support
+
+limabean publishes a [JSON Schema](limabean.schema.json) for the project
+file. With it, your editor:
+
+- completes keys, and offers the built-in [packs](packs.md) and
+  [network presets](network.md) as values;
+- shows what each key does when you hover over it;
+- flags what `up` would refuse while you type: an unknown key such as
+  `enviroment:`, a misspelled or reserved variable (`PATH`), a port out of
+  range, a malformed tool version or package name, a marketplace without
+  plugins.
+
+The schema is generated from the same checks `limabean up` runs, so the two
+agree. A few things only `up` can check, because they depend on your Mac:
+that a secret is set up, that a pack of your own exists (the schema accepts
+any pack name, so yours aren't flagged), and that a repository can be
+cloned.
+
+### One file: the comment line
+
+Editors that use the YAML language server read a comment at the top of the
+file. `limabean recipes` writes it for you; add it to a file you wrote by
+hand:
+
+```yaml
+# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
+packs: [node]
+```
+
+That works in VS Code and Cursor (with the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)),
+Zed, Neovim with `yamlls`, Helix, and any other editor running the YAML
+language server. Committed with the file, it works for everyone on the
+project.
+
+### Every project: editor settings
+
+To get it in every `.limabean.yaml` without the comment, map the schema to
+the file name in your editor's settings.
+
+**VS Code and Cursor**: install the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
+then add to your `settings.json`:
+
+```json
+"yaml.schemas": {
+  "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+}
+```
+
+**Zed**: in `settings.json`:
+
+```json
+"lsp": {
+  "yaml-language-server": {
+    "settings": {
+      "yaml": {
+        "schemas": {
+          "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+        }
+      }
+    }
+  }
+}
+```
+
+**Neovim** with [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)
+and `yaml-language-server` installed:
+
+```lua
+require("lspconfig").yamlls.setup({
+  settings = {
+    yaml = {
+      schemas = {
+        ["https://rossedman.github.io/limabean/limabean.schema.json"] = { "**/.limabean.yaml", "**/.limabean.yml" },
+      },
+    },
+  },
+})
+```
+
+**Helix**: in `languages.toml`:
+
+```toml
+[language-server.yaml-language-server.config.yaml.schemas]
+"https://rossedman.github.io/limabean/limabean.schema.json" = ["**/.limabean.yaml", "**/.limabean.yml"]
+```
+
+**JetBrains IDEs** (GoLand, IntelliJ, PyCharm and the rest): open
+**Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema
+Mappings**, add a mapping with the schema's URL, and add the file patterns
+`.limabean.yaml` and `.limabean.yml`.
+
+### When it doesn't work
+
+- **Nothing is completed or flagged.** Check that the YAML language server
+  is running for the file: in VS Code and Cursor, the YAML extension must be
+  installed, and the language mode in the status bar must say YAML.
+- **The editor can't fetch the schema.** It downloads it from the docs site.
+  Offline, or behind a proxy that blocks it, save
+  [the schema](limabean.schema.json) next to your project and point the
+  comment or the mapping at the file's path instead of the URL.
+- **A pack of yours is underlined.** It shouldn't be: any pack name is
+  accepted. If your editor shows one anyway, it has an old copy of the
+  schema; restarting the language server, or the editor, refreshes it.
 
 ## Examples
 
