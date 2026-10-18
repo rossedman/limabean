@@ -709,7 +709,7 @@ func TestSnapshots(t *testing.T) {
 	if out, err := h.runTTY([]string{"n"}, "snapshot", "restore", "dev"); err != nil || !strings.Contains(out, "Kept dev as it is") {
 		t.Fatalf("restore, answered no: %v\n%s", err, out)
 	}
-	if out, err := h.runTTY(nil, "snapshot", "restore", "dev", "--force"); err != nil || !strings.Contains(out, "Restored dev to "+latest) {
+	if out, err := h.runTTY(nil, "snapshot", "restore", "dev", "--yes"); err != nil || !strings.Contains(out, "Restored dev to "+latest) {
 		t.Fatalf("restore the latest: %v\n%s", err, out)
 	}
 
@@ -1013,6 +1013,9 @@ func TestNewForm(t *testing.T) {
 	if got := h.read("secrets.formvm.env"); !strings.Contains(got, "FORM_SECRET=env:FORM_VALUE") {
 		t.Fatalf("VM file = %q\n%s", got, out)
 	}
+	if !strings.Contains(out, "Next time, without the form: limabean up formvm --with api\n") || !strings.Contains(out, `"limabean new" is now "limabean up <name>"`) {
+		t.Errorf("equivalent command and note:\n%s", out)
+	}
 	if !strings.Contains(h.world.sshStdin["formvm"], "export FORM_SECRET='from-env'") {
 		t.Fatalf("installed = %q", h.world.sshStdin["formvm"])
 	}
@@ -1040,8 +1043,34 @@ func TestNewForm(t *testing.T) {
 	}
 
 	// --secret skips the secrets step; --with skips the packs question.
-	if out, err := h.runTTY(nil, "new", "third", "--secret", "X=1", "--with", "rust"); err != nil || !strings.Contains(out, "Packs: core, rust") {
+	out, err = h.runTTY(nil, "new", "third", "--secret", "X=1", "--with", "rust", "--allow", "github", "--locked")
+	if err != nil || !strings.Contains(out, "Packs: core, rust") {
 		t.Fatalf("%v\n%s", err, out)
+	}
+	// The equivalent command leaves --secret out, and quotes what needs it.
+	if !strings.Contains(out, "limabean up third --with rust --allow github --locked\n") || strings.Contains(out, "X=1") {
+		t.Errorf("equivalent command:\n%s", out)
+	}
+	if got := equivalentUp(newNewCmd(NewApp("test", nil)), createOptions{Name: "x", Env: "web app"}, &newFlags{}); got != "limabean up x 'web app'" {
+		t.Errorf("quoting: %s", got)
+	}
+}
+
+// A credential's value typed on the command line gets a warning that never
+// shows the value; references and plain settings don't.
+func TestPlainSecretWarning(t *testing.T) {
+	h := newHarness(t)
+	out := h.must("", "new", "a", "--secret", "OPENAI_API_KEY=sk-live-123", "--secret", "GH_TOKEN=op://Private/GitHub/token", "--secret", "AWS_REGION=us-east-1")
+	if !strings.Contains(out, "OPENAI_API_KEY's value is on the command line") || strings.Contains(out, "sk-live-123") ||
+		strings.Contains(out, "GH_TOKEN's value") || strings.Contains(out, "AWS_REGION's value") {
+		t.Errorf("new --secret:\n%s", out)
+	}
+	if out := h.must("", "secrets", "set", "DB_PASSWORD", "hunter2"); !strings.Contains(out, "DB_PASSWORD's value is on the command line") || strings.Contains(out, "hunter2") {
+		t.Errorf("secrets set:\n%s", out)
+	}
+	t.Setenv("NPM_TOKEN", "x")
+	if out := h.must("", "secrets", "set", "NPM_TOKEN", "env:NPM_TOKEN"); strings.Contains(out, "command line") {
+		t.Errorf("a reference warned:\n%s", out)
 	}
 }
 
@@ -1389,11 +1418,20 @@ func TestCompletionFunctions(t *testing.T) {
 
 func TestExecuteExitCodes(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Chdir(t.TempDir())
 	if code := Execute("test", fstest.MapFS{}, []string{"version"}); code != 0 {
 		t.Errorf("version exit = %d", code)
 	}
-	if code := Execute("test", fstest.MapFS{}, []string{"no-such-command"}); code != 1 {
-		t.Errorf("unknown command exit = %d", code)
+	for args, want := range map[string]int{
+		"no-such-command":   exitUsage,
+		"ls --no-such-flag": exitUsage,
+		"ls extra-arg":      exitUsage,
+		"recipes cobol":     exitNotFound,
+		"ps --json":         exitNotFound, // in an empty directory
+	} {
+		if code := Execute("test", fstest.MapFS{}, strings.Fields(args)); code != want {
+			t.Errorf("%s: exit %d, want %d", args, code, want)
+		}
 	}
 	if code := Execute("test", fstest.MapFS{}, []string{"--config", t.TempDir(), "version"}); code != 1 {
 		t.Errorf("a directory as config should fail with 1, got %d", code)

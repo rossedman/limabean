@@ -4,6 +4,9 @@
 // When output isn't a terminal, or plain mode is on, everything is printed
 // as plain text and nothing prompts: prompts return their defaults, and the
 // caller decides whether a missing answer is an error.
+//
+// Data (tables, JSON) goes to Out, stdout; everything else (status lines,
+// hints, spinners, forms) goes to Err, stderr, so a pipe gets only data.
 package ui
 
 import (
@@ -20,6 +23,7 @@ import (
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
 
@@ -44,6 +48,10 @@ type UI struct {
 	Interactive bool
 	// Prompting: Interactive, and input is a terminal too.
 	Prompting bool
+	// NoColor keeps the layout but drops color (NO_COLOR, --no-color).
+	NoColor bool
+	// Quiet drops everything but errors from Err; Verbose adds detail.
+	Quiet, Verbose bool
 	// FormTimeout, when set, fails a form that isn't finished in time
 	// (tests use it so a wrong key sequence fails instead of hanging).
 	FormTimeout time.Duration
@@ -53,21 +61,42 @@ type UI struct {
 	r *lipgloss.Renderer
 }
 
-// New returns a UI for stdout, stderr and stdin. plain forces plain output.
-func New(plain bool) *UI {
-	interactive := !plain && term.IsTerminal(int(os.Stdout.Fd()))
+// New returns a UI for stdout, stderr and stdin. plain forces plain output,
+// as does TERM=dumb; NO_COLOR (or noColor) only drops color.
+func New(plain, noColor bool) *UI {
+	plain = plain || os.Getenv("TERM") == "dumb"
+	interactive := !plain && term.IsTerminal(int(os.Stdout.Fd())) && term.IsTerminal(int(os.Stderr.Fd()))
 	u := &UI{
 		Out: os.Stdout, Err: os.Stderr, In: os.Stdin,
 		Interactive: interactive,
 		Prompting:   interactive && term.IsTerminal(int(os.Stdin.Fd())),
+		NoColor:     noColor || os.Getenv("NO_COLOR") != "",
 	}
-	u.r = lipgloss.NewRenderer(os.Stdout)
+	u.r = lipgloss.NewRenderer(os.Stderr)
+	if u.NoColor {
+		u.r.SetColorProfile(termenv.Ascii)
+	}
 	return u
+}
+
+// Report returns a UI whose status lines go to stdout: for commands whose
+// human-readable output is the result itself (ps, doctor, status).
+func (u *UI) Report() *UI {
+	r := *u
+	r.Err = u.Out
+	r.Quiet = false
+	return &r
 }
 
 // NewPlain returns a plain UI writing to out, for tests.
 func NewPlain(out io.Writer) *UI {
 	return &UI{Out: out, Err: out, In: strings.NewReader(""), r: lipgloss.NewRenderer(io.Discard)}
+}
+
+// NewPlainStreams returns a plain UI with separate stdout and stderr, for
+// tests that check what goes where.
+func NewPlainStreams(out, err io.Writer) *UI {
+	return &UI{Out: out, Err: err, In: strings.NewReader(""), r: lipgloss.NewRenderer(io.Discard)}
 }
 
 // NewTerminal returns an interactive UI reading keys from in and writing to
@@ -88,7 +117,7 @@ func NewTerminalForms(out io.Writer, forms ...io.Reader) *UI {
 func (u *UI) style() lipgloss.Style { return u.r.NewStyle() }
 
 func (u *UI) color(c lipgloss.Color, s string) string {
-	if !u.Interactive {
+	if !u.Interactive || u.NoColor {
 		return s
 	}
 	return u.style().Foreground(c).Render(s)
@@ -106,35 +135,52 @@ func (u *UI) Bad(format string, a ...any)  { u.mark("✗", Red, format, a...) }
 func (u *UI) Warn(format string, a ...any) { u.mark("!", Amber, format, a...) }
 
 func (u *UI) mark(sym string, c lipgloss.Color, format string, a ...any) {
-	fmt.Fprintf(u.Out, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
+	if u.Quiet && sym != "✗" {
+		return
+	}
+	fmt.Fprintf(u.Err, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
 }
 
 // Hint prints indented, dimmed lines under a status line.
 func (u *UI) Hint(lines ...string) {
+	if u.Quiet {
+		return
+	}
 	for _, l := range lines {
-		fmt.Fprintf(u.Out, "    %s\n", u.Dimmed(l))
+		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(l))
 	}
 }
 
 // Info prints a progress line.
 func (u *UI) Info(format string, a ...any) {
-	fmt.Fprintf(u.Out, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
+	if u.Quiet {
+		return
+	}
+	fmt.Fprintf(u.Err, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
+}
+
+// Detail prints a line only with --verbose.
+func (u *UI) Detail(format string, a ...any) {
+	if u.Verbose && !u.Quiet {
+		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(fmt.Sprintf(format, a...)))
+	}
 }
 
 // Section starts a group of status lines, with an optional subtitle.
 func (u *UI) Section(title, sub string) {
 	switch {
+	case u.Quiet:
 	case sub == "":
-		fmt.Fprintf(u.Out, "\n%s\n", u.title(title))
+		fmt.Fprintf(u.Err, "\n%s\n", u.title(title))
 	case u.Interactive:
-		fmt.Fprintf(u.Out, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
+		fmt.Fprintf(u.Err, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
 	default:
-		fmt.Fprintf(u.Out, "\n%s (%s)\n", title, sub)
+		fmt.Fprintf(u.Err, "\n%s (%s)\n", title, sub)
 	}
 }
 
 func (u *UI) title(s string) string {
-	if !u.Interactive {
+	if !u.Interactive || u.NoColor {
 		return s
 	}
 	return u.style().Bold(true).Foreground(Leaf2).Render(s)
@@ -142,12 +188,14 @@ func (u *UI) title(s string) string {
 
 // Box prints lines in a rounded box (plain: just the lines).
 func (u *UI) Box(lines ...string) {
-	if !u.Interactive {
-		fmt.Fprintf(u.Out, "\n%s\n", strings.Join(lines, "\n"))
-		return
+	switch {
+	case u.Quiet:
+	case !u.Interactive:
+		fmt.Fprintf(u.Err, "\n%s\n", strings.Join(lines, "\n"))
+	default:
+		box := u.style().Border(lipgloss.RoundedBorder()).BorderForeground(Leaf).Padding(0, 2).MarginTop(1)
+		fmt.Fprintln(u.Err, box.Render(strings.Join(lines, "\n")))
 	}
-	box := u.style().Border(lipgloss.RoundedBorder()).BorderForeground(Leaf).Padding(0, 2).MarginTop(1)
-	fmt.Fprintln(u.Out, box.Render(strings.Join(lines, "\n")))
 }
 
 // Table prints rows under headers: a bordered table in a terminal, aligned
@@ -180,6 +228,9 @@ func (u *UI) Table(headers []string, rows [][]string) {
 // Spin runs fn behind a spinner titled title. In plain mode it prints the
 // title and runs fn.
 func (u *UI) Spin(ctx context.Context, title string, fn func(context.Context) error) error {
+	if u.Quiet {
+		return fn(ctx)
+	}
 	if !u.Interactive {
 		u.Info("%s", title)
 		return fn(ctx)
@@ -190,7 +241,7 @@ func (u *UI) Spin(ctx context.Context, title string, fn func(context.Context) er
 		Type(spinner.Dots).
 		Style(u.style().Foreground(Leaf)).
 		Title(" " + title).
-		Output(u.Out).
+		Output(u.Err).
 		ActionWithErr(func(ctx context.Context) error { fnErr = fn(ctx); return nil }).
 		Run()
 	if err != nil {
@@ -225,7 +276,7 @@ func (u *UI) Run(groups ...*huh.Group) error {
 	if len(u.forms) > 0 {
 		in, u.forms = u.forms[0], u.forms[1:]
 	}
-	form := huh.NewForm(groups...).WithTheme(Theme()).WithShowHelp(true).WithInput(in).WithOutput(u.Out)
+	form := huh.NewForm(groups...).WithTheme(Theme()).WithShowHelp(true).WithInput(in).WithOutput(u.Err)
 	if u.FormTimeout > 0 {
 		form = form.WithTimeout(u.FormTimeout)
 	}

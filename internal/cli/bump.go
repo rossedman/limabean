@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/pins"
 	"github.com/rossedman/limabean/internal/secrets"
 )
@@ -38,7 +39,7 @@ VMs pick up new pins when they're rebuilt.`,
   limabean bump
 
   # See what would change
-  limabean bump --dry-run
+  limabean bump --preview
 
   # Without mise on the Mac
   limabean bump --vm dev
@@ -76,7 +77,8 @@ VMs pick up new pins when they're rebuilt.`,
 	}
 	cmd.Flags().StringVar(&vm, "vm", "", "look versions up with mise in this running VM")
 	cmd.Flags().BoolVar(&major, "major", false, "also move pins to new major versions")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would change without writing")
+	cmd.Flags().BoolVar(&dryRun, "preview", false, "show what would change without writing")
+	hiddenAlias(cmd.Flags(), &dryRun, "dry-run", "", "preview")
 	return cmd
 }
 
@@ -193,7 +195,7 @@ func (a *App) bumpFile(ctx context.Context, path string, latest func(context.Con
 	case dryRun:
 		a.UI.Info("%s: %d pin(s) would change (dry run)", path, len(changes))
 	default:
-		if err := os.WriteFile(path, []byte(pins.Rewrite(src, changes)), 0o644); err != nil {
+		if err := atomic.WriteFile(path, []byte(pins.Rewrite(src, changes)), 0o644); err != nil {
 			return false, err
 		}
 		a.UI.OK("%s: updated %d pin(s)", path, len(changes))

@@ -71,6 +71,7 @@ The secret goes to every VM, or with --vm to that VM only.`,
 				if !secrets.ValidName(args[0]) {
 					return fmt.Errorf("%q isn't a valid variable name", args[0])
 				}
+				a.warnPlainSecret(args[0], args[1])
 				f, err := a.saveSecret(newSecret{Name: args[0], Source: sourceExisting, Input: args[1], Shared: vm == ""}, vm)
 				if err != nil {
 					return err

@@ -47,7 +47,7 @@ func TestUpNamed(t *testing.T) {
 		"up other --disk lots": "a size in GiB",
 		"up other --disk 0":    "a size in GiB",
 		"down":                 "name the VM: limabean down <name>",
-		"down --dry-run":       "--dry-run needs --idle",
+		"down --dry-run":       "--preview needs --idle",
 		"down --idle 30s":      "a minute or more",
 		"down nope":            "nope",
 	} {

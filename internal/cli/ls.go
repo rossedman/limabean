@@ -51,12 +51,6 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
-			out := a.UI.Out
-			if asJSON {
-				// Keep stdout for the JSON.
-				a.UI.Out = a.UI.Err
-				defer func() { a.UI.Out = out }()
-			}
 			a.prune(ctx)
 			list, err := a.vms(ctx)
 			if err != nil {
@@ -76,7 +70,7 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 						entries[len(entries)-1].Expires = t.Format(time.RFC3339)
 					}
 				}
-				enc := json.NewEncoder(out)
+				enc := json.NewEncoder(a.UI.Out)
 				enc.SetIndent("", "  ")
 				return enc.Encode(entries)
 			}

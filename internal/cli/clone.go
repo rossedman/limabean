@@ -42,7 +42,7 @@ starting point and keep the one that worked.`,
 // cloneVM copies the VM src to a new VM dst, and starts dst.
 func (a *App) cloneVM(ctx context.Context, src, dst string) error {
 	if err := validVMName(dst); err != nil {
-		return fmt.Errorf("VM name %q: %w", dst, err)
+		return usageErr("VM name %q: %w", dst, err)
 	}
 	inst, err := a.vm(ctx, src)
 	if err != nil {
@@ -51,7 +51,7 @@ func (a *App) cloneVM(ctx context.Context, src, dst string) error {
 	if _, exists, err := a.Lima.Get(ctx, dst); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("a VM named %q already exists", dst)
+		return conflictErr("a VM named %q already exists", dst)
 	}
 	if a.hasCodeDisk(ctx, dst) {
 		return fmt.Errorf("a code disk for %q is left over from an earlier VM; delete it first: limactl disk delete %s", dst, codeDiskName(dst))

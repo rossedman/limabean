@@ -177,3 +177,22 @@ func (a *App) otherVMSecrets(vm string) (names []string, refs map[string]secrets
 	slices.Sort(names)
 	return names, refs
 }
+
+// secretWords mark a variable whose value is a credential.
+var secretWords = []string{"KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD", "CREDENTIAL", "PRIVATE"}
+
+// warnPlainSecret warns when a credential's value was typed on the command
+// line: it's in shell history and visible to other processes. Settings
+// like AWS_REGION=us-east-1 are fine, and the value itself is never shown.
+func (a *App) warnPlainSecret(name, ref string) {
+	if secrets.Kind(ref) != "plain value" {
+		return
+	}
+	upper := strings.ToUpper(name)
+	for _, w := range secretWords {
+		if strings.Contains(upper, w) {
+			a.UI.Warn("%s's value is on the command line, so it's in your shell history; next time run \"limabean secrets set %s\", which asks for it and keeps it in the Keychain", name, name)
+			return
+		}
+	}
+}

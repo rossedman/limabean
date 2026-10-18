@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"strings"
 
@@ -38,7 +37,7 @@ Copy directories with -r.`,
 				}
 			}
 			if len(names) == 0 {
-				return errors.New("name a VM path on one side, e.g. limabean cp ./file dev:")
+				return usageErr("name a VM path on one side, e.g. limabean cp ./file dev:")
 			}
 			for _, name := range names {
 				inst, err := a.vm(ctx, name)

@@ -42,7 +42,7 @@ taken as the port when it isn't a VM's name.`,
 				} else if _, err := strconv.Atoi(args[0]); err == nil {
 					port = args[0]
 				} else {
-					return fmt.Errorf("no VM named %q (see: limabean ls)", args[0])
+					return notFoundErr("no VM named %q (see: limabean ls)", args[0])
 				}
 			}
 			if name == "" {

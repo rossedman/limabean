@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -42,13 +41,13 @@ without a name every running VM is checked. A VM is in use while:
 
   # Every VM unused for two hours, and a dry run of the same
   limabean down --idle 2h
-  limabean down --idle 2h --dry-run`,
+  limabean down --idle 2h --preview`,
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if dryRun && idle == 0 {
-				return errors.New("--dry-run needs --idle")
+				return errors.New("--preview needs --idle")
 			}
 			if cmd.Flags().Changed("idle") {
 				if idle < time.Minute {
@@ -74,7 +73,8 @@ without a name every running VM is checked. A VM is in use while:
 	}
 	cmd.Flags().StringVarP(&file, "file", "f", "", "the project file (default: .limabean.yaml here or in a parent directory)")
 	cmd.Flags().DurationVar(&idle, "idle", 0, "only stop VMs unused for this long, e.g. 2h; without a name, every running VM is checked")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "with --idle, show which VMs would stop without stopping them")
+	cmd.Flags().BoolVar(&dryRun, "preview", false, "with --idle, show which VMs would stop without stopping them")
+	hiddenAlias(cmd.Flags(), &dryRun, "dry-run", "", "preview")
 	return cmd
 }
 
@@ -98,7 +98,7 @@ func (a *App) targetVM(ctx context.Context, args []string, file, command, verb s
 		}
 		return f.Name, nil
 	case !a.UI.Prompting:
-		return "", fmt.Errorf("no .limabean.yaml here or in a parent directory; name the VM: limabean %s <name>", command)
+		return "", usageErr("no .limabean.yaml here or in a parent directory; name the VM: limabean %s <name>", command)
 	}
 	return a.vmArg(ctx, args, verb)
 }

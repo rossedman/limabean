@@ -20,11 +20,11 @@ go back to how they were when it was saved. Everything changed since then
 is lost, pushed or not. A running VM is shut down and started again.
 
 Leave out the snapshot to restore the latest one. In a terminal it asks
-you to confirm; --force doesn't ask.`,
+you to confirm; --yes doesn't ask.`,
 		Example: `  limabean snapshot restore dev before-refactor
 
   # The latest snapshot, without asking
-  limabean snapshot restore dev --force`,
+  limabean snapshot restore dev --yes`,
 		Args:              cobra.MaximumNArgs(2),
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -100,6 +100,7 @@ you to confirm; --force doesn't ask.`,
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "don't ask for confirmation")
+	cmd.Flags().BoolVarP(&force, "yes", "y", false, "don't ask for confirmation")
+	hiddenAlias(cmd.Flags(), &force, "force", "f", "yes")
 	return cmd
 }

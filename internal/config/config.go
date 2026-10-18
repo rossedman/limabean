@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+
+	"github.com/rossedman/limabean/internal/atomic"
 )
 
 // Keys, as written in the config file. Viper lower-cases them.
@@ -208,7 +210,7 @@ PACKS=%q
 # background and kept fresh (limabean images). no: provision every VM.
 IMAGES=%q
 `, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, disk, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images))
-	return os.WriteFile(c.Path, []byte(body), 0o600)
+	return atomic.WriteFile(c.Path, []byte(body), 0o600)
 }
 
 // Expand replaces a leading ~ with the home directory. Config values keep
@@ -226,3 +228,22 @@ func Expand(path string) string {
 
 // Dir is the directory the config file lives in; secrets live there too.
 func (c *Config) Dir() string { return filepath.Dir(c.Path) }
+
+// Keys are the settings in the config file's order, then the ones only set
+// by a flag or the environment.
+var Keys = []string{
+	KeyGitConfigDir, KeyCodeDir, KeyCodeDisk, KeyCPUs, KeyMemory, KeyDisk, KeyClaudeDesktop,
+	KeyAWSDir, KeyIDE, KeyPacks, KeyImages, KeyPlain, KeyTemplates,
+}
+
+// Source says where key's value comes from, short of a flag: "env" for a
+// LIMABEAN_* variable, "file" for the config file, or "default".
+func Source(v *viper.Viper, key string) string {
+	if _, ok := os.LookupEnv("LIMABEAN_" + strings.ToUpper(key)); ok {
+		return "env"
+	}
+	if v.InConfig(key) {
+		return "file"
+	}
+	return "default"
+}

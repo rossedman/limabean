@@ -460,6 +460,22 @@ An opt-in `--mount` of a host directory (B) is still open.
   from parsing `.git/config`, so git never runs on the Mac for a tool
   call. Setup, which needs a terminal in the CLI, runs without one over
   MCP and its output goes into the reply.
+- **D25 Following [cli.style](https://cli.style/). Decided: adopt its
+  rules on streams, exit codes, flag names and discoverability, keep
+  limabean's verbs.** stdout carries only data, and status goes to stderr.
+  Exit codes are fixed (2 usage, 4 not found, 5 in the way, 130
+  cancelled), and `--json` failures are JSON. `help --json` and
+  `version --json` describe the CLI to scripts and agents. Flags are named
+  for their outcome (`--preview`, `--yes`, `--overwrite`), with the old
+  names kept and hidden. `config` shows where each setting comes from.
+  limabean's own files are written atomically, and a credential typed on
+  the command line gets a warning. Not adopted: noun-verb grammar (`up` and
+  `down` stay, D22); dropping success lines (they moved to stderr, and
+  `-q` hides them); macOS `~/Library` paths (`~/.config` and XDG stay); and
+  editing `~/.ssh/config` only on request (`init` asks first, and
+  limabean can't connect without the `Include`). The hidden `new`, `start`
+  and `stop` print a note naming what replaced them. No removal date is
+  set.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

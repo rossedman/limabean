@@ -807,6 +807,57 @@ func TestVersionAndCompletion(t *testing.T) {
 	if out := h.must("", "completion", "zsh"); !strings.Contains(out, "#compdef limabean") {
 		t.Errorf("zsh completion doesn't start with #compdef")
 	}
+	var v map[string]string
+	if err := json.Unmarshal([]byte(h.must("", "version", "--json")), &v); err != nil || v["version"] != "test" || v["go"] == "" || v["os"] == "" || v["arch"] == "" {
+		t.Errorf("version --json = %v, %v", v, err)
+	}
+}
+
+func TestHelpCommand(t *testing.T) {
+	h := newHarness(t)
+	// The footer is on limabean's own help only.
+	if out := h.must("", "help"); !strings.Contains(out, "Docs:   https://rossedman.github.io/limabean/") || !strings.Contains(out, "Issues: https://github.com/rossedman/limabean/issues") {
+		t.Errorf("help has no docs and issues links:\n%s", out)
+	}
+	if out := h.must("", "help", "ps"); !strings.Contains(out, "limabean ps [flags]") || strings.Contains(out, "Issues:") {
+		t.Errorf("help ps:\n%s", out)
+	}
+	if _, err := h.run("", "help", "nope"); err == nil || !strings.Contains(err.Error(), `unknown help topic "nope"`) {
+		t.Errorf("unknown topic: %v", err)
+	}
+
+	// The whole tree, without hidden commands or flags; global flags once.
+	var tree cmdSchema
+	if err := json.Unmarshal([]byte(h.must("", "help", "--json")), &tree); err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]cmdSchema{}
+	for _, c := range tree.Commands {
+		names[c.Name] = c
+	}
+	for _, want := range []string{"up", "down", "ps", "network", "version"} {
+		if _, ok := names[want]; !ok {
+			t.Errorf("help --json has no %s", want)
+		}
+	}
+	for _, hidden := range []string{"new", "start", "stop", "help"} {
+		if _, ok := names[hidden]; ok {
+			t.Errorf("help --json lists %s", hidden)
+		}
+	}
+	global := 0
+	for _, f := range tree.Flags {
+		if f.Global {
+			global++
+		}
+	}
+	if global == 0 || len(names["ls"].Flags) != 1 || names["ls"].Flags[0].Name != "json" || names["ls"].Aliases[0] != "list" {
+		t.Errorf("flags: %+v; ls: %+v", tree.Flags, names["ls"])
+	}
+	var network cmdSchema
+	if err := json.Unmarshal([]byte(h.must("", "help", "network", "--json")), &network); err != nil || network.Path != "limabean network" || len(network.Commands) == 0 {
+		t.Errorf("help network --json: %+v, %v", network, err)
+	}
 }
 
 func TestClaudeSettingsJSONStaysValid(t *testing.T) {

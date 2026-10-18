@@ -54,14 +54,14 @@ several arguments are quoted one by one.`,
 				name = "run-" + randomHex(2)
 			}
 			if err := validVMName(name); err != nil {
-				return fmt.Errorf("VM name %q: %w", name, err)
+				return usageErr("VM name %q: %w", name, err)
 			}
 			if _, exists, err := a.Lima.Get(ctx, name); err != nil {
 				return err
 			} else if exists {
-				return fmt.Errorf("a VM named %q already exists", name)
+				return conflictErr("a VM named %q already exists", name)
 			}
-			flagSecrets, err := parseSecretFlags(secretFlags)
+			flagSecrets, err := a.parseSecretFlags(secretFlags)
 			if err != nil {
 				return err
 			}

@@ -162,7 +162,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			if err != nil {
 				return nil, nil, err
 			}
-			return cli(ctx, "up", "--dry-run", "--file="+file)
+			return cli(ctx, "up", "--preview", "--file="+file)
 		})
 	mcp.AddTool(s, ask(tool("project_up", "Bring up a project's VM", "For a checkout with a .limabean.yaml: create its VM (cloning the repository, running its setup) or start it and apply the file's changes, then run its start commands in the background. The user is asked first; call project_plan and show them its output before this. It never widens the VM's network, and refuses changes that need a rebuild unless the server allows destructive tools.", false, &no)),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
@@ -335,7 +335,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			if err := checkNames(in.Name); err != nil {
 				return nil, nil, err
 			}
-			args := []string{"snapshot", "restore", "--force", "--", in.Name}
+			args := []string{"snapshot", "restore", "--yes", "--", in.Name}
 			if in.Tag != "" {
 				if err := validSnapshotTag(in.Tag); err != nil {
 					return nil, nil, err

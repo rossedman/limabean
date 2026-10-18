@@ -11,7 +11,7 @@ limabean up
 ```
 
 `limabean recipes <name> --print` shows one without writing it, and
-`--force` replaces a project file that's already there. Every recipe is a
+`--overwrite` replaces a project file that's already there. Every recipe is a
 plain project file: change the packs, size, ports and setup to fit, and
 commit it so everyone on the project gets the same VM.
 

@@ -2,13 +2,14 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/ui"
 )
 
 // psPort is a port in ps: one something listens on, or one the project
@@ -58,7 +59,7 @@ ps changes nothing. For every VM at once, use limabean ls.`,
 				return err
 			}
 			if f == nil {
-				return errors.New("no .limabean.yaml here or in a parent directory; for every VM, use limabean ls")
+				return notFoundErr("no .limabean.yaml here or in a parent directory; for every VM, use limabean ls")
 			}
 			e := psEntry{Name: f.Name, File: shortPath(path), Status: "none", Start: "none", Ports: []psPort{}, Changes: []string{}, Widening: []string{}}
 			inst, ok, err := a.Lima.Get(ctx, f.Name)
@@ -112,8 +113,10 @@ ps changes nothing. For every VM at once, use limabean ls.`,
 	return cmd
 }
 
-// psShow prints ps for people.
+// psShow prints ps for people, on stdout: the report is the result.
 func (a *App) psShow(e psEntry) {
+	defer func(u *ui.UI) { a.UI = u }(a.UI)
+	a.UI = a.UI.Report()
 	a.UI.Section(e.Name, "from "+e.File)
 	vm := e.Status
 	if e.Status == "none" {

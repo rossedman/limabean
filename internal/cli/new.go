@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -22,6 +22,7 @@ func newNewCmd(a *App) *cobra.Command {
 		Use:     "new [name] [environment]",
 		Aliases: []string{"create"},
 		Hidden:  true, // "limabean up <name>" creates a VM; new stays for scripts
+		PreRun:  a.oldCommand("limabean up <name>"),
 		Short:   "Create a VM (limabean up <name> does this now)",
 		Long: `Create a VM from an environment template (default: scratch), boot it, apply
 every pending Ubuntu update, install its secrets and register it with
@@ -141,10 +142,10 @@ func (a *App) newVM(cmd *cobra.Command, args []string, nf *newFlags) error {
 		return err
 	}
 	if o.Name == "" && !a.UI.Prompting {
-		return errors.New("name the VM: limabean up <name>")
+		return usageErr("name the VM: limabean up <name>")
 	}
 
-	flagSecrets, err := parseSecretFlags(nf.secrets)
+	flagSecrets, err := a.parseSecretFlags(nf.secrets)
 	if err != nil {
 		return err
 	}
@@ -162,17 +163,18 @@ func (a *App) newVM(cmd *cobra.Command, args []string, nf *newFlags) error {
 		if packs != nil {
 			nf.with, nf.without = packChoice(templates.SplitList(a.Cfg.Packs), picked)
 		}
+		a.UI.Hint("Next time, without the form: " + equivalentUp(cmd, o, nf))
 	}
 	if o.Env == "" {
 		o.Env = "scratch"
 	}
 	if err := validVMName(o.Name); err != nil {
-		return fmt.Errorf("VM name %q: %w", o.Name, err)
+		return usageErr("VM name %q: %w", o.Name, err)
 	}
 	if _, exists, err := a.Lima.Get(ctx, o.Name); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("a VM named %q already exists", o.Name)
+		return conflictErr("a VM named %q already exists", o.Name)
 	}
 	if err := a.prepareVM(&o, vmChoices{secrets: flagSecrets, with: nf.with, without: nf.without, allow: nf.allow, locked: nf.locked, learn: nf.learn}); err != nil {
 		return err
@@ -312,13 +314,14 @@ func (a *App) secretsStep(vm string) error {
 }
 
 // parseSecretFlags reads --secret NAME=reference values.
-func parseSecretFlags(flags []string) ([]secrets.Secret, error) {
+func (a *App) parseSecretFlags(flags []string) ([]secrets.Secret, error) {
 	var out []secrets.Secret
 	for _, f := range flags {
 		name, ref, ok := strings.Cut(f, "=")
 		if !ok || !secrets.ValidName(name) || ref == "" {
 			return nil, fmt.Errorf("--secret %q: expected NAME=reference, e.g. OPENAI_API_KEY=op://Private/OpenAI/credential", f)
 		}
+		a.warnPlainSecret(name, ref)
 		out = append(out, secrets.Secret{Name: name, Ref: ref})
 	}
 	return out, nil
@@ -373,4 +376,49 @@ func (a *App) prepareVM(o *createOptions, c vmChoices) error {
 		return a.savePolicy(o.Name, netPolicy{Locked: c.locked, Learn: c.learn, Allow: domains})
 	}
 	return nil
+}
+
+// plainArg matches arguments that need no quoting in a shell.
+var plainArg = regexp.MustCompile(`^[A-Za-z0-9_.,:/=@+-]+$`)
+
+// equivalentUp is the command that creates the VM a form just described,
+// for scripts. --secret flags are left out, so a value typed on the command
+// line isn't echoed; the form's secret choices are already saved.
+func equivalentUp(cmd *cobra.Command, o createOptions, nf *newFlags) string {
+	quote := func(s string) string {
+		if plainArg.MatchString(s) {
+			return s
+		}
+		return secrets.ShellQuote(s)
+	}
+	parts := []string{"limabean", "up", quote(o.Name)}
+	if o.Env != "" && o.Env != "scratch" {
+		parts = append(parts, quote(o.Env))
+	}
+	if len(nf.with) > 0 {
+		parts = append(parts, "--with", quote(strings.Join(nf.with, ",")))
+	}
+	if len(nf.without) > 0 {
+		parts = append(parts, "--without", quote(strings.Join(nf.without, ",")))
+	}
+	cmd.Flags().Visit(func(f *pflag.Flag) {
+		switch {
+		case f.Name == "secret" || f.Name == "with" || f.Name == "without":
+			return
+		case cmd.Root().PersistentFlags().Lookup(f.Name) != nil:
+			return // --plain, --verbose and the like aren't part of the VM
+		}
+		if f.Value.Type() == "bool" {
+			parts = append(parts, "--"+f.Name)
+			return
+		}
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			for _, v := range sv.GetSlice() {
+				parts = append(parts, "--"+f.Name, quote(v))
+			}
+			return
+		}
+		parts = append(parts, "--"+f.Name, quote(f.Value.String()))
+	})
+	return strings.Join(parts, " ")
 }

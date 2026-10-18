@@ -9,7 +9,7 @@ import (
 )
 
 func newRmCmd(a *App) *cobra.Command {
-	var force, expired bool
+	var force, yes, expired bool
 	cmd := &cobra.Command{
 		Use:     "rm [name]",
 		Aliases: []string{"delete"},
@@ -21,8 +21,8 @@ secrets. Shared secrets are kept.
 
 Before deleting, rm checks every git repository under ~/code in the VM. If
 any has uncommitted changes, stashes or commits that aren't on a remote, it
-stops and lists them. In a terminal it then asks you to confirm. --force
-skips both.
+stops and lists them. In a terminal it then asks you to confirm. --yes
+skips the question; --force skips both.
 
 A VM already deleted with "limactl delete" can still be named: rm cleans up
 what's left of it.
@@ -33,6 +33,9 @@ checks; the autostop agent does this every 10 minutes.`,
 
   # Pick the VM from a list
   limabean rm
+
+  # Don't ask, but still check for unsaved work
+  limabean rm scratch --yes
 
   # No checks, no questions
   limabean rm scratch --force
@@ -59,7 +62,7 @@ checks; the autostop agent does this every 10 minutes.`,
 			}
 			if !ok {
 				if a.envOf(name) == "" && !a.hasLeftovers(ctx, name) {
-					return fmt.Errorf("no VM named %q (see: limabean ls)", name)
+					return notFoundErr("no VM named %q (see: limabean ls)", name)
 				}
 				a.forget(ctx, name)
 				a.UI.OK("No VM named %s; removed what was left of it", name)
@@ -71,14 +74,14 @@ checks; the autostop agent does this every 10 minutes.`,
 					return err
 				}
 				if !clean {
-					return errSilent
+					return errUnsaved
 				}
-				if a.UI.Prompting {
-					yes, err := a.UI.Confirm(fmt.Sprintf("Delete %s? This can't be undone.", name), false)
+				if a.UI.Prompting && !yes {
+					ok, err := a.UI.Confirm(fmt.Sprintf("Delete %s? This can't be undone.", name), false)
 					if err != nil {
 						return err
 					}
-					if !yes {
+					if !ok {
 						a.UI.Info("Kept %s", name)
 						return nil
 					}
@@ -95,6 +98,7 @@ checks; the autostop agent does this every 10 minutes.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip the unsaved-work check and the confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation; the unsaved-work check still runs")
 	cmd.Flags().BoolVar(&expired, "expired", false, "delete every VM whose --ttl is up")
 	return cmd
 }

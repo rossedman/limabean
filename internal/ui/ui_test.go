@@ -109,7 +109,7 @@ func TestSpin(t *testing.T) {
 }
 
 func TestNewAndTheme(t *testing.T) {
-	if u := New(true); u.Interactive || u.Prompting {
+	if u := New(true, false); u.Interactive || u.Prompting {
 		t.Error("New(plain) should not be interactive")
 	}
 	if Theme() == nil {
@@ -121,5 +121,71 @@ func TestKeysSplitsTextButNotEscapes(t *testing.T) {
 	r := Keys("ab", Down, Enter).(*keyReader)
 	if len(r.keys) != 4 || r.keys[2] != Down || r.keys[3] != Enter {
 		t.Fatalf("keys = %q", r.keys)
+	}
+}
+
+func TestStreams(t *testing.T) {
+	var out, errs bytes.Buffer
+	u := NewPlainStreams(&out, &errs)
+	u.OK("done")
+	u.Info("working")
+	u.Hint("a hint")
+	u.Section("title", "sub")
+	u.Box("box")
+	u.Table([]string{"A"}, [][]string{{"1"}})
+	if out.String() != "A\n1\n" || !strings.Contains(errs.String(), "done") || !strings.Contains(errs.String(), "box") {
+		t.Fatalf("out=%q err=%q", out.String(), errs.String())
+	}
+
+	// Quiet keeps errors and data only; Verbose adds detail.
+	errs.Reset()
+	u.Quiet = true
+	u.OK("hidden")
+	u.Warn("hidden")
+	u.Hint("hidden")
+	u.Info("hidden")
+	u.Section("hidden", "")
+	u.Box("hidden")
+	u.Detail("hidden")
+	u.Bad("shown")
+	if err := u.Spin(context.Background(), "hidden", func(context.Context) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(errs.String(), "hidden") || !strings.Contains(errs.String(), "shown") {
+		t.Fatalf("quiet: %q", errs.String())
+	}
+	u.Quiet, u.Verbose = false, true
+	errs.Reset()
+	u.Detail("detail")
+	if !strings.Contains(errs.String(), "detail") {
+		t.Errorf("verbose: %q", errs.String())
+	}
+
+	// Report puts status lines on stdout, and isn't quiet.
+	out.Reset()
+	u.Quiet = true
+	r := u.Report()
+	r.OK("report")
+	if !strings.Contains(out.String(), "report") {
+		t.Errorf("report: %q", out.String())
+	}
+
+	// Color is an enhancement: words and symbols stay without it.
+	term := NewTerminal(strings.NewReader(""), &out)
+	term.NoColor = true
+	if term.Code("x") != "x" || term.title("t") != "t" {
+		t.Error("NoColor should drop color")
+	}
+}
+
+func TestNewHonorsEnvironment(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	if u := New(false, false); !u.NoColor {
+		t.Error("NO_COLOR")
+	}
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("TERM", "dumb")
+	if u := New(false, true); u.Interactive || !u.NoColor {
+		t.Error("TERM=dumb is plain; --no-color drops color")
 	}
 }
