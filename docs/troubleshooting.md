@@ -16,7 +16,7 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | `limabean` prints plain text and doesn't prompt | Output isn't a terminal (a pipe or script), or `--plain` / `LIMABEAN_PLAIN=1` is set. |
 | A secret is missing in a VM | `limabean secrets ls --vm <name>` shows what it should get, and `limabean doctor` checks every reference. A stopped VM gets changes at its next `limabean secrets sync`. |
 | `op couldn't read it` during sync | 1Password is locked or the op CLI isn't signed in. Unlock it and run `limabean secrets sync` again. |
-| macOS says limabean "cannot be opened" after downloading | The binary is quarantined: `xattr -d com.apple.quarantine ~/.local/bin/limabean`. |
+| macOS says limabean "cannot be opened" after downloading | The binary is quarantined (Homebrew clears this itself): `xattr -d com.apple.quarantine ~/.local/bin/limabean`. |
 | A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean start <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
 | `limabean new` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
 | `limabean new` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it is `~/.lima/<name>/ha.stderr.log`. |

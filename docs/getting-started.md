@@ -2,14 +2,17 @@
 
 ## Install
 
-limabean needs macOS and [Lima](https://lima-vm.io) 2.0 or newer:
+limabean needs macOS and [Lima](https://lima-vm.io) 2.0 or newer. It's a
+single binary with the VM templates built in.
+
+**With Homebrew** (installs Lima too):
 
 ```bash
-brew install lima
+brew install rossedman/tap/limabean
+brew upgrade limabean   # later, for a new release
 ```
 
-limabean itself is a single binary with the VM templates built in. Install it
-in one of two ways.
+The other ways need Lima first: `brew install lima`.
 
 **From a release.** The download works on Apple Silicon and Intel:
 

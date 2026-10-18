@@ -46,6 +46,33 @@ changelog:
     exclude:
       - "^Merge "
 
+# brew install rossedman/tap/limabean. GoReleaser writes Casks/limabean.rb
+# to rossedman/homebrew-tap, with a fine-grained token that can write only
+# to that repo (the HOMEBREW_TAP_GITHUB_TOKEN secret). Pre-releases skip it.
+homebrew_casks:
+  - name: limabean
+    ids: [limabean]
+    repository:
+      owner: rossedman
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "limabean {{ .Tag }}"
+    homepage: https://github.com/rossedman/limabean
+    description: Disposable Ubuntu dev VMs on macOS, built on Lima
+    skip_upload: auto
+    dependencies:
+      - formula: lima
+    hooks:
+      post:
+        # The binary isn't notarized: without this, macOS refuses to run it.
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/limabean"]
+          end
+
 release:
   github:
     owner: rossedman
@@ -53,6 +80,12 @@ release:
   prerelease: auto
   footer: |
     ## Install
+
+    ```bash
+    brew install rossedman/tap/limabean
+    ```
+
+    Or download the binary:
 
     ```bash
     curl -fsSL https://github.com/rossedman/limabean/releases/download/{{ .Tag }}/limabean_{{ .Version }}_darwin_universal.tar.gz | tar -xz limabean
