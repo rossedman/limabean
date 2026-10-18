@@ -21,6 +21,11 @@ remote.
   database clients, and core shell tools (ripgrep, fd, fzf, bat, delta,
   lazygit, gh, ghq, just, …). Rust, Java, Ruby and more are a `--with` away.
   Use `mise use node@22` or `mise use terraform@1.9` for other versions.
+- **Formatters and linters** for Go, Python, shell and YAML: gofumpt,
+  goimports, golangci-lint and `go vet`; ruff and yamllint; shellcheck and
+  shfmt. They come with the `go`, `python` and `core` packs.
+- **[guardrails](https://github.com/rossedman/guardrails)**, turned on for
+  Claude Code in the VM. See [Claude Desktop](claude-desktop.md#guardrails).
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   and venv.

@@ -80,6 +80,8 @@ provision:
   file: ./features/git.sh
 - mode: user
   file: ./features/shell.sh
+- mode: user
+  file: ./features/guardrails.sh
 
 probes:
 - description: mise tools are installed

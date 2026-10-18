@@ -12,6 +12,7 @@ ghq = "1.11.2"   # limabean get and code
 glow = "3.0.0"
 gum = "2.0.2"
 shellcheck = "0.11.0"
+shfmt = "3.14.1"   # shell formatter
 svu = "3.4.1"
 delta = "0.20.1"   # readable diffs
 lazygit = "0.66.2"

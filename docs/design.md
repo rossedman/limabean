@@ -355,6 +355,17 @@ An opt-in `--mount` of a host directory (B) is still open.
   - Considered: snapshotting the first real VM before its secrets were
     installed (saves one provision, but risks carrying VM-specific state
     into the image), and Lima's own image caching (only the download).
+- **D17 Guardrails in VMs. Decided: declare the plugin in the VM's user
+  settings.** `features/guardrails.sh` adds the `rossedman/guardrails`
+  marketplace and `guardrails@guardrails` to `~/.claude/settings.json` on
+  every boot, only where they're missing, so `false` sticks. Claude Code
+  fetches a plugin enabled in user settings when a session starts, with no
+  trust prompt (project settings have one), and Claude Desktop's SSH copy
+  and the `claude` pack's both read that file. The packs carry the
+  formatters and linters guardrails runs, so it doesn't download them.
+  - Considered: `claude plugin install` during provisioning (needs Claude
+    Code installed and the network at that moment; Claude Desktop's copy
+    arrives only on first connect).
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
