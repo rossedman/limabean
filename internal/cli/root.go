@@ -34,7 +34,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
   limabean init
 
   # Create a VM and connect to it
-  limabean new dev
+  limabean up dev
   limabean ssh dev
 
   # Give every VM an API key from 1Password

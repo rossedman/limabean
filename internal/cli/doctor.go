@@ -45,7 +45,7 @@ It exits non-zero if something needs fixing, so it can gate scripts.`,
 				a.UI.Box("Fix the items marked ✗ above.")
 				return errSilent
 			}
-			a.UI.Box(a.UI.Code("All good.") + " Create a VM with: limabean new <name>")
+			a.UI.Box(a.UI.Code("All good.") + " Create a VM with: limabean up <name>")
 			return nil
 		},
 	}

@@ -79,7 +79,7 @@ Host *
 ```
 
 With another agent, such as 1Password or Secretive, make sure `SSH_AUTH_SOCK`
-points at it in the shell where you run `limabean new`.
+points at it in the shell where you run `limabean up`.
 
 ### Your git config is in a directory
 
@@ -105,12 +105,12 @@ Settings that only make sense on the Mac are overridden in the VM:
 ## Your first VM
 
 ```bash
-limabean new dev                       # a few minutes the first time; later VMs are copies of an image
+limabean up dev                       # a few minutes the first time; later VMs are copies of an image
 limabean ssh dev ssh -T git@github.com # should greet you by your GitHub username
 limabean get dev owner/repo            # clone into ~/code/github.com/owner/repo
 ```
 
-In a terminal, `new` asks which [packs](packs.md) the VM gets (Go, Node,
+In a terminal, `up` asks which [packs](packs.md) the VM gets (Go, Node,
 Kubernetes, …) and which secrets; `--with go,node` answers the first
 question on the command line. The first VM of a kind provisions everything
 from scratch, and builds an

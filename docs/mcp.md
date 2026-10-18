@@ -15,7 +15,7 @@ That's the whole setup for Claude Code. Then ask for something like:
 
 !!! tip "MCP or an SSH connection?"
     They work together. **MCP** lets Claude, running on your Mac, manage VMs
-    and run commands in them. An **SSH connection**, which `limabean new`
+    and run commands in them. An **SSH connection**, which `limabean up`
     adds to Claude Desktop for every VM, puts a whole Claude session inside
     one VM. See [Claude Desktop](claude-desktop.md) for that.
 

@@ -34,7 +34,7 @@
       <div class="lb-term" aria-label="A terminal creating a VM with limabean">
         <div class="lb-term__bar"><i></i><i></i><i></i><span>~ zsh</span></div>
         <div class="lb-term__body" data-typing>
-          <div><span class="p">$</span> <span class="c" data-type>limabean new dev</span></div>
+          <div><span class="p">$</span> <span class="c" data-type>limabean up dev</span></div>
           <div class="o"><span class="p">  ✓</span> Created <span class="ok">dev</span> from scratch</div>
           <div class="o"><span class="p">  ✓</span> Packages up to date</div>
           <div class="o"><span class="p">  ✓</span> Installed 2 secret(s)</div>
@@ -90,7 +90,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/lightning-bolt.svg" %}</div>
           <h3>One command per VM</h3>
-          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity. It's a copy of a ready-made image, so it only has to boot. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes, and <code>limabean recipes</code> starts that file for you.</p>
+          <p><code>limabean up dev</code> gives you an Ubuntu 26.04 VM with your git identity. It's a copy of a ready-made image, so it only has to boot. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes, and <code>limabean recipes</code> starts that file for you.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/package-variant-closed.svg" %}</div>
@@ -148,7 +148,7 @@
         </li>
         <li>
           <h4>Create a VM and jump in</h4>
-          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean new dev
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean up dev
 <span class="p">$</span> limabean ssh dev   <span class="d"># or: ssh lima-dev</span></code></pre>
         </li>
         <li>
@@ -187,8 +187,7 @@
         <div class="lb-cmdgroup">
           <h3>VMs</h3>
           <dl>
-            <dt>new</dt><dd>Create a VM, choosing its secrets</dd>
-            <dt>up / down</dt><dd>The VM a repo's <code>.limabean.yaml</code> describes, kept in step with it</dd>
+            <dt>up / down</dt><dd>Create or start a VM, or a repo's from its <code>.limabean.yaml</code>; stop it</dd>
             <dt>recipes</dt><dd>Starter <code>.limabean.yaml</code> files for common VMs</dd>
             <dt>run --rm</dt><dd>One command in a fresh VM, then gone</dd>
             <dt>ls</dt><dd>List VMs, or print JSON with <code>--json</code></dd>
@@ -196,7 +195,6 @@
             <dt>get</dt><dd>Clone a repository into the VM with ghq</dd>
             <dt>cp</dt><dd>Copy files between your Mac and a VM</dd>
             <dt>code</dt><dd>Open the VM or a repo in VS Code, Cursor or another editor</dd>
-            <dt>start / stop</dt><dd>Start or stop a VM</dd>
             <dt>ports / open</dt><dd>See forwarded ports, open one in the browser</dd>
             <dt>rebuild</dt><dd>Recreate from the current templates, keeping <code>~/code</code></dd>
             <dt>clone</dt><dd>Copy a VM, <code>~/code</code> and all, in seconds</dd>

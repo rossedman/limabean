@@ -27,7 +27,7 @@ func newPacksCmd(a *App) *cobra.Command {
 core, the shell tools limabean itself relies on, and Docker and Python;
 everything else is a pack you choose:
 
-  limabean new api --with go,db          # or pick them in new's form
+  limabean up api --with go,db           # or pick them in up's form
   limabean rebuild dev --with ruby       # add one to an existing VM
   packs: [go, db]                        # in a project's .limabean.yaml
 

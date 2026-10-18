@@ -53,7 +53,7 @@ Leave out the name to pick a VM from a list.`,
 				return err
 			}
 			if !inst.Running() {
-				return fmt.Errorf("%s is stopped, so nothing is forwarded (start it with: limabean start %s)", name, name)
+				return fmt.Errorf("%s is stopped, so nothing is forwarded (start it with: limabean up %s)", name, name)
 			}
 			list, err := a.ports(ctx, inst)
 			if err != nil {

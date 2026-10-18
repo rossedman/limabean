@@ -6,7 +6,7 @@ limabean keeps one token in your macOS Keychain and installs it in every VM.
 
 ```bash
 limabean github login     # paste a token; installs it in running VMs
-limabean new dev          # new VMs get it automatically
+limabean up dev          # new VMs get it automatically
 ```
 
 ## Use a fine-grained token

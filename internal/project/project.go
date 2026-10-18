@@ -26,6 +26,9 @@ const FileName = ".limabean.yaml"
 
 var FileNames = []string{FileName, ".limabean.yml"}
 
+// ErrNotFound is Find's error when there's no project file.
+var ErrNotFound = errors.New("no " + FileName + " (or .yml) here or in a parent directory")
+
 // File is a .limabean.yaml.
 type File struct {
 	Name    string   `yaml:"name"`    // the VM's name; default the directory's
@@ -102,7 +105,7 @@ func Find(dir string) (string, error) {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("no %s (or .yml) here or in a parent directory (see: limabean up --help)", FileName)
+			return "", fmt.Errorf("%w (see: limabean up --help)", ErrNotFound)
 		}
 		dir = parent
 	}

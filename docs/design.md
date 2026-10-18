@@ -416,6 +416,18 @@ An opt-in `--mount` of a host directory (B) is still open.
   again with `--setup`. `down` only stops the VM, keeping everything,
   rather than deleting it as Compose does: a VM holds more than a
   container, and `rm` already deletes with its checks.
+- **D22 Two verbs. Decided: up and down make, start and stop every VM.**
+  There were four ways to bring a VM up (`new`/`create`, `start`, `up`, and
+  the commands that start one on the way) and two to stop one. Now `up`
+  works from a project file when there is one and the name (if any) is
+  the project's, and otherwise starts the named VM or creates it with
+  `new`'s form and flags. Flags that only mean something when creating
+  are refused for an existing VM or a project, rather than ignored.
+  `down` stops the project's VM or the named one, and takes `stop`'s
+  `--idle`. `new`, `create`, `start` and `stop` stay as hidden commands:
+  scripts keep working, and autostop agents installed earlier run
+  `stop --idle`. `up` applies its size flags itself, since a setting can
+  bind only one flag and `new` keeps its binding.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

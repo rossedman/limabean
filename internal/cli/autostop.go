@@ -22,7 +22,7 @@ func newAutostopCmd(a *App) *cobra.Command {
 		Long: `Stop idle VMs in the background, so forgotten ones don't hold on to memory
 and battery, and delete VMs made with "new --ttl" once they expire.
 "autostop on" installs a launchd agent in your login session that runs
-"limabean autostop run" every 10 minutes; see "limabean stop --help" for
+"limabean autostop run" every 10 minutes; see "limabean down --help" for
 what counts as in use.
 
 A stopped VM keeps its disk. "limabean ssh", "code" and "start" bring it

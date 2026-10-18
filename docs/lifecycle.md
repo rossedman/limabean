@@ -10,7 +10,7 @@ themselves, and VMs nobody is using stop by themselves.
 Provisioning a VM from scratch takes minutes: every Ubuntu update, Docker,
 and each pack's tools. So limabean does it once per kind of VM and keeps
 the result as an **image**: a provisioned VM, shut down, with no secrets,
-code disk or network policy of its own. `new`, `up`, `run`, `rebuild` and
+code disk or network policy of its own. `up`, `run`, `rebuild` and
 MCP's `create_vm` make an APFS clone of the image, give it the VM's own
 settings, and boot it. The copy takes moments and shares disk blocks with
 the image until they change, so a new VM is ready about as soon as it has
@@ -111,7 +111,7 @@ Claude can clone VMs too, [through MCP](mcp.md#tools) (`clone_vm`).
 ## Throwaway VMs
 
 ```bash
-limabean new spike --ttl 4h                    # deleted in four hours
+limabean up spike --ttl 4h                    # deleted in four hours
 limabean run --rm -- 'uname -a'                # a VM for one command
 limabean run --rm --repo me/app -- make test   # a clean checkout's tests
 ```
@@ -126,7 +126,7 @@ minutes, so turn it on; `limabean rm --expired` does it by hand.
 deletes the VM when the command ends, whether it worked or not. limabean
 exits with the command's exit status, so it fits in scripts. `--repo` clones
 a repository first and runs the command in it. It takes the same `--with`,
-`--allow`, `--locked` and `--secret` flags as `new`:
+`--allow`, `--locked` and `--secret` flags as `up`:
 
 ```bash
 # Claude Code on a task, in a locked sandbox, then gone
@@ -151,7 +151,7 @@ limabean autostop off
 [expired VMs](#throwaway-vms), and stops VMs nobody is using, so one you've
 forgotten about stops holding memory and battery. An agent installed before
 limabean had `--ttl` only stops idle VMs: run `limabean autostop on` again
-(`autostop status` says if it's needed). Its disks are kept, and `limabean ssh`, `code` or `start` brings it
+(`autostop status` says if it's needed). Its disks are kept, and `limabean ssh`, `code` or `up` brings it
 back. A VM counts as in use while:
 
 - a terminal in it (a shell, tmux, `limabean ssh`) had input or output
@@ -164,5 +164,5 @@ back. A VM counts as in use while:
 
 Quiet background work, such as idle containers or a long command run over
 `ssh` without a terminal, doesn't keep a VM running. Run
-`limabean stop --idle 2h --dry-run` to see what would stop and why the rest
+`limabean down --idle 2h --dry-run` to see what would stop and why the rest
 are kept. The agent's output is in `~/Library/Logs/limabean-autostop.log`.

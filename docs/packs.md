@@ -6,8 +6,8 @@ Python; everything else is a pack you choose for that VM:
 
 ```bash
 limabean packs                          # what there is
-limabean new api                        # in a terminal, new asks which packs
-limabean new api --with go,db           # or name them
+limabean up api                        # in a terminal, new asks which packs
+limabean up api --with go,db           # or name them
 limabean rebuild dev --with ruby        # add a pack to an existing VM
 ```
 
@@ -64,7 +64,7 @@ secret: `ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN` from
 ```bash
 claude setup-token   # on the Mac; copy the token it prints
 limabean secrets set CLAUDE_CODE_OAUTH_TOKEN --vm agent
-limabean new agent --with claude --allow github --allow claude --locked
+limabean up agent --with claude --allow github --allow claude --locked
 limabean get agent me/app
 limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing test"'
 ```
@@ -75,8 +75,8 @@ the task is done.
 ## Packs for every new VM
 
 The `PACKS` setting in `~/.config/limabean/config` (or `LIMABEAN_PACKS`)
-adds packs to every VM made with `limabean new`, `limabean run` or MCP's
-`create_vm`. It's empty unless you set it; `new`'s form starts with these
+adds packs to every VM made with `limabean up`, `limabean run` or MCP's
+`create_vm`. It's empty unless you set it; `up`'s form starts with these
 checked, and `--without` leaves one out:
 
 ```bash
@@ -137,7 +137,7 @@ libc6-dev
 ```
 
 The first line is the description `limabean packs` shows. Then
-`limabean new chat --with zig`. A tool with options is an inline table
+`limabean up chat --with zig`. A tool with options is an inline table
 whose first key is its version, as mise writes it:
 `rust = { version = "1.99.1", components = "rust-analyzer" }`. A pack of yours with a built-in pack's
 name replaces it, so `go.toml` there changes what the `go` pack installs.
@@ -155,7 +155,7 @@ the allowlist applies.
 ## How it works
 
 `layer-base.yaml` writes `core` into the VM as
-`/etc/limabean/mise/00-core.toml`. `limabean new` adds each other pack with a
+`/etc/limabean/mise/00-core.toml`. `limabean up` adds each other pack with a
 `--set` provision, as `/etc/limabean/mise/50-<pack>.toml`, plus
 `/etc/limabean/apt/<pack>.list` for its apt packages. On first boot,
 `features/packs-apt.sh` installs the apt packages and `features/mise.sh`

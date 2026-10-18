@@ -57,7 +57,7 @@ taken as the port when it isn't a VM's name.`,
 				return err
 			}
 			if !inst.Running() {
-				return fmt.Errorf("%s is stopped, so nothing is forwarded (start it with: limabean start %s)", name, name)
+				return fmt.Errorf("%s is stopped, so nothing is forwarded (start it with: limabean up %s)", name, name)
 			}
 
 			if port != "" {

@@ -1,59 +1,95 @@
 package cli
 
 import (
-	"os"
+	"errors"
+	"time"
 
 	"github.com/spf13/cobra"
-
-	"github.com/rossedman/limabean/internal/project"
 )
 
 func newDownCmd(a *App) *cobra.Command {
 	var file string
+	var idle time.Duration
+	var dryRun bool
 	cmd := &cobra.Command{
-		Use:   "down",
-		Short: "Stop the VM a repository's .limabean.yaml describes",
-		Long: `Stop the project's VM: the one named by .limabean.yaml (or .limabean.yml)
-here or in a parent directory. Everything in it is kept, ~/code included,
-and "limabean up" starts it again, applying any changes to the file.
+		Use:   "down [name]",
+		Short: "Stop a VM, or the project's",
+		Long: `Stop a VM. Everything in it is kept, ~/code included, and "limabean up"
+starts it again (in a project, applying any changes to its file). To
+delete a VM, use limabean rm.
 
-down is "limabean stop <name>" for whichever project you're in. To delete
-the VM, use limabean rm.`,
-		Example: `  cd ~/src/myapp && limabean down
+Without a name, down stops the project's VM: the one .limabean.yaml (or
+.limabean.yml) here or in a parent directory describes. Outside a project
+it asks which VM in a terminal.
 
-  # Bring it back, with whatever changed in the file
-  limabean up`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+Its Claude Desktop connection is removed while it's stopped (Claude Desktop
+shows an error for a VM it can't reach) and added back when it starts.
+
+With --idle, only VMs nobody has used for that long are stopped, and
+without a name every running VM is checked. A VM is in use while:
+  - a terminal in it (a shell, tmux, limabean ssh) had input or output
+  - Claude Desktop or an editor is connected to it
+  - its 5-minute load average is 1 or more, e.g. a build or busy containers
+  - it started less than that long ago
+"limabean autostop on" runs this every few minutes.`,
+		Example: `  # The project you're in
+  cd ~/src/myapp && limabean down
+
+  # A VM by name
+  limabean down dev
+
+  # Every VM unused for two hours, and a dry run of the same
+  limabean down --idle 2h
+  limabean down --idle 2h --dry-run`,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: a.completeVMs,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			path := file
-			if path == "" {
-				wd, err := os.Getwd()
+			if dryRun && idle == 0 {
+				return errors.New("--dry-run needs --idle")
+			}
+			if cmd.Flags().Changed("idle") {
+				if idle < time.Minute {
+					return errors.New("--idle needs a duration of a minute or more, e.g. 2h or 90m")
+				}
+				return a.stopIdle(ctx, args, idle, dryRun)
+			}
+			name := ""
+			if len(args) == 1 {
+				name = args[0]
+			} else {
+				_, f, err := findProject(file)
 				if err != nil {
 					return err
 				}
-				if path, err = project.Find(wd); err != nil {
+				if f != nil {
+					if _, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
+						return err
+					} else if !ok {
+						a.UI.Info("%s has no VM yet; limabean up creates it", f.Name)
+						return nil
+					}
+					name = f.Name
+				} else if !a.UI.Prompting {
+					return errors.New("no .limabean.yaml here or in a parent directory; name the VM: limabean down <name>")
+				} else if name, err = a.vmArg(ctx, args, "stop"); err != nil {
 					return err
 				}
 			}
-			f, err := project.Load(path)
+			inst, err := a.vm(ctx, name)
 			if err != nil {
 				return err
 			}
-			inst, ok, err := a.Lima.Get(ctx, f.Name)
-			switch {
-			case err != nil:
-				return err
-			case !ok:
-				a.UI.Info("%s has no VM yet; limabean up creates it", f.Name)
-				return nil
-			case !inst.Running():
-				a.UI.Info("%s is already stopped", a.UI.Code(f.Name))
+			if !inst.Running() {
+				a.claudeRemove(name)
+				a.UI.Info("%s is already stopped", name)
 				return nil
 			}
-			return a.stopVM(ctx, f.Name, "Stopping "+f.Name)
+			return a.stopVM(ctx, name, "Stopping "+name)
 		},
 	}
 	cmd.Flags().StringVarP(&file, "file", "f", "", "the project file (default: .limabean.yaml here or in a parent directory)")
+	cmd.Flags().DurationVar(&idle, "idle", 0, "only stop VMs unused for this long, e.g. 2h; without a name, every running VM is checked")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "with --idle, show which VMs would stop without stopping them")
 	return cmd
 }
