@@ -60,7 +60,7 @@
         <p class="lb-eyebrow">Project file</p>
         <h2>One file in the repo.<br><span>The same VM for everyone.</span></h2>
         <p class="lb-lede">Commit a <code>.limabean.yaml</code> and <code>limabean up</code> builds the VM it describes: packs, size, ports, variables, which secrets it gets, its network, a setup script and a start command. Run it again after editing the file and it applies what changed, like <code>docker compose</code>.</p>
-        <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean recipes node-web  <span class="d"># a starter file</span>
+        <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> limabean init --project    <span class="d"># a file from the repo</span>
 <span class="p">$</span> limabean up                <span class="d"># create or update</span>
 <span class="p">$</span> limabean ps                <span class="d"># what's running</span>
 <span class="p">$</span> limabean down              <span class="d"># stop; nothing lost</span></code></pre>
@@ -282,7 +282,7 @@
         <div class="lb-cmdgroup">
           <h3>Access &amp; setup</h3>
           <dl>
-            <dt>init</dt><dd>Git config, code directory, SSH, GitHub</dd>
+            <dt>init</dt><dd>Git config, code directory, SSH, GitHub; <code>--project</code> writes a repo's file</dd>
             <dt>config</dt><dd>Every setting, and where it comes from</dd>
             <dt>doctor</dt><dd>Check everything VMs depend on</dd>
             <dt>packs</dt><dd>Languages and tools a VM can get</dd>

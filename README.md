@@ -112,9 +112,9 @@ Leave out a VM name and you pick one from a list. Every command has
 
 | Command | What it does |
 |---|---|
-| `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token |
+| `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token; `--project` writes a repository's `.limabean.yaml` from what's in it |
 | `limabean config` | Show every setting and where it comes from |
-| `limabean doctor` | Check everything VMs depend on |
+| `limabean doctor` | Check everything VMs depend on, and the project file you're in |
 | `limabean bump` | Update the pinned tool versions in `templates/packs/*.toml` |
 
 **VMs**

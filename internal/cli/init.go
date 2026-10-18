@@ -8,12 +8,15 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/project"
 )
 
 func newInitCmd(a *App) *cobra.Command {
-	return &cobra.Command{
+	var forProject, toStdout, overwrite bool
+	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Set up limabean: settings, SSH config and a GitHub token",
+		Short: "Set up limabean, or write a repository's .limabean.yaml",
 		Long: `Walk through first-time setup, then run "limabean doctor":
 
   1. Where your git config lives on the Mac. A ~/.gitconfig symlinked into a
@@ -25,13 +28,35 @@ func newInitCmd(a *App) *cobra.Command {
   4. Optionally, a GitHub token for gh and https pushes in VMs.
 
 Settings are saved to ~/.config/limabean/config. Without a terminal, the
-suggested values are saved and the SSH config isn't changed.`,
+suggested values are saved and the SSH config isn't changed.
+
+With --project, init writes a .limabean.yaml for the repository you're in
+instead, from what's in it: go.mod, package.json and its lockfile,
+pyproject.toml, Cargo.toml, Gemfile, mix.exs, pom.xml, a compose file,
+.tool-versions and the like, here and in the directories directly below. It
+picks the packs, the setup commands, likely ports, and tools no pack has,
+and lists credentials named in .env.example as secrets to set up. It only
+reads files; nothing in the repository runs. In a terminal it shows what it
+found and asks before writing. --print writes the file to standard output
+instead, and --overwrite replaces a project file that's already there.`,
 		Example: `  limabean init
 
   # Accept every suggestion, e.g. in a provisioning script
-  limabean init --plain`,
+  limabean init --plain
+
+  # A project file for this repository, then its VM
+  cd ~/src/myapp && limabean init --project && limabean up
+
+  # See what it would write
+  limabean init --project --print`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if forProject {
+				return a.initProject(toStdout, overwrite)
+			}
+			if toStdout || overwrite {
+				return usageErr("--print and --overwrite go with --project")
+			}
 			home, _ := os.UserHomeDir()
 			cfg := *a.Cfg
 			cfg.GitConfigDir = guessGitConfigDir(home, cfg.GitConfigDir)
@@ -94,9 +119,18 @@ suggested values are saved and the SSH config isn't changed.`,
 				}
 			}
 			a.doctor(cmd.Context())
+			if _, err := os.Stat(".git"); err == nil {
+				if _, err := project.Find("."); err != nil {
+					a.UI.Hint("This is a repository without a project file. Write one: limabean init --project")
+				}
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&forProject, "project", false, "write a .limabean.yaml for the repository here instead")
+	cmd.Flags().BoolVar(&toStdout, "print", false, "with --project, write it to standard output")
+	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "with --project, replace a project file that's already here")
+	return cmd
 }
 
 // guessGitConfigDir suggests where the git config lives: the directory a

@@ -488,6 +488,19 @@ An opt-in `--mount` of a host directory (B) is still open.
   published with the docs is generated from Go, using `project.Load`'s own
   patterns; tests fail if a key is missing from it, if the published copy
   is stale, or if a recipe doesn't validate.
+- **D27 Writing and checking project files. Decided: `init --project`
+  guesses, and `doctor` checks what only the Mac knows.** `init --project`
+  reads manifests, lockfiles, framework hints, compose files, tool-version
+  files and `.env.example` in the repository's root and the directories
+  just below it, and writes a commented draft that must pass the same
+  checks as `up` before it's written. It's part of `init` rather than a new
+  verb, and explicit (`--project`) rather than switched on by running
+  `init` in a checkout, so first-time setup never writes into a
+  repository by surprise. It only reads files, never runs repository code,
+  doesn't follow symlinks, and skips directories whose names would change
+  what `setup`'s `cd` means. `doctor` gains a Project section for what the
+  schema can't know: whether the packs, presets and secrets exist on this
+  Mac, and whether the VM matches the file.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

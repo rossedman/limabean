@@ -142,6 +142,12 @@ func Load(path string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
+	return Parse(b, path)
+}
+
+// Parse checks a project file's contents, as Load does for the file at
+// path.
+func Parse(b []byte, path string) (*File, error) {
 	var f File
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
