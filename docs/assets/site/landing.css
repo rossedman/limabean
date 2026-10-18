@@ -382,3 +382,7 @@
 .lb-chat__tool b { color: var(--amber); font-weight: 700; margin-right: 0.3rem; }
 .lb-chat__tool span { color: var(--mist); }
 .lb-chat__ok { color: var(--leaf-2); padding-left: 0.8rem; }
+
+/* Project file: the file and up's plan, one above the other */
+.lb-stack { display: grid; gap: 1rem; }
+#project .lb-code { margin-top: 0.4rem; }

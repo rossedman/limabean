@@ -24,12 +24,12 @@ nav:
       - Claude and MCP: mcp.md
       - Claude Desktop SSH connections: claude-desktop.md
   - Guides:
+      - Projects: projects.md
+      - Recipes: recipes.md
+      - Packs: packs.md
       - Sandboxes: network.md
       - Rebuilds, clones and snapshots: lifecycle.md
       - Inside a VM: inside-a-vm.md
-      - Packs: packs.md
-      - Projects: projects.md
-      - Recipes: recipes.md
       - Secrets: secrets.md
       - GitHub access: github.md
       - Customizing: customizing.md
