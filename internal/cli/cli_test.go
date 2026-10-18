@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -49,23 +50,24 @@ type fakeWorld struct {
 	failDiskList   bool
 	failDiskCreate bool
 	failDiskDelete bool
-	failClone      bool            // snapshot copies fail
-	failLimaClone  bool            // limactl clone fails
-	rejectClone    bool            // limactl clone copies the VM, then rejects its settings
-	oldVMs         map[string]bool // VMs created before network policies
-	failNetwork    bool            // applying a network policy fails
-	reboot         bool            // the first boot left /var/run/reboot-required
-	sshFail        bool            // every ssh call fails
-	attachErr      error           // what commands run on the terminal return
-	failDelete     bool            // limactl delete fails
-	spawnErr       error           // starting a background build fails
-	claudeErr      bool            // up's Claude plugins fail
-	extensions     string          // what the editor's --list-extensions prints
-	extensionsErr  error           // --list-extensions fails
-	installExtErr  error           // --install-extension fails
-	bootless       bool            // the next start or clone --start succeeds without booting
-	neverBoots     bool            // every start succeeds without booting
-	diskGiB        map[string]int  // VM → its system disk's size
+	failClone      bool              // snapshot copies fail
+	failLimaClone  bool              // limactl clone fails
+	rejectClone    bool              // limactl clone copies the VM, then rejects its settings
+	oldVMs         map[string]bool   // VMs created before network policies
+	failNetwork    bool              // applying a network policy fails
+	reboot         bool              // the first boot left /var/run/reboot-required
+	sshFail        bool              // every ssh call fails
+	attachErr      error             // what commands run on the terminal return
+	failDelete     bool              // limactl delete fails
+	spawnErr       error             // starting a background build fails
+	claudeErr      bool              // up's Claude plugins fail
+	sizes          map[string][2]int // VM → CPUs and GiB of memory, as started or edited (default 4, 8)
+	extensions     string            // what the editor's --list-extensions prints
+	extensionsErr  error             // --list-extensions fails
+	installExtErr  error             // --install-extension fails
+	bootless       bool              // the next start or clone --start succeeds without booting
+	neverBoots     bool              // every start succeeds without booting
+	diskGiB        map[string]int    // VM → its system disk's size
 }
 
 // limaMountOverwrite matches a --set that sets a param and then writes a
@@ -102,7 +104,8 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				if w.oldVMs[n] {
 					mounts = ""
 				}
-				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":4,"memory":8589934592,"disk":%d,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), w.diskGiB[n]<<30, n, mounts)
+				size := w.size(n)
+				fmt.Fprintf(&b, `{"name":%q,"status":%q,"dir":%q,"cpus":%d,"memory":%d,"disk":%d,"sshConfigFile":"/lima/%s/ssh.config","config":{%s"provision":[{"path":"/etc/limabean/mise/00-core.toml"}]}}`+"\n", n, status, filepath.Join(w.limaHome, n), size[0], int64(size[1])<<30, w.diskGiB[n]<<30, n, mounts)
 			}
 			return []byte(b.String()), nil
 		case "start":
@@ -111,6 +114,7 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			}
 			for _, a := range args {
 				if name, ok := strings.CutPrefix(a, "--name="); ok {
+					w.resize(name, args)
 					w.vms[name] = "Running"
 					w.writeFile(filepath.Join(name, "disk"), "system of "+name)
 					return nil, nil
@@ -125,6 +129,8 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return []byte("stop failed"), errors.New("exit status 1")
 			}
 			w.vms[args[1]] = "Stopped"
+		case "edit":
+			w.resize(args[len(args)-1], args)
 		case "delete":
 			if w.failDelete {
 				return []byte("delete failed"), errors.New("exit status 1")
@@ -239,6 +245,37 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 		return nil, nil
 	}
 	return nil, fmt.Errorf("unexpected program %s", name)
+}
+
+// size is a VM's CPUs and GiB of memory.
+func (w *fakeWorld) size(vm string) [2]int {
+	if s, ok := w.sizes[vm]; ok {
+		return s
+	}
+	return [2]int{4, 8}
+}
+
+// resize records the --cpus, --memory and --disk a start or edit sets.
+func (w *fakeWorld) resize(vm string, args []string) {
+	s := w.size(vm)
+	for i := 0; i+1 < len(args); i++ {
+		n, err := strconv.Atoi(args[i+1])
+		if err != nil {
+			continue
+		}
+		switch args[i] {
+		case "--cpus":
+			s[0] = n
+		case "--memory":
+			s[1] = n
+		case "--disk":
+			w.diskGiB[vm] = n
+		}
+	}
+	if w.sizes == nil {
+		w.sizes = map[string][2]int{}
+	}
+	w.sizes[vm] = s
 }
 
 func (w *fakeWorld) Get(s string) (string, error) {

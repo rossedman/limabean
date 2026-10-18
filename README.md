@@ -121,7 +121,8 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean new [name] [env]` | Create a VM, choosing its secrets; `--with rust` adds a pack |
-| `limabean up` | Create or start the VM a repository's `.limabean.yaml` describes |
+| `limabean up` | Create the VM a repository's `.limabean.yaml` describes, or start it and apply the file's changes |
+| `limabean down` | Stop that VM |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
 | `limabean run --rm -- <cmd>` | Run one command in a new VM, then delete it |
 | `limabean packs` | List the tool packs a VM can get |
