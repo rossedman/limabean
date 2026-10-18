@@ -56,6 +56,9 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 	pf := root.PersistentFlags()
 	pf.StringVar(&a.configPath, "config", "", "config file (default ~/.config/limabean/config)")
 	pf.BoolVar(&a.plain, "plain", false, "print plain text and never prompt (also LIMABEAN_PLAIN=1)")
+	pf.BoolVar(&a.noColor, "no-color", false, "print without color (also NO_COLOR=1)")
+	pf.BoolVarP(&a.quiet, "quiet", "q", false, "print only errors (and the data a command returns)")
+	pf.BoolVarP(&a.verbose, "verbose", "v", false, "also print the limactl and ssh commands limabean runs; wins over --quiet")
 	pf.StringVar(&a.templatesDir, "templates", "", "read templates from this directory instead of the built-in copy (also LIMABEAN_TEMPLATES)")
 	_ = a.V.BindPFlag(config.KeyPlain, pf.Lookup("plain"))
 	_ = a.V.BindPFlag(config.KeyTemplates, pf.Lookup("templates"))
@@ -99,7 +102,7 @@ func Execute(version string, embedded fs.FS, args []string) int {
 	}
 	u := a.UI
 	if u == nil {
-		u = ui.New(true)
+		u = ui.New(true, false)
 	}
 	fmt.Fprintf(os.Stderr, "%s %v\n", u.Dimmed("limabean:"), err)
 	return 1

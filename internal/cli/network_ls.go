@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/ui"
 )
 
 func newNetworkLsCmd(a *App) *cobra.Command {
@@ -17,6 +19,9 @@ allowed alongside an allowlist, for the clock.`,
 		Example: `  limabean network ls agent`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// The report is the result, so it goes to stdout.
+			defer func(u *ui.UI) { a.UI = u }(a.UI)
+			a.UI = a.UI.Report()
 			ctx := cmd.Context()
 			name, err := a.vmArg(ctx, args, "show the network of")
 			if err != nil {

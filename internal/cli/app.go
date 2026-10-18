@@ -8,9 +8,11 @@ package cli
 
 import (
 	"context"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -69,6 +71,9 @@ type App struct {
 	// Persistent flags.
 	configPath   string
 	plain        bool
+	noColor      bool
+	quiet        bool
+	verbose      bool
 	templatesDir string
 
 	// Set when serving MCP: read a checkout's origin from .git/config instead
@@ -109,10 +114,19 @@ func (a *App) setup() error {
 	}
 	a.Cfg = cfg
 	if a.UI == nil {
-		a.UI = ui.New(a.plain || a.V.GetBool(config.KeyPlain))
+		a.UI = ui.New(a.plain || a.V.GetBool(config.KeyPlain), a.noColor)
 	}
+	// --verbose wins over --quiet, rather than being an error.
+	a.UI.Verbose = a.UI.Verbose || a.verbose
+	a.UI.Quiet = (a.UI.Quiet || a.quiet) && !a.UI.Verbose
+	a.UI.NoColor = a.UI.NoColor || a.noColor
 	if a.Lima == nil {
 		a.Lima = lima.New()
+	}
+	if a.UI.Verbose {
+		if _, done := a.Lima.Runner.(verboseRunner); !done {
+			a.Lima.Runner = verboseRunner{a.Lima.Runner, a.UI}
+		}
 	}
 	if a.Claude.Path == "" {
 		a.Claude.Path = envOr("LIMABEAN_CLAUDE_SETTINGS", claude.DefaultPath())
@@ -203,4 +217,16 @@ func cacheDir() string {
 func hasProgram(name string) bool {
 	_, err := lookPath(name)
 	return err == nil
+}
+
+// verboseRunner prints each limactl and ssh command before running it, for
+// --verbose. Secret values travel on stdin, so they're never printed.
+type verboseRunner struct {
+	lima.Runner
+	ui *ui.UI
+}
+
+func (v verboseRunner) Output(ctx context.Context, stdin io.Reader, combined bool, name string, args ...string) ([]byte, error) {
+	v.ui.Detail("$ %s %s", name, strings.Join(args, " "))
+	return v.Runner.Output(ctx, stdin, combined, name, args...)
 }

@@ -49,9 +49,25 @@ In a terminal, limabean shows its interface:
   `rebuild` also [check for unsaved work](lifecycle.md#unsaved-work-is-protected).
 - **Tables** for `ls` and `secrets ls`.
 
-When output isn't a terminal (pipes, scripts, CI), or with `--plain` or
-`LIMABEAN_PLAIN=1`, it prints plain text and never prompts: missing names
-are errors, and questions take their defaults.
+When output isn't a terminal (pipes, scripts, CI), or with `--plain`,
+`LIMABEAN_PLAIN=1` or `TERM=dumb`, it prints plain text and never prompts:
+missing names are errors, and questions take their defaults.
+
+## Output
+
+- **stdout carries only data:** tables, `--json`, the reports of `ps`,
+  `doctor` and the `status` commands, `recipes --print`, `logs`. Status
+  lines, progress, hints and prompts go to stderr, so
+  `limabean ls --json | jq` and `limabean ps > state.txt` get only the
+  result.
+- **An empty result** prints nothing on stdout (`[]` with `--json`), and a
+  note on stderr in a terminal.
+- **Color only adds**: every colored mark also has a word or symbol. It's
+  off with `NO_COLOR=1`, `--no-color`, `TERM=dumb`, or when output isn't a
+  terminal.
+- `-q`/`--quiet` prints only errors, and the data a command returns.
+  `-v`/`--verbose` also prints each `limactl` and ssh command limabean runs;
+  with both, `--verbose` wins.
 
 ## Settings
 
@@ -91,4 +107,7 @@ Global flags:
 |---|---|
 | `--config <file>` | Use another config file |
 | `--plain` | Plain text, no prompts (`LIMABEAN_PLAIN=1`) |
+| `--no-color` | No color (`NO_COLOR=1`) |
+| `-q`, `--quiet` | Only errors, and the data a command returns |
+| `-v`, `--verbose` | Also the `limactl` and ssh commands limabean runs |
 | `--templates <dir>` | Read templates from a directory instead of the built-in copy (`LIMABEAN_TEMPLATES`); see [Customizing](customizing.md) |

@@ -3,6 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/ui"
+
 	"github.com/rossedman/limabean/internal/github"
 )
 
@@ -18,6 +20,9 @@ A missing token in a running VM is fixed with "limabean github sync".`,
 		Example: `  limabean github status`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// The report is the result, so it goes to stdout.
+			defer func(u *ui.UI) { a.UI = u }(a.UI)
+			a.UI = a.UI.Report()
 			ctx := cmd.Context()
 			token, err := a.Keychain.Get(a.githubService())
 			if err != nil {

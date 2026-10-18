@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/ui"
 )
 
 func newAutostopStatusCmd(a *App) *cobra.Command {
@@ -17,6 +19,9 @@ long an unused VM is stopped. To see what it would do right now, run
 		Example: `  limabean autostop status`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// The report is the result, so it goes to stdout.
+			defer func(u *ui.UI) { a.UI = u }(a.UI)
+			a.UI = a.UI.Report()
 			plist, err := os.ReadFile(autostopPlist())
 			if os.IsNotExist(err) {
 				a.UI.Info("Autostop is off")

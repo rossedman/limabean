@@ -14,6 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/ui"
+
 	"github.com/rossedman/limabean/internal/config"
 	"github.com/rossedman/limabean/internal/secrets"
 )
@@ -41,6 +43,9 @@ It exits non-zero if something needs fixing, so it can gate scripts.`,
   limabean doctor --plain >/dev/null || echo "fix limabean first"`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// The report is the result, so it goes to stdout.
+			defer func(u *ui.UI) { a.UI = u }(a.UI)
+			a.UI = a.UI.Report()
 			if !a.doctor(cmd.Context()) {
 				a.UI.Box("Fix the items marked ✗ above.")
 				return errSilent

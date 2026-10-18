@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/ui"
 )
 
 // psPort is a port in ps: one something listens on, or one the project
@@ -112,8 +114,10 @@ ps changes nothing. For every VM at once, use limabean ls.`,
 	return cmd
 }
 
-// psShow prints ps for people.
+// psShow prints ps for people, on stdout: the report is the result.
 func (a *App) psShow(e psEntry) {
+	defer func(u *ui.UI) { a.UI = u }(a.UI)
+	a.UI = a.UI.Report()
 	a.UI.Section(e.Name, "from "+e.File)
 	vm := e.Status
 	if e.Status == "none" {
