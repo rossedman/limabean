@@ -44,7 +44,7 @@ Claude Desktop as an SSH connection.
 ## Quick start
 
 ```bash
-brew install rossedman/tap/limabean   # installs Lima too; or: go install, or a release
+brew install rossedman/tap/limabean   # installs Lima too
 
 limabean init       # save settings, fix ~/.ssh/config, check your setup
 
@@ -57,8 +57,11 @@ limabean ssh dev    # or: ssh lima-dev
 cd ~/src/myapp && limabean up   # the VM a repository's .limabean.yaml describes
 ```
 
-Prebuilt binaries for Apple Silicon and Intel are on the
-[releases page](https://github.com/rossedman/limabean/releases).
+Upgrade with `brew upgrade limabean`. To install without the tap, get Lima
+2.0 or newer first, then a binary from the
+[releases page](https://github.com/rossedman/limabean/releases) or
+`go install github.com/rossedman/limabean/cmd/limabean@latest`
+([getting started](https://rossedman.github.io/limabean/getting-started/)).
 
 ## Use it with Claude
 

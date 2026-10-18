@@ -4,7 +4,7 @@
 
 {% set gh = "https://github.com/rossedman/limabean" %}
 {% set mcp_cmd = "claude mcp add --scope user limabean -- limabean mcp" %}
-{% set install = "go install github.com/rossedman/limabean/cmd/limabean@latest" %}
+{% set install = "brew install rossedman/tap/limabean" %}
 
 {% block tabs %}
 {{ super() }}
@@ -128,15 +128,14 @@
         <p class="lb-eyebrow">Quick start</p>
         <h2>Zero to a shell<br><span>in four commands.</span></h2>
         <p class="lb-lede">limabean is a single binary with its VM templates built in. All it needs is macOS and
-          <a href="https://lima-vm.io">Lima</a> 2.0 or newer. Prebuilt binaries for Apple Silicon and Intel are on the
-          <a href="{{ gh }}/releases">releases page</a>.</p>
+          <a href="https://lima-vm.io">Lima</a> 2.0 or newer, and Homebrew installs Lima along with it. Prefer not to use
+          Homebrew? Binaries for Apple Silicon and Intel are on the <a href="{{ gh }}/releases">releases page</a>.</p>
         <a class="lb-btn" href="{{ 'getting-started/' | url }}">{% include ".icons/material/book-open-page-variant-outline.svg" %} Full getting-started guide</a>
       </div>
       <ol class="lb-steps">
         <li>
-          <h4>Install Lima and limabean</h4>
-          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> brew install lima
-<span class="p">$</span> {{ install }}</code></pre>
+          <h4>Install limabean and Lima</h4>
+          <pre class="lb-code"><button class="lb-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> {{ install }}</code></pre>
         </li>
         <li>
           <h4>Set up once</h4>
