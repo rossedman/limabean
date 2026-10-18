@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/rossedman/limabean/internal/project"
 )
 
 func TestUp(t *testing.T) {
@@ -126,18 +124,17 @@ func TestUpClaude(t *testing.T) {
 	}
 	if err := os.WriteFile(file, []byte(`claude:
   marketplaces:
-    guardrails: rossedman/guardrails
-    internal: https://git.example.com/team/plugins.git
-  plugins: [guardrails@guardrails]
-  skills: [anthropics/skills/skills/pdf]
+    - marketplace: rossedman/guardrails
+      plugins: [guardrails@guardrails]
+    - marketplace: https://git.example.com/team/plugins.git
+      plugins: [review@team, deploy@team]
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	out, _ := h.run("", "up", "--file", file)
 	for _, want := range []string{
-		"claude marketplaces: guardrails (rossedman/guardrails), internal (https://git.example.com/team/plugins.git)",
-		"claude plugins: guardrails@guardrails",
-		"claude skills: anthropics/skills/skills/pdf",
+		"claude plugins from rossedman/guardrails: guardrails@guardrails",
+		"claude plugins from https://git.example.com/team/plugins.git: review@team, deploy@team",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("plan missing %q:\n%s", want, out)
@@ -145,14 +142,15 @@ func TestUpClaude(t *testing.T) {
 	}
 
 	out = h.must("", "up", "--file", file, "--yes")
-	if !strings.Contains(out, "Claude Code in agent gets: 1 plugin and 1 skill") {
+	if !strings.Contains(out, "Claude plugins for agent: guardrails@guardrails, review@team, deploy@team") {
 		t.Errorf("out:\n%s", out)
 	}
 	// The list reaches the VM as base64 JSON on stdin, never on a command line.
 	in := h.world.sshStdin["agent"]
 	line, _, _ := strings.Cut(in, "\n")
 	data, err := base64.StdEncoding.DecodeString(strings.Trim(strings.TrimPrefix(line, "DATA = "), `"`))
-	if err != nil || !strings.Contains(string(data), `"guardrails@guardrails"`) || !strings.Contains(in, "enabledPlugins") {
+	if err != nil || !strings.Contains(string(data), `"team":"https://git.example.com/team/plugins.git"`) ||
+		!strings.Contains(string(data), `"guardrails@guardrails"`) || !strings.Contains(in, "enabledPlugins") {
 		t.Errorf("stdin: %q (%s, %v)", in, data, err)
 	}
 	if strings.Contains(strings.Join(h.world.calls, "\n"), "rossedman/guardrails") {
@@ -162,13 +160,7 @@ func TestUpClaude(t *testing.T) {
 	// A failure is a warning: the VM is still there and usable.
 	h.world.vms = map[string]string{}
 	h.world.claudeErr = true
-	out = h.must("", "up", "--file", file, "--yes")
-	if !strings.Contains(out, "couldn't install skills: a/b/c") || !strings.Contains(out, "limabean network allow agent github") {
+	if out := h.must("", "up", "--file", file, "--yes"); !strings.Contains(out, "Claude plugins not added") {
 		t.Errorf("failure:\n%s", out)
-	}
-
-	// Marketplaces alone.
-	if s := claudeSummary(project.Claude{Marketplaces: map[string]string{"a": "b/c"}}); s != "1 marketplace" {
-		t.Errorf("summary = %q", s)
 	}
 }

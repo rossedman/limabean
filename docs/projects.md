@@ -101,9 +101,7 @@ Every key is optional.
 | `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
 | `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
 | `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
-| `claude.marketplaces` | map | none | Plugin marketplaces for Claude Code in the VM: `name: owner/repo` (GitHub) or `name: https://…` (git) |
-| `claude.plugins` | list | none | Plugins to turn on, as `plugin@marketplace`; the marketplace must be listed above |
-| `claude.skills` | list | none | Skills to copy into `~/.claude/skills`: `owner/repo/path/to/skill` on GitHub, optionally `@branch` or `@tag` |
+| `claude.marketplaces` | list | none | [Claude plugins](#claude-plugins) for the VM: each entry a `marketplace` (GitHub `owner/repo` or an https git URL) and the `plugins` to turn on from it, as `plugin@marketplace` |
 
 Unknown keys, malformed names and out-of-range values are errors, so a typo
 doesn't go unnoticed. A complete file:
@@ -127,9 +125,8 @@ setup: |
   cargo fetch
 claude:
   marketplaces:
-    guardrails: rossedman/guardrails
-  plugins: [guardrails@guardrails]
-  skills: [anthropics/skills/skills/pdf]
+    - marketplace: rossedman/guardrails
+      plugins: [guardrails@guardrails]
 ```
 
 ### Secrets
@@ -175,36 +172,36 @@ VM's user, with your secrets in the environment. If it fails, `up` stops and
 keeps the VM so you can look: `limabean ssh myapp`. Fix the setup and start
 over with `limabean rm myapp && limabean up`.
 
-### Claude plugins and skills
+### Claude plugins
 
-`claude` gives Claude Code in the VM plugins and skills. It's the same
-whether Claude runs from the [`claude` pack](packs.md#claude-code-in-a-vm)
-or from [Claude Desktop](claude-desktop.md) over SSH:
+`claude` turns on plugins for Claude Code in the VM, whether it runs from
+the [`claude` pack](packs.md#claude-code-in-a-vm) or from
+[Claude Desktop](claude-desktop.md) over SSH. Skills, agents, hooks and
+MCP servers all come inside plugins:
 
 ```yaml
 claude:
   marketplaces:
-    guardrails: rossedman/guardrails                      # GitHub
-    team: https://git.example.com/platform/plugins.git    # any git host, over https
-  plugins: [guardrails@guardrails, review@team]
-  skills:
-    - anthropics/skills/skills/pdf
-    - acme/claude-skills/release-notes@v2
+    - marketplace: rossedman/guardrails                    # GitHub owner/repo
+      plugins: [guardrails@guardrails]
+    - marketplace: https://git.example.com/platform/plugins.git   # any git host, over https
+      plugins: [review@platform, deploy@platform]
 ```
 
-- **Plugins** go into the VM's `~/.claude/settings.json`: each marketplace
-  under `extraKnownMarketplaces` and each plugin under `enabledPlugins`.
-  Claude Code adds the marketplace and installs the plugin when a session
-  starts. Settings already there are kept.
-- **Skills** are directories with a `SKILL.md`. Each is copied from its
-  repository into `~/.claude/skills/<name>`, where `<name>` is the path's
-  last part, so two skills can't share one.
-- Everything is fetched **inside the VM**, after the clone and before
-  `setup`, through git with the VM's own credentials (a private repository
-  works if [`limabean github login`](github.md) gave VMs access). A VM with a
+- Plugins are `plugin@marketplace`, where the marketplace is the name in
+  its `marketplace.json` (often the repository's name). The plugins in one
+  entry share it; another marketplace is another entry.
+- `up` adds each marketplace to the VM's `~/.claude/settings.json` under
+  `extraKnownMarketplaces`, and each plugin under `enabledPlugins`. Settings
+  already there are kept. Claude Code adds the marketplace and installs the
+  plugins when a session starts.
+- Claude Code fetches them **inside the VM**, with the VM's own git
+  credentials (a private repository works if
+  [`limabean github login`](github.md) gave VMs access). A VM with a
   network allowlist needs `github`, or the marketplace's host.
-- If something can't be fetched, `up` warns and carries on; the VM is fine
-  without it. Change the list, then `limabean rm myapp && limabean up`.
+- To change the list, edit the file, then
+  `limabean rm myapp && limabean up`. To turn a plugin off in one VM, set it
+  to `false` in that VM's `~/.claude/settings.json`.
 
 A repository can also keep its own `.claude/settings.json` with
 `enabledPlugins` and `extraKnownMarketplaces`; Claude Code reads that in
@@ -262,8 +259,8 @@ your shared secrets. So `up` never acts on it blindly:
 - In a terminal, it shows what the file asks for, setup commands included,
   and asks before creating anything.
 - Without a terminal it shows the same and stops, unless you pass `--yes`.
-- Claude marketplaces, plugins and skills are fetched and run inside the
-  VM, never on your Mac, and the plan lists every one of them.
+- Claude plugins are fetched and run inside the VM, never on your Mac,
+  and the plan lists every one of them.
 - The file can only **name** secrets. It can't say where a value comes from,
   so it can't run a command on your Mac (as a `cmd:` reference would) or
   read a Keychain item you didn't already give VMs.

@@ -10,7 +10,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
 | `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--with` and `--without` change its [packs](packs.md); `--allow`, `--locked` and `--learn` set its [network policy](network.md); `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
-| `limabean up` | Creates or starts the VM a repository's [`.limabean.yaml`](projects.md) describes, clones the repository, adds its Claude plugins and skills, and runs its setup |
+| `limabean up` | Creates or starts the VM a repository's [`.limabean.yaml`](projects.md) describes, clones the repository, turns on its Claude plugins, and runs its setup |
 | `limabean run [flags] -- <cmd>` | Creates a VM, runs one command in it (in a fresh clone with `--repo`), and with `--rm` deletes it after; exits with the command's status ([details](lifecycle.md#throwaway-vms)) |
 | `limabean packs` | Lists the [packs](packs.md) of tools a VM can get and which new VMs get by default; `--json` for scripts |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets, network and SSH host, and when throwaway ones expire; `--json` prints them for scripts |
