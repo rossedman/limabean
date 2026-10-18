@@ -355,8 +355,9 @@ An opt-in `--mount` of a host directory (B) is still open.
   - Considered: snapshotting the first real VM before its secrets were
     installed (saves one provision, but risks carrying VM-specific state
     into the image), and Lima's own image caching (only the download).
-- **D17 Guardrails in VMs. Decided: declare the plugin in the VM's user
-  settings.** `features/guardrails.sh` adds the `rossedman/guardrails`
+- **D17 Guardrails in VMs. Superseded by D18: plugins come from a
+  project's `.limabean.yaml`, so no plugin is in every VM.** Originally:
+  declare the plugin in the VM's user settings. `features/guardrails.sh` adds the `rossedman/guardrails`
   marketplace and `guardrails@guardrails` to `~/.claude/settings.json` on
   every boot, only where they're missing, so `false` sticks. Claude Code
   fetches a plugin enabled in user settings when a session starts, with no

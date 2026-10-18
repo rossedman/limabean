@@ -84,11 +84,10 @@ hosts, ask for a locked sandbox: *"create a locked VM that can only reach
 github and python"*. Nothing runs on your Mac, Claude never sees secret values,
 and deleting or restoring VMs needs `--allow-destructive`.
 
-Claude Code in a VM is held to your standards:
-[guardrails](https://github.com/rossedman/guardrails) is on in every VM, so
-edits are formatted and linted and a turn can't end until the tests pass. A
-project's `.limabean.yaml` can turn on more plugins, and the `claude-agent`
-recipe is a locked-down sandbox to start from.
+A project's `.limabean.yaml` can turn on Claude Code plugins in its VM, such
+as [guardrails](https://github.com/rossedman/guardrails) to hold Claude to
+your standards, and the `claude-agent` recipe is a locked-down sandbox to
+start from.
 
 [Claude and MCP](docs/mcp.md) covers Claude Desktop, example prompts, every
 tool and the safety model.

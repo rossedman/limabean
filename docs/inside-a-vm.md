@@ -28,8 +28,6 @@ remote.
   goimports, golangci-lint and `go vet`; ruff and yamllint; shellcheck and
   shfmt. shellcheck and shfmt are in every VM; the rest come with the `go`
   and `python` packs.
-- **[guardrails](https://github.com/rossedman/guardrails)**, turned on for
-  Claude Code in the VM. See [Claude Desktop](claude-desktop.md#guardrails).
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,
   httpie, jq, tree, htop, watch, speedtest-cli, build-essential, python3, pip,
   and venv.
