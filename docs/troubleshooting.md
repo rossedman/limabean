@@ -19,8 +19,9 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | macOS says limabean "cannot be opened" after downloading | The binary is quarantined (Homebrew clears this itself): `xattr -d com.apple.quarantine ~/.local/bin/limabean`. |
 | The editor says `Unable to resolve resource vscode-remote://ssh-remote+lima-…` | It has no Remote - SSH extension; VS Code Insiders and VSCodium don't share VS Code's extensions. `limabean code` offers to install it, or run `code-insiders --install-extension ms-vscode-remote.remote-ssh` (`codium --install-extension jeanp413.open-remote-ssh`). |
 | A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean up <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
-| `limabean up` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
-| `limabean up` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it is `~/.lima/<name>/ha.stderr.log`. |
+| A project's `start` doesn't seem to run | `limabean logs --start` shows its output. `up` doesn't run changed start commands until you approve them, and leaves one that's still running alone. |
+| `limabean up` hangs on "mise tools are installed" | Read the provisioning log: `limabean logs <name>` (`-f` to follow it). |
+| `limabean up` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it: `limabean logs <name> --lima`. |
 | A new VM wasn't fast | It was the first of its kind (environment and packs), or the templates changed since its image was built: an image is being built in the background (`~/Library/Logs/limabean-images.log`). `limabean images ls` shows what there is. |
 | A VM runs out of disk (`no space left on device`) | Docker images live on the 10 GiB system disk; `~/code` has its own. `docker system prune` frees space; for more, set `DISK="30"` (or `up --disk 30`) and `limabean rebuild <name>`. |
 | `limabean up` says to run again with `--yes` | It needs your OK to act on the file, and there's no terminal to ask in. Read the plan it printed, then pass `--yes`. |

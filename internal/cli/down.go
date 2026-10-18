@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -54,27 +56,9 @@ without a name every running VM is checked. A VM is in use while:
 				}
 				return a.stopIdle(ctx, args, idle, dryRun)
 			}
-			name := ""
-			if len(args) == 1 {
-				name = args[0]
-			} else {
-				_, f, err := findProject(file)
-				if err != nil {
-					return err
-				}
-				if f != nil {
-					if _, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
-						return err
-					} else if !ok {
-						a.UI.Info("%s has no VM yet; limabean up creates it", f.Name)
-						return nil
-					}
-					name = f.Name
-				} else if !a.UI.Prompting {
-					return errors.New("no .limabean.yaml here or in a parent directory; name the VM: limabean down <name>")
-				} else if name, err = a.vmArg(ctx, args, "stop"); err != nil {
-					return err
-				}
+			name, err := a.targetVM(ctx, args, file, "down", "stop")
+			if err != nil || name == "" {
+				return err
 			}
 			inst, err := a.vm(ctx, name)
 			if err != nil {
@@ -92,4 +76,29 @@ without a name every running VM is checked. A VM is in use while:
 	cmd.Flags().DurationVar(&idle, "idle", 0, "only stop VMs unused for this long, e.g. 2h; without a name, every running VM is checked")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "with --idle, show which VMs would stop without stopping them")
 	return cmd
+}
+
+// targetVM is the VM a command acts on: the one named, else the project's
+// (from its .limabean.yaml), else one picked in a terminal ("VM to verb").
+// It returns "" when the project has no VM yet, after saying so.
+func (a *App) targetVM(ctx context.Context, args []string, file, command, verb string) (string, error) {
+	if len(args) == 1 {
+		return args[0], nil
+	}
+	_, f, err := findProject(file)
+	switch {
+	case err != nil:
+		return "", err
+	case f != nil:
+		if _, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
+			return "", err
+		} else if !ok {
+			a.UI.Info("%s has no VM yet; limabean up creates it", f.Name)
+			return "", nil
+		}
+		return f.Name, nil
+	case !a.UI.Prompting:
+		return "", fmt.Errorf("no .limabean.yaml here or in a parent directory; name the VM: limabean %s <name>", command)
+	}
+	return a.vmArg(ctx, args, verb)
 }

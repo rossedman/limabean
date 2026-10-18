@@ -89,7 +89,7 @@ func TestUpAppliesChanges(t *testing.T) {
 	h.world.ghq = "/home/me.linux/code/github.com/me/app\n"
 	h.world.calls = nil
 	h.must("", "up", "--file", file, "--setup")
-	if !h.world.called("attach ssh app cd '/home/me.linux/code/github.com/me/app' && 'bash' '-ec' 'make deps'") {
+	if !strings.Contains(strings.Join(h.world.calls, "\n"), "attach ssh app mkdir -p") || !strings.Contains(strings.Join(h.world.calls, "\n"), "cd '/home/me.linux/code/github.com/me/app' && 'bash' '-ec' 'make deps'; } 2>&1 | tee") {
 		t.Errorf("setup: %v", h.world.calls)
 	}
 }

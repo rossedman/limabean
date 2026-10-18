@@ -55,7 +55,7 @@ setup: |
 
 	out = h.must("", "up", "--file", file, "--yes")
 	calls := strings.Join(h.world.calls, "\n")
-	for _, want := range []string{"limactl start --name=myapp", "--cpus 6", "--memory 12", "50-rust.toml", "lima-myapp ghq get 'github.com/me/myapp'", "attach ssh myapp cd '/home/me.linux/code/github.com/me/myapp' && 'bash' '-ec' 'make deps\nmake db\n'", "systemctl start limabean-network"} {
+	for _, want := range []string{"limactl start --name=myapp", "--cpus 6", "--memory 12", "50-rust.toml", "lima-myapp ghq get 'github.com/me/myapp'", "cd '/home/me.linux/code/github.com/me/myapp' && 'bash' '-ec' 'make deps\nmake db\n'; } 2>&1 | tee \"$HOME/.local/state/limabean/setup.log\"", "systemctl start limabean-network"} {
 		if !strings.Contains(calls, want) {
 			t.Errorf("calls missing %q:\n%s", want, calls)
 		}

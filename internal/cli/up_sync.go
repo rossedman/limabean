@@ -28,6 +28,8 @@ type upChanges struct {
 	widening []string   // commands for network changes the file can't make
 
 	secrets []secrets.Secret // the file's secrets the VM doesn't have yet
+
+	start bool // start commands that differ from the ones last approved
 }
 
 // empty reports whether the VM already matches the file.
@@ -73,6 +75,15 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 
 	if err := a.diffNetwork(&c, inst, f); err != nil {
 		return c, err
+	}
+
+	if f.Start != a.approvedStart(inst.Name) {
+		c.start = true
+		if f.Start == "" {
+			c.lines = append(c.lines, "start: none")
+		} else {
+			c.lines = append(c.lines, startPlan(f.Start)...)
+		}
 	}
 
 	mine, _ := secrets.Load(a.Cfg.Dir(), inst.Name)
@@ -162,7 +173,7 @@ func packList(packs []string, known bool) string {
 
 // upExisting brings an existing project VM in line with its file: it shows
 // what differs, asks, and applies it, then starts the VM if it's stopped.
-func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.File, dir string, yes, setup bool) error {
+func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.File, dir string, opt upOptions) error {
 	own, missing := a.projectSecrets(f.Secrets)
 	c, err := a.upDiff(inst, f, own)
 	if err != nil {
@@ -174,7 +185,21 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 	if !c.empty() {
 		a.UI.Section(f.Name, "changes from "+shortPath(filepath.Join(dir, project.FileName)))
 		a.UI.Hint(c.lines...)
-		if !yes {
+	}
+	if opt.dryRun {
+		if len(c.widening) > 0 {
+			a.UI.Warn("The file allows more than %s does now, which only you can change:", f.Name)
+			a.UI.Hint(c.widening...)
+		}
+		if c.empty() {
+			a.UI.OK("%s is up to date", a.UI.Code(f.Name))
+		} else {
+			a.UI.Info("Nothing changed (--dry-run)")
+		}
+		return nil
+	}
+	if !c.empty() {
+		if !opt.yes {
 			if !a.UI.Prompting {
 				return errors.New("check the changes above, then run again with --yes to apply them")
 			}
@@ -191,13 +216,18 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 	if inst, err = a.upApply(ctx, inst, f, c); err != nil {
 		return err
 	}
+	if c.start {
+		if err := a.approveStart(inst.Name, f.Start); err != nil {
+			return err
+		}
+	}
 	if len(c.widening) > 0 {
 		a.UI.Warn("The file allows more than %s does now, which only you can change:", f.Name)
 		a.UI.Hint(c.widening...)
 	}
 	a.upClaude(ctx, inst, f.Claude)
 	clone := ""
-	if setup {
+	if opt.setup {
 		repo := a.projectRepo(ctx, f, dir)
 		if repo == "" {
 			return errors.New("no repository to run setup in: the checkout has no origin, and the file names no repo")
@@ -209,6 +239,18 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 			a.UI.Info("The file has no setup to run")
 		} else if err := a.upSetup(inst, f, clone); err != nil {
 			return err
+		}
+	}
+	if f.Start != "" {
+		if f.Start != a.approvedStart(inst.Name) {
+			a.UI.Warn("start changed and wasn't approved, so it didn't run")
+		} else {
+			if clone == "" {
+				clone = a.projectDir(ctx, inst, f, dir)
+			}
+			if err := a.runStart(ctx, inst, f, clone); err != nil {
+				return err
+			}
 		}
 	}
 	if c.empty() {
