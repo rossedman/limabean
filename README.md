@@ -164,7 +164,8 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean completion <shell>` | Print a completion script for bash, zsh, fish or PowerShell |
-| `limabean version` | Print the version |
+| `limabean version` | Print the version (`--json` for scripts) |
+| `limabean help --json` | Describe every command and flag as JSON, for scripts and agents |
 
 ## Documentation
 

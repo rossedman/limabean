@@ -46,7 +46,10 @@ const usageTemplate = `{{heading "Usage:"}}{{if .Runnable}}
 {{heading "Global flags:"}}
 {{flags (.InheritedFlags.FlagUsages | trimTrailingWhitespaces)}}{{end}}{{if .HasAvailableSubCommands}}
 
-{{dim (printf "Run \"%s [command] --help\" for more about a command." .CommandPath)}}{{end}}
+{{dim (printf "Run \"%s [command] --help\" for more about a command." .CommandPath)}}{{end}}{{if not .HasParent}}
+
+{{dim "Docs:   https://rossedman.github.io/limabean/"}}
+{{dim "Issues: https://github.com/rossedman/limabean/issues"}}{{end}}
 `
 
 // setupHelp gives every command limabean's help and usage templates.

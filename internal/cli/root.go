@@ -51,6 +51,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 	}
 	root.SetVersionTemplate("limabean {{.Version}}\n")
 	setupHelp(root, a)
+	root.SetHelpCommand(newHelpCmd(a))
 	root.CompletionOptions.DisableDefaultCmd = true
 
 	pf := root.PersistentFlags()

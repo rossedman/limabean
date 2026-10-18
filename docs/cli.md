@@ -36,7 +36,8 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean claude sync` | Registers running VMs in Claude Desktop and removes stopped or deleted ones |
 | `limabean mcp` | Runs an MCP server so Claude can manage VMs ([details](mcp.md)) |
 | `limabean completion <shell>` | Prints a tab-completion script for bash, zsh, fish or PowerShell |
-| `limabean version` | Prints the version |
+| `limabean version` | Prints the version (`--json` for scripts) |
+| `limabean help [command]` | Shows help; `--json` prints the command tree, with every command's usage and flags, for scripts and agents |
 
 Leave out a VM name and you pick one from a list.
 
@@ -68,6 +69,8 @@ missing names are errors, and questions take their defaults.
 - `-q`/`--quiet` prints only errors, and the data a command returns.
   `-v`/`--verbose` also prints each `limactl` and ssh command limabean runs;
   with both, `--verbose` wins.
+- `limabean help --json` describes every command and flag, and
+  `limabean version --json` the version, Go version and platform.
 
 ## Exit codes
 
