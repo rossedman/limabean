@@ -21,6 +21,7 @@ type upChanges struct {
 	recreate bool     // packs or environment differ: rebuild, keeping ~/code
 	env      string   // the file's environment
 	packs    []string // the file's packs
+	tools    projectTools
 
 	cpus, memory, disk int // a new size, where it differs (0: as it is)
 
@@ -51,6 +52,11 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 	if !known || !slices.Equal(have, packs) {
 		c.recreate = true
 		c.lines = append(c.lines, fmt.Sprintf("packs: %s → %s (rebuild, keeping ~/code)", packList(have, known), packList(packs, true)))
+	}
+	c.tools = toolsOfFile(f)
+	if lines := toolsChanges(a.toolsOf(inst.Name), c.tools); len(lines) > 0 {
+		c.recreate = true
+		c.lines = append(c.lines, lines...)
 	}
 	if env := firstNonEmpty(a.envOf(inst.Name), "scratch"); env != c.env {
 		c.recreate = true
@@ -279,7 +285,7 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 // upApply makes the changes c lists and returns the VM, running.
 func (a *App) upApply(ctx context.Context, inst lima.Instance, f *project.File, c upChanges) (lima.Instance, error) {
 	if c.recreate && a.noRecreate {
-		return inst, fmt.Errorf("the file's packs or environment changed, which rebuilds %s (keeping ~/code); the user can run limabean up, or start the MCP server with --allow-destructive", inst.Name)
+		return inst, fmt.Errorf("the file's packs, tools or environment changed, which rebuilds %s (keeping ~/code); the user can run limabean up, or start the MCP server with --allow-destructive", inst.Name)
 	}
 	if c.recreate {
 		keepsCode := a.hasCodeDisk(ctx, inst.Name)
@@ -309,7 +315,7 @@ func (a *App) upApply(ctx context.Context, inst lima.Instance, f *project.File, 
 		if err := a.putSecrets(inst.Name, c.secrets); err != nil {
 			return inst, err
 		}
-		if err := a.recreate(ctx, inst, c.env, c.packs, keepsCode); err != nil {
+		if err := a.recreate(ctx, inst, c.env, c.packs, c.tools, keepsCode); err != nil {
 			return inst, err
 		}
 		return a.vm(ctx, inst.Name)

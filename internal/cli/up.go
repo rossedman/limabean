@@ -50,6 +50,9 @@ limabean down stops a VM; limabean rm deletes it.
   name: myapp                 # default: the directory's name
   env: scratch                # environment template
   packs: [go, db, claude]     # besides core, Docker and Python (limabean packs)
+  tools:                      # the project's own mise tools, pinned
+    terraform: 1.9.8
+  apt: [libpq-dev]            # and Ubuntu packages
   cpus: 6
   memory: 12                  # GiB
   disk: 30                    # GiB of system disk
@@ -243,6 +246,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
 	plan := []string{"env: " + firstNonEmpty(f.Env, "scratch")}
 	plan = append(plan, "packs: "+strings.Join(append([]string{"core"}, f.Packs...), ", "))
+	plan = append(plan, toolsPlan(toolsOfFile(f))...)
 	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
 		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
 	}
@@ -308,7 +312,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	if f.Disk > 0 {
 		a.Cfg.Disk = f.Disk
 	}
-	o := createOptions{Name: f.Name, Env: firstNonEmpty(f.Env, "scratch")}
+	o := createOptions{Name: f.Name, Env: firstNonEmpty(f.Env, "scratch"), Tools: toolsOfFile(f)}
 	if err := a.prepareVM(&o, vmChoices{secrets: own, exact: true, with: f.Packs, allow: f.Network.Allow, locked: f.Network.Locked}); err != nil {
 		return err
 	}

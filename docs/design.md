@@ -476,6 +476,18 @@ An opt-in `--mount` of a host directory (B) is still open.
   limabean can't connect without the `Include`). The hidden `new`, `start`
   and `stop` print a note naming what replaced them. No removal date is
   set.
+- **D26 Project tools and a schema. Decided: a project file names its own
+  tools, and editors check it.** `tools:` (mise, `tool: version`) and
+  `apt:` cover what no pack has, without a pack on every Mac. They're
+  written into the VM next to the packs' lists at creation
+  (`90-project.toml`, `_project.list`), so the same boot scripts install
+  them and VMs copied from an image get them; a change rebuilds, as a pack
+  change does, since a locked VM has no sudo to install them live. Only
+  names and versions are accepted, so the file can't break out of the
+  TOML or the apt list, and nothing runs on the Mac. The JSON Schema
+  published with the docs is generated from Go, using `project.Load`'s own
+  patterns; tests fail if a key is missing from it, if the published copy
+  is stale, or if a recipe doesn't validate.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

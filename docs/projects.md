@@ -66,6 +66,20 @@ The VM is a normal limabean VM: `limabean ssh myapp`, `limabean code myapp`,
 Claude Desktop and MCP all work with it. Commit the file so everyone on the
 project gets the same VM.
 
+### In your editor
+
+limabean publishes a [JSON Schema](limabean.schema.json) for the file.
+Editors with the YAML language server (VS Code and Cursor with the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
+Zed, Neovim and others) then complete keys, pack names and network
+presets, and flag a typo or a refused name while you type. Files written by
+`limabean recipes` already start with the line that turns it on; add it to
+a file you wrote by hand:
+
+```yaml
+# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
+```
+
 ## Every day
 
 Like `docker compose`, `up` and `down` work from the checkout, wherever you
@@ -98,7 +112,7 @@ Apply these changes to myapp? Yes
 
 | Change | What `up` does |
 |---|---|
-| `packs`, `env` | Rebuilds the VM, as [`limabean rebuild`](lifecycle.md) does: `~/code` and its repositories are kept on their own disk, the rest of the system is fresh |
+| `packs`, `tools`, `apt`, `env` | Rebuilds the VM, as [`limabean rebuild`](lifecycle.md) does: `~/code` and its repositories are kept on their own disk, the rest of the system is fresh |
 | `cpus`, `memory` | Stops the VM, resizes it and starts it again |
 | `disk` | Grows the disk the same way; Lima can't shrink one, so a smaller number is only a warning |
 | `secrets` | Gives the VM the secrets it doesn't have yet |
@@ -124,6 +138,8 @@ Every key is optional.
 | `env` | string | `scratch` | The [environment template](customizing.md) |
 | `repo` | string | the checkout's `origin` | What to clone: `owner/repo`, `host/owner/repo` or a URL |
 | `packs` | list | none | The VM's [packs](packs.md) besides `core`; the `PACKS` setting doesn't apply, so everyone gets the same VM |
+| `tools` | map | none | The project's own [mise tools](#tools-and-apt), `tool: version`, for what no pack has |
+| `apt` | list | none | The project's own [Ubuntu packages](#tools-and-apt) |
 | `cpus` | number | `CPUS`, or 2 | CPUs |
 | `memory` | number | `MEMORY`, or 4 | GiB of memory |
 | `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
@@ -160,6 +176,30 @@ claude:
     - marketplace: rossedman/guardrails
       plugins: [guardrails@guardrails]
 ```
+
+### Tools and apt
+
+When a project needs a tool or a system package that no [pack](packs.md)
+has, list it in the file instead of making a pack on every Mac:
+
+```yaml
+tools:                        # mise tools, tool: version
+  terraform: 1.9.8
+  "npm:@biomejs/biome": 2.1.2 # any mise backend: aqua:, npm:, pipx:, cargo:, go:
+apt: [libpq-dev, graphviz]    # Ubuntu packages
+```
+
+- They're installed in the VM when it's created, the same way packs are,
+  so a VM [copied from an image](lifecycle.md#fast-vms-images) gets them
+  too. A change to them rebuilds the VM, keeping `~/code`, as a change to
+  `packs` does; `limabean rebuild` keeps them.
+- Pin exact versions, as packs do, so everyone gets the same tools.
+  `limabean bump` doesn't update these; edit the file.
+- A tool a pack already pins is best left to the pack.
+- Like packs, they're installed at the VM's first boot, before its
+  [network policy](#network) applies, so a `locked` VM still gets them.
+- Names and versions are checked: only letters, digits and `._@/:+-`
+  for tools, Debian package names for `apt`.
 
 ### Vars
 

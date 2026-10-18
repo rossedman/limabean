@@ -52,7 +52,7 @@ func TestRecipesCmd(t *testing.T) {
 	if !strings.Contains(out, "go-service") || !strings.Contains(out, "A Go service with Postgres in Docker.") {
 		t.Errorf("list:\n%s", out)
 	}
-	if out := h.must("", "recipes", "rust", "--print"); !strings.HasPrefix(out, "# A Rust crate or CLI.") {
+	if out := h.must("", "recipes", "rust", "--print"); !strings.HasPrefix(out, project.SchemaComment+"# A Rust crate or CLI.") {
 		t.Errorf("print:\n%s", out)
 	}
 	if _, err := h.run("", "recipes", "cobol"); err == nil || !strings.Contains(err.Error(), "there are: claude-agent") {
@@ -68,14 +68,14 @@ func TestRecipesCmd(t *testing.T) {
 	if out := h.must("", "recipes", "rust"); !strings.Contains(out, "from the rust recipe") {
 		t.Errorf("write:\n%s", out)
 	}
-	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), "# A Rust crate") {
+	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), project.SchemaComment+"# A Rust crate") {
 		t.Errorf("written: %q", b)
 	}
 	if _, err := h.run("", "recipes", "go-service"); err == nil || !strings.Contains(err.Error(), "--overwrite") {
 		t.Errorf("overwrite without --overwrite: %v", err)
 	}
 	h.must("", "recipes", "go-service", "--overwrite")
-	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), "# A Go service") {
+	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), project.SchemaComment+"# A Go service") {
 		t.Errorf("forced: %q", b)
 	}
 
@@ -90,7 +90,7 @@ func TestRecipesCmd(t *testing.T) {
 	if _, err := os.Stat(project.FileName); err == nil {
 		t.Error("wrote .limabean.yaml beside .limabean.yml")
 	}
-	if b, _ := os.ReadFile(".limabean.yml"); !strings.HasPrefix(string(b), "# The smallest VM") {
+	if b, _ := os.ReadFile(".limabean.yml"); !strings.HasPrefix(string(b), project.SchemaComment+"# The smallest VM") {
 		t.Errorf(".yml: %q", b)
 	}
 

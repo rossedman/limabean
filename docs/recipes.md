@@ -13,7 +13,9 @@ limabean up
 `limabean recipes <name> --print` shows one without writing it, and
 `--overwrite` replaces a project file that's already there. Every recipe is a
 plain project file: change the packs, size, ports and setup to fit, and
-commit it so everyone on the project gets the same VM.
+commit it so everyone on the project gets the same VM. Its first line
+points your editor at the file's [schema](projects.md#in-your-editor), so
+keys and pack names complete as you edit.
 
 The recipes live in
 [`recipes/`](https://github.com/rossedman/limabean/tree/main/recipes), and
