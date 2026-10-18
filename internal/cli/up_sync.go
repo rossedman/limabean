@@ -278,6 +278,9 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 
 // upApply makes the changes c lists and returns the VM, running.
 func (a *App) upApply(ctx context.Context, inst lima.Instance, f *project.File, c upChanges) (lima.Instance, error) {
+	if c.recreate && a.noRecreate {
+		return inst, fmt.Errorf("the file's packs or environment changed, which rebuilds %s (keeping ~/code); the user can run limabean up, or start the MCP server with --allow-destructive", inst.Name)
+	}
 	if c.recreate {
 		keepsCode := a.hasCodeDisk(ctx, inst.Name)
 		if !keepsCode {

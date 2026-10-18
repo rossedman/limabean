@@ -355,8 +355,39 @@ func (a *App) projectRepo(ctx context.Context, f *project.File, dir string) stri
 	if f.Repo != "" {
 		return f.Repo
 	}
+	if a.mcpMode {
+		if origin := originFromConfig(dir); origin != "" {
+			return repoQuery(origin)
+		}
+		return ""
+	}
 	if origin, err := gitOrigin(ctx, dir); err == nil {
 		return repoQuery(origin)
+	}
+	return ""
+}
+
+// originFromConfig reads the origin remote's url from a checkout's
+// .git/config as a file, without running git; "" if there's none.
+func originFromConfig(dir string) string {
+	b, err := os.ReadFile(filepath.Join(dir, ".git", "config"))
+	if err != nil {
+		return ""
+	}
+	inOrigin := false
+	for line := range strings.Lines(string(b)) {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "[") {
+			inOrigin = line == `[remote "origin"]`
+			continue
+		}
+		if key, value, ok := strings.Cut(line, "="); ok && inOrigin && strings.TrimSpace(key) == "url" {
+			url := strings.TrimSpace(value)
+			if strings.HasPrefix(url, "-") {
+				return ""
+			}
+			return url
+		}
 	}
 	return ""
 }

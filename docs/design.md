@@ -443,6 +443,23 @@ An opt-in `--mount` of a host directory (B) is still open.
   Mac; different ones are a change `up` shows and asks about, and until
   then neither old nor new run. `up --dry-run` prints the plan or the
   changes and stops.
+- **D24 environment, ps and project tools over MCP. Decided: the project
+  file stays the one description, for people and for Claude.**
+  `environment:` writes plain variables to `~/.config/limabean/project.env`,
+  which `env.sh` sources before `secrets.env` so secrets win; names the
+  shell or linker reads first (`PATH`, `LD_*`, …) and names that are also
+  secrets are refused. The applied set is kept on the Mac so changes are
+  shown and applied live. `ps` combines the VM's status, start, ports and
+  `up`'s pending changes. Over MCP, `project_plan` (read-only) and
+  `project_up` (with `requiresUserInteraction`, so the user approves each
+  call after seeing the plan) run `up` itself, so every rule holds:
+  networks only tighten, start changes need approval, and a rebuild needs
+  `--allow-destructive`. MCP input picks only a directory, whose own
+  regular `.limabean.yaml` is the one file read (no parents, no symlinks,
+  so a call can't turn limabean into a file reader), and the origin comes
+  from parsing `.git/config`, so git never runs on the Mac for a tool
+  call. Setup, which needs a terminal in the CLI, runs without one over
+  MCP and its output goes into the reply.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

@@ -73,7 +73,7 @@ func TestMCPTools(t *testing.T) {
 	h := newHarness(t)
 	cs, stdout := h.mcpClient(false)
 
-	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
+	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "project_down", "project_logs", "project_plan", "project_status", "project_up", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
 	if got := toolNames(t, cs); !slices.Equal(got, safe) {
 		t.Fatalf("tools without --allow-destructive: %v", got)
 	}
@@ -224,7 +224,7 @@ func TestMCPDestructiveTools(t *testing.T) {
 		}
 		// Claude Code asks before every call to these.
 		asks := tool.Meta["anthropic/requiresUserInteraction"] == true
-		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore"}, tool.Name) != asks {
+		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore", "project_up"}, tool.Name) != asks {
 			t.Errorf("%s: anthropic/requiresUserInteraction = %v", tool.Name, asks)
 		}
 	}
