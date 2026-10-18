@@ -41,6 +41,7 @@ internal/keychain/         macOS Keychain via `security`, values on stdin
 internal/claude/           sshConfigs entries in ~/.claude/settings.json
 internal/github/           token checks against the GitHub API
 internal/ui/               lipgloss styles, huh forms, spinners, plain mode
+internal/atomic/           atomic file writes for limabean's own files
 templates.go               embeds templates/ into the binary
 ```
 

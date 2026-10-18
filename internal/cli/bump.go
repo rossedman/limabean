@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/pins"
 	"github.com/rossedman/limabean/internal/secrets"
 )
@@ -194,7 +195,7 @@ func (a *App) bumpFile(ctx context.Context, path string, latest func(context.Con
 	case dryRun:
 		a.UI.Info("%s: %d pin(s) would change (dry run)", path, len(changes))
 	default:
-		if err := os.WriteFile(path, []byte(pins.Rewrite(src, changes)), 0o644); err != nil {
+		if err := atomic.WriteFile(path, []byte(pins.Rewrite(src, changes)), 0o644); err != nil {
 			return false, err
 		}
 		a.UI.OK("%s: updated %d pin(s)", path, len(changes))

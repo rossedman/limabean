@@ -17,6 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/claude"
 	"github.com/rossedman/limabean/internal/config"
 	"github.com/rossedman/limabean/internal/lima"
@@ -487,7 +488,7 @@ func (a *App) saveEnv(name, env string) error {
 	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(a.stateDir, name+".env"), []byte(env+"\n"), 0o644)
+	return atomic.WriteFile(filepath.Join(a.stateDir, name+".env"), []byte(env+"\n"), 0o644)
 }
 
 // envOf returns the environment a VM was built from ("scratch" if unknown).
@@ -703,7 +704,7 @@ func (a *App) savePacks(name string, packs []string) error {
 	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(a.stateDir, name+".packs"), []byte(strings.Join(packs, ",")+"\n"), 0o644)
+	return atomic.WriteFile(filepath.Join(a.stateDir, name+".packs"), []byte(strings.Join(packs, ",")+"\n"), 0o644)
 }
 
 // packsOf returns the packs a VM was built with, and whether that's known
@@ -729,7 +730,7 @@ func (a *App) setTTL(ctx context.Context, name string, ttl time.Duration) error 
 	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(a.stateDir, name+".expires"), []byte(expires.Format(time.RFC3339)+"\n"), 0o644); err != nil {
+	if err := atomic.WriteFile(filepath.Join(a.stateDir, name+".expires"), []byte(expires.Format(time.RFC3339)+"\n"), 0o644); err != nil {
 		return err
 	}
 	a.UI.OK("%s is deleted at %s", name, expires.Format("15:04 Mon"))

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/lima"
 	"github.com/rossedman/limabean/internal/project"
 	"github.com/rossedman/limabean/internal/secrets"
@@ -110,7 +111,7 @@ func (a *App) approveStart(vm, start string) error {
 	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(a.startFile(vm), []byte(start), 0o644)
+	return atomic.WriteFile(a.startFile(vm), []byte(start), 0o644)
 }
 
 // startPlan shows start commands for a plan.

@@ -19,6 +19,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/lima"
 	"github.com/rossedman/limabean/internal/templates"
 )
@@ -163,7 +164,7 @@ func (a *App) saveImage(im image) error {
 		return err
 	}
 	b, _ := json.MarshalIndent(im, "", "  ")
-	return os.WriteFile(filepath.Join(a.imagesDir(), im.Name+".json"), b, 0o644)
+	return atomic.WriteFile(filepath.Join(a.imagesDir(), im.Name+".json"), b, 0o644)
 }
 
 // imageCleanScript runs in a new image before it's shut down. An empty

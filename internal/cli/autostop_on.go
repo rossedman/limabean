@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/rossedman/limabean/internal/atomic"
 )
 
 func newAutostopOnCmd(a *App) *cobra.Command {
@@ -63,7 +65,7 @@ finds limactl where it is now. Its output goes to
 			if err := os.MkdirAll(filepath.Dir(autostopLog()), 0o755); err != nil {
 				return err
 			}
-			if err := os.WriteFile(plist, renderPlist(program, strings.Join(dirs, ":"), autostopInterval), 0o644); err != nil {
+			if err := atomic.WriteFile(plist, renderPlist(program, strings.Join(dirs, ":"), autostopInterval), 0o644); err != nil {
 				return err
 			}
 			// Replace an agent that's already loaded, so a new limit applies.

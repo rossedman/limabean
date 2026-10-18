@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/rossedman/limabean/internal/atomic"
 )
 
 // Secret is one NAME=reference line and the file it came from.
@@ -181,7 +183,7 @@ func Put(path, name, ref string) error {
 	if ref != "" {
 		kept = append(kept, name+"="+ref)
 	}
-	if err := os.WriteFile(path, []byte(strings.Join(kept, "\n")+"\n"), 0o600); err != nil {
+	if err := atomic.WriteFile(path, []byte(strings.Join(kept, "\n")+"\n"), 0o600); err != nil {
 		return err
 	}
 	return os.Chmod(path, 0o600)

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/lima"
 	"github.com/rossedman/limabean/internal/secrets"
 )
@@ -78,7 +79,7 @@ func (a *App) saveEnvironment(vm string, env map[string]string) error {
 		return err
 	}
 	b, _ := json.Marshal(env)
-	return os.WriteFile(a.environmentState(vm), b, 0o644)
+	return atomic.WriteFile(a.environmentState(vm), b, 0o644)
 }
 
 // environmentPlan shows a project's environment for up's plan.

@@ -30,6 +30,12 @@ limabean secrets set AWS_REGION us-east-1                  # a plain setting
 op read op://Private/OpenAI/credential | limabean secrets set OPENAI_API_KEY --from-stdin
 ```
 
+A credential typed on the command line (`secrets set DB_PASSWORD hunter2`,
+or `--secret OPENAI_API_KEY=sk-…`) ends up in your shell history, so
+limabean warns about it, without repeating the value. Leave the value out
+and paste it at the prompt, or use `--from-stdin` or a reference. Plain
+settings like `AWS_REGION` don't get a warning.
+
 `set`, `rm` and `edit` update running VMs straight away; stopped ones get
 the change at their next `limabean secrets sync`. From scripts,
 `limabean up <name> --secret NAME=reference` gives a new VM its own

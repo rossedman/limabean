@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/atomic"
 	"github.com/rossedman/limabean/internal/project"
 	"github.com/rossedman/limabean/recipes"
 )
@@ -111,7 +112,7 @@ func (a *App) writeRecipe(name string, body []byte, force bool) error {
 			return err
 		}
 	}
-	if err := os.WriteFile(target, body, 0o644); err != nil {
+	if err := atomic.WriteFile(target, body, 0o644); err != nil {
 		return err
 	}
 	wd, _ := os.Getwd()

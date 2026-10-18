@@ -15,6 +15,7 @@ internal/lima/       limactl and ssh runner; never imports Lima's Go packages
 internal/project/    .limabean.yaml for `limabean up`
 internal/templates/  the templates directory, packs and environments
 internal/pins/       pinned versions in mise TOML, for `limabean bump`
+internal/atomic/     atomic writes for limabean's own files (config, secrets, state)
 templates/           Lima templates, embedded in the binary: layer-os, layer-base,
                      environments, features/*.sh, files/, packs/
 recipes/             starter .limabean.yaml files for `limabean recipes`, embedded;
@@ -23,7 +24,7 @@ docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 
 `docs/go-cli.md` and `docs/design.md` explain the architecture and the
-decisions (D1–D24); read the relevant note before changing a design.
+decisions (D1–D25); read the relevant note before changing a design.
 
 ## Checks
 

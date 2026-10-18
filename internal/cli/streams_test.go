@@ -101,3 +101,42 @@ func TestYesSkipsOnlyTheQuestion(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigShowsSources(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CPUS", "4")
+	var got []settingEntry
+	if err := json.Unmarshal([]byte(h.must("", "config", "--json", "--templates", t.TempDir())), &got); err != nil {
+		t.Fatal(err)
+	}
+	sources := map[string]string{}
+	for _, e := range got {
+		sources[e.Name] = e.Value + " " + e.Source
+	}
+	if sources["CPUS"] != "4 env" || sources["CODE_DIR"] != "~/code default" || !strings.HasSuffix(sources["TEMPLATES"], " flag") {
+		t.Errorf("sources: %v", sources)
+	}
+	h.must("", "init")
+	if out := h.must("", "config"); !strings.Contains(out, "CODE_DIR") || !strings.Contains(out, `"~/code"`) || !strings.Contains(out, "file") {
+		t.Errorf("table:\n%s", out)
+	}
+}
+
+// Hidden commands kept for scripts say what replaced them, except for
+// autostop agents' stop --idle and with --quiet.
+func TestOldCommandNotes(t *testing.T) {
+	h := newHarness(t)
+	h.world.vms["dev"] = "Stopped"
+	if out := h.must("", "start", "dev"); !strings.Contains(out, `"limabean start" is now "limabean up <name>"`) {
+		t.Errorf("start:\n%s", out)
+	}
+	if out := h.must("", "stop", "dev"); !strings.Contains(out, `"limabean stop" is now "limabean down <name>"`) {
+		t.Errorf("stop:\n%s", out)
+	}
+	if out := h.must("", "stop", "--idle", "2h"); strings.Contains(out, "is now") {
+		t.Errorf("stop --idle:\n%s", out)
+	}
+	if out := h.must("", "stop", "dev", "-q"); strings.Contains(out, "is now") {
+		t.Errorf("stop -q:\n%s", out)
+	}
+}

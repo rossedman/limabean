@@ -61,7 +61,7 @@ several arguments are quoted one by one.`,
 			} else if exists {
 				return conflictErr("a VM named %q already exists", name)
 			}
-			flagSecrets, err := parseSecretFlags(secretFlags)
+			flagSecrets, err := a.parseSecretFlags(secretFlags)
 			if err != nil {
 				return err
 			}

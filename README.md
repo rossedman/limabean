@@ -113,6 +113,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean init` | Set up: git config, code directory, SSH `Include`, GitHub token |
+| `limabean config` | Show every setting and where it comes from |
 | `limabean doctor` | Check everything VMs depend on |
 | `limabean bump` | Update the pinned tool versions in `templates/packs/*.toml` |
 

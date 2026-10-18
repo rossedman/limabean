@@ -7,6 +7,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | Command | What it does |
 |---|---|
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
+| `limabean config` | Shows every setting, its value, and whether it came from a flag, a `LIMABEAN_*` variable, the config file or the default (`--json` for scripts) |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
 | `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--overwrite` to replace a project file) |
@@ -85,7 +86,14 @@ Flags are named for what happens:
   `remove`).
 
 The earlier names `--dry-run`, `recipes --force` and
-`snapshot restore --force` still work, but aren't shown in help.
+`snapshot restore --force` still work, but aren't shown in help. So do the
+commands `new`, `create`, `start` and `stop`, which print a note naming the
+`up` or `down` command that replaced them.
+
+After the form `up` shows for a new VM, it prints the same command with
+flags, to use in scripts. limabean writes its own files (settings, secret
+references, state) atomically, so an interrupted write never leaves half a
+file.
 
 ## Exit codes
 
@@ -117,7 +125,8 @@ If limabean itself crashes, it says so and prints what to include in a
 
 `~/.config/limabean/config` is a small `KEY="value"` file written by `init`.
 Each setting can also come from a `LIMABEAN_*` environment variable, or a
-flag where one exists, which take priority:
+flag where one exists, which take priority. `limabean config` shows each
+value and where it came from:
 
 ```bash
 GIT_CONFIG_DIR="~/.config/git"   # host directory mounted read-only into VMs
