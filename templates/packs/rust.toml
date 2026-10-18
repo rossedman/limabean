@@ -1,4 +1,4 @@
-# Rust: the stable toolchain through rustup, and cargo-binstall.
+# Rust: the stable toolchain through rustup, cargo-binstall and rust-analyzer.
 [tools]
-rust = "1.99.1"
+rust = { version = "1.99.1", components = "rust-analyzer" }   # rust-analyzer: for editors and Claude's rust-analyzer-lsp
 cargo-binstall = "1.25.3"

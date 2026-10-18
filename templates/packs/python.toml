@@ -1,6 +1,7 @@
-# Python: uv for projects and tools, ruff, and yamllint. The interpreter comes from apt;
+# Python: uv for projects and tools, ruff, yamllint and pyright. The interpreter comes from apt;
 # other versions: `mise use python@<v>`, which replaces pyenv.
 [tools]
 uv = "0.13.1"
 ruff = "0.17.1"
 "pipx:yamllint" = "1.38.0"   # installed with uv
+"pipx:pyright" = { version = "1.1.414", extras = "nodejs" }   # with its own Node; Claude's pyright-lsp

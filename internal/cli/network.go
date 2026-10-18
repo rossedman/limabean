@@ -59,7 +59,11 @@ VMs created before this feature need a rebuild first.`,
 // netPresets are names for sets of domains. Each domain allows its
 // subdomains too.
 var netPresets = map[string][]string{
+	"azure":  {"azure.com", "microsoft.com", "microsoftonline.com", "windows.net", "azureedge.net"},
 	"claude": {"anthropic.com", "claude.ai", "claude.com"},
+	"dotnet": {"nuget.org", "dot.net", "microsoft.com"},
+	"elixir": {"hex.pm", "hexdocs.pm"},
+	"gcp":    {"googleapis.com", "google.com", "gstatic.com"},
 	"docker": {"docker.io", "docker.com"},
 	"github": {"github.com", "githubusercontent.com", "githubassets.com", "ghcr.io"},
 	"java":   {"maven.org", "apache.org", "gradle.org", "gradle-dn.com"},

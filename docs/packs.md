@@ -26,18 +26,23 @@ project.
 | Pack | Installs |
 |---|---|
 | `core` (every VM) | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
-| `go` | go, goreleaser, golangci-lint, gofumpt, goimports (`go vet` comes with go) |
-| `python` | uv, ruff, yamllint (Python itself is in every VM, from apt) |
-| `node` | node (LTS), pnpm, bun |
+| `go` | go, goreleaser, golangci-lint, gofumpt, goimports, gopls (`go vet` comes with go) |
+| `python` | uv, ruff, yamllint, pyright (Python itself is in every VM, from apt) |
+| `node` | node (LTS), pnpm, bun, typescript, typescript-language-server |
 | `kubernetes` | kubectl, helm, kind, k9s |
 | `infra` | terraform, tflint, aws-cli |
 | `containers` | act, dive, skopeo (Docker itself is in every VM) |
 | `db` | psql, sqlite3, redis-cli |
 | `api` | buf, grpcurl |
 | `supply-chain` | cosign, syft, grype |
-| `rust` | rust (stable, through rustup), cargo-binstall |
+| `rust` | rust (stable, through rustup, with rust-analyzer), cargo-binstall |
 | `java` | Temurin JDK (LTS), gradle, maven |
 | `ruby` | ruby (precompiled), and the libraries native gems build against |
+| `elixir` | Erlang/OTP (precompiled), elixir |
+| `dotnet` | the .NET SDK (C#, F#) |
+| `security` | trivy, semgrep, gitleaks |
+| `gcp` | gcloud (with gsutil and bq) |
+| `azure` | az |
 | `claude` | Claude Code, to run agents inside the VM |
 
 `core` holds the tools limabean and the shell rely on, so it can't be
@@ -87,26 +92,54 @@ database tools unless told otherwise, and `limabean init` wrote that list
 into `PACKS`. If your config still has it, every new VM keeps getting
 them; set `PACKS=""` for the smaller default.
 
+## Language servers
+
+The language packs carry their language server: gopls in `go`, pyright in
+`python`, typescript-language-server in `node`, and rust-analyzer in
+`rust`. Editors use them over [`limabean code`](inside-a-vm.md), and so does
+Claude Code: Anthropic's LSP plugins give Claude go-to-definition, find
+references and type errors as it edits. Turn them on in a project file:
+
+```yaml
+# .limabean.yaml
+packs: [go, node]
+claude:
+  marketplaces:
+    - marketplace: anthropics/claude-plugins-official
+      plugins: [gopls-lsp@claude-plugins-official, typescript-lsp@claude-plugins-official]
+```
+
+The plugins for the others are `pyright-lsp` and `rust-analyzer-lsp`.
+
+## Cloud CLIs
+
+`infra` brings the AWS CLI, which uses your Mac's `~/.aws`, mounted
+read-only. `gcp` and `azure` log in inside the VM, with a device code you
+open on your Mac: `gcloud auth login --no-launch-browser` and
+`az login --use-device-code`. Their credentials stay in that VM.
+
 ## Your own packs
 
 A pack is a [mise](https://mise.jdx.dev) TOML file, and optionally a list of
 apt packages. Put your own in `~/.config/limabean/templates/packs/`:
 
 ```toml
-# ~/.config/limabean/templates/packs/elixir.toml
-# Elixir and Erlang.
+# ~/.config/limabean/templates/packs/zig.toml
+# Zig and its language server.
 [tools]
-erlang = "28.1"
-elixir = "1.19.0"
+zig = "0.16.0"
+zls = "0.16.0"   # zls follows zig's minor version
 ```
 
 ```text
-# ~/.config/limabean/templates/packs/elixir.apt  (optional)
-inotify-tools
+# ~/.config/limabean/templates/packs/zig.apt  (optional)
+libc6-dev
 ```
 
 The first line is the description `limabean packs` shows. Then
-`limabean new chat --with elixir`. A pack of yours with a built-in pack's
+`limabean new chat --with zig`. A tool with options is an inline table
+whose first key is its version, as mise writes it:
+`rust = { version = "1.99.1", components = "rust-analyzer" }`. A pack of yours with a built-in pack's
 name replaces it, so `go.toml` there changes what the `go` pack installs.
 `limabean bump ~/.config/limabean/templates/packs/*.toml` keeps your pins
 current.
@@ -115,7 +148,8 @@ current.
 
 A VM with a [network allowlist](network.md) needs its packs' registries to
 install packages at work time. Presets name them: `go`, `npm`, `python`,
-`rust`, `java` and `ruby`. Packs themselves install on the first boot, before
+`rust`, `java`, `ruby`, `elixir` (Hex), `dotnet` (NuGet), and `gcp` and
+`azure` for their CLIs. Packs themselves install on the first boot, before
 the allowlist applies.
 
 ## How it works

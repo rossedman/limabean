@@ -1,0 +1,6 @@
+# Security: trivy, semgrep and gitleaks, to scan code, images and history.
+[tools]
+trivy = "0.76.0"   # vulnerabilities and misconfigurations in images, filesystems and IaC
+"pipx:semgrep" = "1.181.0"   # static analysis
+gitleaks = "8.30.1"   # secrets in files and git history
+uv = "0.13.1"   # installs semgrep

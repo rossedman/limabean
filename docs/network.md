@@ -28,8 +28,12 @@ Presets name common sets:
 
 | Preset | Domains |
 |---|---|
+| `azure` | azure.com, microsoft.com, microsoftonline.com, windows.net, azureedge.net |
 | `claude` | anthropic.com, claude.ai, claude.com |
 | `docker` | docker.io, docker.com |
+| `dotnet` | nuget.org, dot.net, microsoft.com |
+| `elixir` | hex.pm, hexdocs.pm |
+| `gcp` | googleapis.com, google.com, gstatic.com |
 | `github` | github.com, githubusercontent.com, githubassets.com, ghcr.io |
 | `go` | go.dev, golang.org, proxy.golang.org, sum.golang.org |
 | `java` | maven.org, apache.org, gradle.org, gradle-dn.com |

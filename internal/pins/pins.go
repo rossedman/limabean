@@ -10,16 +10,18 @@ import (
 	"strings"
 )
 
-// Pin is one `tool = "version"` line under [tools].
+// Pin is one `tool = "version"` line under [tools], or
+// `tool = { version = "version", … }` for a tool with options.
 type Pin struct {
 	Tool    string // as mise names it, e.g. go or "go:github.com/x/y"
 	Version string
 	Line    int // 0-based
 }
 
-// pinRE matches a tool line: a bare or quoted key, then a quoted version,
-// then anything (usually a comment).
-var pinRE = regexp.MustCompile(`^(\s*)("[^"]+"|[A-Za-z0-9_.-]+)(\s*=\s*)"([^"]*)"(.*)$`)
+// pinRE matches a tool line: a bare or quoted key, then a quoted version
+// (alone, or first in an inline table as version = "…"), then anything:
+// the table's other options, a comment.
+var pinRE = regexp.MustCompile(`^(\s*)("[^"]+"|[A-Za-z0-9_.-]+)(\s*=\s*(?:\{\s*version\s*=\s*)?)"([^"]*)"(.*)$`)
 
 // Parse returns the pins in a mise TOML file's [tools] table.
 func Parse(src string) []Pin {

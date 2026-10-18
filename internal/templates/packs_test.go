@@ -114,8 +114,8 @@ func TestUserPacks(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(filepath.Join(user, "packs", "elixir.toml"), "# Elixir\n[tools]\nelixir = \"1.19.0\"\n")
-	write(filepath.Join(user, "packs", "elixir.apt"), "inotify-tools\n")
+	write(filepath.Join(user, "packs", "zig.toml"), "# Zig\n[tools]\nzig = \"0.15.2\"\n")
+	write(filepath.Join(user, "packs", "zig.apt"), "inotify-tools\n")
 	write(filepath.Join(user, "packs", "go.toml"), "# My Go\n[tools]\ngo = \"1.26.0\"\n")
 	write(filepath.Join(user, "packs", "README.md"), "ignored")
 	d := Dirs{User: user, Cache: cache}
@@ -132,8 +132,8 @@ func TestUserPacks(t *testing.T) {
 	for _, p := range packs {
 		byName[p.Name] = p
 	}
-	if byName["elixir"].Description != "Elixir" || strings.Join(byName["elixir"].Apt, ",") != "inotify-tools" {
-		t.Errorf("user pack: %+v", byName["elixir"])
+	if byName["zig"].Description != "Zig" || strings.Join(byName["zig"].Apt, ",") != "inotify-tools" {
+		t.Errorf("user pack: %+v", byName["zig"])
 	}
 	if byName["go"].Description != "My Go" || byName["rust"].Name == "" {
 		t.Errorf("a user pack should replace the built-in one, and leave the others: go=%+v", byName["go"])
@@ -142,13 +142,13 @@ func TestUserPacks(t *testing.T) {
 		t.Errorf("go listed twice: %v", names(packs))
 	}
 
-	os.Remove(filepath.Join(user, "packs", "elixir.toml"))
+	os.Remove(filepath.Join(user, "packs", "zig.toml"))
 	if root, err = d.Root(fsys); err != nil {
 		t.Fatal(err)
 	}
 	packs, _ = Packs(root)
 	for _, p := range packs {
-		if p.Name == "elixir" {
+		if p.Name == "zig" {
 			t.Error("a removed user pack should be gone")
 		}
 	}

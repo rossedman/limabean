@@ -17,6 +17,8 @@ ripgrep = "15.2.0"
 bat = "0.26.1"   # pager in the host gitconfig
 "go:github.com/posener/complete/v2/gocomplete" = "2.1.0"   # completion
   helm   =   "4.3.1"
+"pipx:pyright" = { version = "1.1.414", extras = "nodejs" }   # options
+other = { extras = "x" }
 not a pin
 
 [env]
@@ -30,6 +32,7 @@ func TestParse(t *testing.T) {
 		{"bat", "0.26.1", 7},
 		{"go:github.com/posener/complete/v2/gocomplete", "2.1.0", 8},
 		{"helm", "4.3.1", 9},
+		{"pipx:pyright", "1.1.414", 10},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %v", got)
@@ -45,11 +48,12 @@ func TestParse(t *testing.T) {
 }
 
 func TestRewriteKeepsLayout(t *testing.T) {
-	out := Rewrite(sample, map[string]string{"bat": "0.27.0", "go:github.com/posener/complete/v2/gocomplete": "2.2.0", "helm": "4.4.0", "FOO": "9"})
+	out := Rewrite(sample, map[string]string{"bat": "0.27.0", "go:github.com/posener/complete/v2/gocomplete": "2.2.0", "helm": "4.4.0", "pipx:pyright": "1.1.420", "FOO": "9"})
 	want := strings.NewReplacer(
 		`bat = "0.26.1"`, `bat = "0.27.0"`,
 		`gocomplete" = "2.1.0"`, `gocomplete" = "2.2.0"`,
 		`helm   =   "4.3.1"`, `helm   =   "4.4.0"`,
+		`{ version = "1.1.414", extras`, `{ version = "1.1.420", extras`,
 	).Replace(sample)
 	if out != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", out, want)
