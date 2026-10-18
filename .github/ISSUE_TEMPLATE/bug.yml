@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in limabean doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a security problem, don't open an issue: see [SECURITY.md](https://github.com/rossedman/limabean/blob/main/SECURITY.md).
+        Leave secret values out of everything you paste here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what happened instead.
+      placeholder: |
+        limabean up dev
+        Expected: …
+        Got: …
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The command's output. `--verbose` also shows the limactl and ssh commands limabean runs.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: limabean version
+      description: "`limabean version`"
+    validations:
+      required: true
+  - type: input
+    id: lima
+    attributes:
+      label: Lima version
+      description: "`limactl --version`"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: macOS 26.1, Apple M4
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: limabean doctor
+      description: "`limabean doctor --plain`, if it's about your setup."
+      render: text
+  - type: textarea
+    id: project
+    attributes:
+      label: Project file
+      description: The `.limabean.yaml`, if it's about `limabean up`.
+      render: yaml

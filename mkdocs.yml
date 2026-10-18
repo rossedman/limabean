@@ -16,6 +16,7 @@ validation:
 exclude_docs: |
   /assets/src/
   /assets/render.sh
+  /requirements.txt
 
 nav:
   - Home: index.md

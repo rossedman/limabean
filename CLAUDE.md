@@ -39,6 +39,7 @@ shellcheck templates/features/*.sh templates/files/limabean-network
 shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git
 actionlint                       # when .github/ changes
 mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
+                                 # (pip install -r docs/requirements.txt)
 ```
 
 - Build the docs **outside the repo** (`-d`): a committed `site/` has

@@ -190,9 +190,11 @@ built from the [`docs/`](docs) folder:
 
 ## Contributing
 
-Issues and pull requests are welcome. CI runs `go test`, `go vet`, gofmt,
-`shellcheck` and `limactl tmpl validate`, and every pull request gets a
-snapshot build to try; see [Customizing](docs/customizing.md#checks).
+Issues and pull requests are welcome; [CONTRIBUTING.md](CONTRIBUTING.md)
+covers setting up, the checks CI runs and what a pull request needs. Every
+pull request gets a snapshot build to try. Report security problems
+privately, as [SECURITY.md](SECURITY.md) describes. Everyone taking part
+follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
