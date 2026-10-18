@@ -491,6 +491,82 @@ func TestCodeWithoutAnEditor(t *testing.T) {
 	}
 }
 
+func TestCodeInstallsRemoteSSH(t *testing.T) {
+	h := newHarness(t)
+	h.installEditors("code-insiders")
+	h.world.vms["dev"] = "Running"
+	h.world.extensions = "github.copilot\n"
+	// Plain mode takes the default: install it, then open the VM.
+	out := h.must("", "code", "dev")
+	if !h.world.called("editor code-insiders --install-extension ms-vscode-remote.remote-ssh") ||
+		!h.world.called("editor code-insiders --remote ssh-remote+lima-dev") {
+		t.Fatalf("calls: %v", h.world.calls)
+	}
+	if !strings.Contains(out, "Installing ms-vscode-remote.remote-ssh in code-insiders") {
+		t.Errorf("out:\n%s", out)
+	}
+
+	// Declining opens nothing, and says how to install it.
+	h.world.calls = nil
+	_, err := h.runTTY([]string{"n"}, "code", "dev")
+	if err == nil || !strings.Contains(err.Error(), "code-insiders --install-extension ms-vscode-remote.remote-ssh") {
+		t.Errorf("declined: %v", err)
+	}
+	if h.world.called("editor code-insiders --remote") || h.world.called("editor code-insiders --install-extension") {
+		t.Errorf("declined but ran: %v", h.world.calls)
+	}
+
+	// A failed install stops before opening, with the editor's output.
+	h.world.calls = nil
+	h.world.installExtErr = errors.New("exit status 1")
+	if _, err := h.run("", "code", "dev"); err == nil || !strings.Contains(err.Error(), "network down") {
+		t.Errorf("failed install: %v", err)
+	}
+	if h.world.called("editor code-insiders --remote") {
+		t.Errorf("opened after a failed install: %v", h.world.calls)
+	}
+
+	// If the editor can't list its extensions, open anyway.
+	h.world.calls = nil
+	h.world.extensionsErr = errors.New("no")
+	h.must("", "code", "dev")
+	if !h.world.called("editor code-insiders --remote") || h.world.called("editor code-insiders --install-extension") {
+		t.Errorf("calls: %v", h.world.calls)
+	}
+}
+
+func TestCodeChecksOnlyEditorsWithoutRemoteSSH(t *testing.T) {
+	h := newHarness(t)
+	h.installEditors("cursor", "codium")
+	h.world.vms["dev"] = "Running"
+	h.world.extensions = "MS-VSCODE-REMOTE.REMOTE-SSH\n"
+	h.must("", "code", "dev", "--ide", "cursor")
+	if h.world.called("editor cursor --list-extensions") {
+		t.Errorf("cursor ships its own: %v", h.world.calls)
+	}
+	h.must("", "code", "dev", "--ide", "codium")
+	if !h.world.called("editor codium --install-extension jeanp413.open-remote-ssh") {
+		t.Errorf("codium uses Open Remote - SSH: %v", h.world.calls)
+	}
+	h.world.calls = nil
+	h.world.extensions = "Jeanp413.Open-Remote-SSH\n"
+	h.must("", "code", "dev", "--ide", "codium")
+	if h.world.called("editor codium --install-extension") {
+		t.Errorf("installed, in another case: %v", h.world.calls)
+	}
+}
+
+func TestEditorOutput(t *testing.T) {
+	bin := t.TempDir()
+	script := filepath.Join(bin, "code")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho \"$@\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := editorOutput(context.Background(), script, "--list-extensions"); err != nil || strings.TrimSpace(string(out)) != "--list-extensions" {
+		t.Errorf("editorOutput = %q, %v", out, err)
+	}
+}
+
 func TestCodeDisk(t *testing.T) {
 	h := newHarness(t)
 	disk := codeDiskName("dev")
