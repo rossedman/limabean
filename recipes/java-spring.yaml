@@ -1,7 +1,6 @@
 # A Java service: Spring Boot, Quarkus or plain Gradle or Maven.
 # Start from it: limabean recipes java-spring && limabean up
-packs: [java]
-without: [go, node, kubernetes, infra]
+packs: [java]                     # Temurin JDK, gradle, maven
 memory: 6                         # the JVM and Gradle's daemon
 ports: [8080]
 setup: |

@@ -4,8 +4,7 @@
 #   claude setup-token
 #   limabean secrets set CLAUDE_CODE_OAUTH_TOKEN --vm <name>
 # Start from it: limabean recipes claude-agent && limabean up
-packs: [claude]
-without: [kubernetes, infra]
+packs: [claude, go, node, python]  # Claude Code, and the languages it works in
 network:
   allow: [github, npm, python, go, claude]
   locked: true

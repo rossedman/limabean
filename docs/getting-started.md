@@ -110,7 +110,10 @@ limabean ssh dev ssh -T git@github.com # should greet you by your GitHub usernam
 limabean get dev owner/repo            # clone into ~/code/github.com/owner/repo
 ```
 
-The first VM provisions everything from scratch, and builds an
+In a terminal, `new` asks which [packs](packs.md) the VM gets (Go, Node,
+Kubernetes, …) and which secrets; `--with go,node` answers the first
+question on the command line. The first VM of a kind provisions everything
+from scratch, and builds an
 [image](lifecycle.md#fast-vms-images) of itself in the background. Every
 later VM like it is a copy of that image, so it only has to boot.
 

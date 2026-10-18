@@ -31,8 +31,9 @@ command ends, whether it worked or not. limabean exits with the command's
 exit status.
 
 --repo clones a repository first and runs the command in it. The VM gets
-your shared secrets, the default packs and an open network, unless flags
-say otherwise, as for "limabean new". Without --rm the VM is kept, named
+your shared secrets, the PACKS setting's packs (none besides core, unless
+you set it) and an open network, unless flags say otherwise, as for
+"limabean new". Without --rm the VM is kept, named
 run-<random> unless you name it; --ttl deletes it later.
 
 A single argument is run by the shell as it is, so pipes and && work;
@@ -107,7 +108,7 @@ several arguments are quoted one by one.`,
 	f.BoolVar(&remove, "rm", false, "delete the VM when the command ends")
 	f.DurationVar(&ttl, "ttl", 0, "without --rm: delete the VM once it's this old, e.g. 2h")
 	f.StringArrayVar(&secretFlags, "secret", nil, "give the VM a secret: NAME=reference (repeatable)")
-	f.StringSliceVar(&with, "with", nil, "add these packs to the defaults, e.g. claude,rust")
+	f.StringSliceVar(&with, "with", nil, "give the VM these packs, e.g. go,claude")
 	f.StringSliceVar(&without, "without", nil, "leave these packs out")
 	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable)")
 	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")

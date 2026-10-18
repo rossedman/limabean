@@ -17,13 +17,14 @@ remote.
   (`# syntax=docker/dockerfile:1`) work. Your user owns the socket, so `docker`
   needs no sudo, and kind and testcontainers work as they do on a Mac.
 - **mise**, with the tools of the VM's [packs](packs.md), every version
-  pinned. By default: Go, Node, Kubernetes, Terraform and AWS, container and
-  database clients, and core shell tools (ripgrep, fd, fzf, bat, delta,
-  lazygit, gh, ghq, just, …). Rust, Java, Ruby and more are a `--with` away.
+  pinned. Every VM has the core shell tools (ripgrep, fd, fzf, bat, delta,
+  lazygit, gh, ghq, just, shellcheck, shfmt, …); Go, Node, Python's uv,
+  Kubernetes, Terraform, Rust, Java, Ruby and more are packs you pick.
   Use `mise use node@22` or `mise use terraform@1.9` for other versions.
 - **Formatters and linters** for Go, Python, shell and YAML: gofumpt,
   goimports, golangci-lint and `go vet`; ruff and yamllint; shellcheck and
-  shfmt. They come with the `go`, `python` and `core` packs.
+  shfmt. shellcheck and shfmt are in every VM; the rest come with the `go`
+  and `python` packs.
 - **[guardrails](https://github.com/rossedman/guardrails)**, turned on for
   Claude Code in the VM. See [Claude Desktop](claude-desktop.md#guardrails).
 - **apt**: git, git-extras, git-quick-stats, curl, wget, vim, tmux, stow,

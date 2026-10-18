@@ -34,8 +34,9 @@ const (
 	KeyTemplates     = "templates"
 )
 
-// DefaultPacks are the packs new VMs get unless PACKS says otherwise.
-const DefaultPacks = "go,python,node,kubernetes,infra,containers,db"
+// DefaultPacks are the packs new VMs get unless PACKS says otherwise: none
+// besides core, so a VM, a project file or a recipe names what it needs.
+const DefaultPacks = ""
 
 // Config is the resolved settings.
 type Config struct {
@@ -198,8 +199,9 @@ AWS_DIR=%q
 # Empty: the first of those that's installed.
 IDE=%q
 
-# Packs of tools new VMs get besides core (limabean packs lists them);
-# new --with/--without adjust it per VM.
+# Packs of tools new VMs get besides core (limabean packs lists them).
+# Empty: only core; new asks in a terminal, --with/--without adjust it, and
+# a project's .limabean.yaml lists its own.
 PACKS=%q
 
 # Create VMs in seconds by cloning a provisioned image, built in the

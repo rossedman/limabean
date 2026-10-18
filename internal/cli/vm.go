@@ -245,6 +245,8 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	}
 	if len(o.Packs) > 0 {
 		a.UI.OK("Packs: core, %s", strings.Join(o.Packs, ", "))
+	} else {
+		a.UI.OK("Packs: core only (more later: limabean rebuild %s --with go,node)", o.Name)
 	}
 	inst, err := a.vm(ctx, o.Name)
 	if err != nil {

@@ -1,38 +1,44 @@
 # Packs: languages and tools
 
 What a VM has installed is split into **packs**: Go, Node, Kubernetes, and
-so on. Every VM gets a sensible default set, and you add or remove packs per
-VM:
+so on. Every VM has `core` (the shell tools limabean relies on), Docker and
+Python; everything else is a pack you choose for that VM:
 
 ```bash
-limabean packs                                    # what there is, and the defaults
-limabean new api --with rust,java                 # the defaults, plus Rust and Java
-limabean new web --without kubernetes,infra       # the defaults, minus two
-limabean rebuild dev --with ruby                  # add a pack to an existing VM
+limabean packs                          # what there is
+limabean new api                        # in a terminal, new asks which packs
+limabean new api --with go,db           # or name them
+limabean rebuild dev --with ruby        # add a pack to an existing VM
+```
+
+```yaml
+# .limabean.yaml: a project's VM gets exactly these, besides core
+packs: [go, db]
 ```
 
 A VM keeps its packs through `limabean rebuild`, and `limabean ls --json`
 lists them. Claude can choose them too: [`create_vm`](mcp.md#tools) takes
-`with`.
+`with`. The [recipes](recipes.md) show which packs suit which kind of
+project.
 
 ## The packs
 
-| Pack | Default | Installs |
-|---|---|---|
-| `core` | always | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
-| `go` | yes | go, goreleaser, golangci-lint, gofumpt, goimports (`go vet` comes with go) |
-| `python` | yes | uv, ruff, yamllint (Python itself is in every VM, from apt) |
-| `node` | yes | node (LTS), pnpm, bun |
-| `kubernetes` | yes | kubectl, helm, kind, k9s |
-| `infra` | yes | terraform, tflint, aws-cli |
-| `containers` | yes | act, dive, skopeo (Docker itself is in every VM) |
-| `db` | yes | psql, sqlite3, redis-cli |
-| `api` | | buf, grpcurl |
-| `supply-chain` | | cosign, syft, grype |
-| `rust` | | rust (stable, through rustup), cargo-binstall |
-| `java` | | Temurin JDK (LTS), gradle, maven |
-| `ruby` | | ruby (precompiled), and the libraries native gems build against |
-| `claude` | | Claude Code, to run agents inside the VM |
+| Pack | Installs |
+|---|---|
+| `core` (every VM) | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
+| `go` | go, goreleaser, golangci-lint, gofumpt, goimports (`go vet` comes with go) |
+| `python` | uv, ruff, yamllint (Python itself is in every VM, from apt) |
+| `node` | node (LTS), pnpm, bun |
+| `kubernetes` | kubectl, helm, kind, k9s |
+| `infra` | terraform, tflint, aws-cli |
+| `containers` | act, dive, skopeo (Docker itself is in every VM) |
+| `db` | psql, sqlite3, redis-cli |
+| `api` | buf, grpcurl |
+| `supply-chain` | cosign, syft, grype |
+| `rust` | rust (stable, through rustup), cargo-binstall |
+| `java` | Temurin JDK (LTS), gradle, maven |
+| `ruby` | ruby (precompiled), and the libraries native gems build against |
+| `claude` | Claude Code, to run agents inside the VM |
 
 `core` holds the tools limabean and the shell rely on, so it can't be
 removed. Docker, Python 3 and the [apt basics](inside-a-vm.md#tools) are in
@@ -61,17 +67,25 @@ limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing te
 With [`limabean run --rm`](lifecycle.md#throwaway-vms), the VM is gone when
 the task is done.
 
-## Changing the defaults
+## Packs for every new VM
 
-The defaults are the `PACKS` setting in `~/.config/limabean/config` (or
-`LIMABEAN_PACKS`):
+The `PACKS` setting in `~/.config/limabean/config` (or `LIMABEAN_PACKS`)
+adds packs to every VM made with `limabean new`, `limabean run` or MCP's
+`create_vm`. It's empty unless you set it; `new`'s form starts with these
+checked, and `--without` leaves one out:
 
 ```bash
-PACKS="go,python,node,kubernetes,infra,containers,db"
+PACKS="go,node"
 ```
 
-Add `rust` there, for example, and every new VM gets Rust. Existing VMs keep
-their packs; `limabean rebuild dev --with rust` adds it to one.
+Project files ignore it: a `.limabean.yaml` lists every pack its VM gets,
+so the VM is the same for everyone. Existing VMs keep their packs;
+`limabean rebuild dev --with rust` adds one.
+
+Earlier versions gave VMs Go, Python, Node, Kubernetes, Terraform, container and
+database tools unless told otherwise, and `limabean init` wrote that list
+into `PACKS`. If your config still has it, every new VM keeps getting
+them; set `PACKS=""` for the smaller default.
 
 ## Your own packs
 

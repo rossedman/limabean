@@ -124,7 +124,7 @@ the task is done.
 | Tool | Does |
 |---|---|
 | `list_vms` | Lists VMs: status, environment, size, secrets, network |
-| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` ([packs](packs.md) beyond the defaults), `allow`, `locked`, and `ttl` to have it deleted later. It gets your shared secrets |
+| `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` (the [packs](packs.md) the task needs; without it, only core and the `PACKS` setting's), `allow`, `locked`, and `ttl` to have it deleted later. It gets your shared secrets |
 | `clone_vm` | Copies a VM in seconds, `~/code` and all ([clones](lifecycle.md#clones)) |
 | `start_vm`, `stop_vm` | Starts or stops a VM |
 | `run_in_vm` | Runs a shell command in a running VM and returns the exit code and output |

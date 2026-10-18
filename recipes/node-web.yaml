@@ -1,6 +1,6 @@
 # A web frontend: Node, pnpm and a dev server (Vite, Next.js and the like).
 # Start from it: limabean recipes node-web && limabean up
-without: [go, kubernetes, infra, db]
+packs: [node]                     # node, pnpm, bun
 ports: [5173, 3000]               # Vite, Next.js
 setup: |
   if [ -f pnpm-lock.yaml ]; then pnpm install

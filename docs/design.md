@@ -391,6 +391,17 @@ An opt-in `--mount` of a host directory (B) is still open.
   so editing one doesn't change the templates hash and outdate every image.
   `TestRecipesBringVMsUp` runs `up` on each, so a recipe naming a missing
   pack or preset fails CI, and the docs include the files themselves.
+- **D20 Packs. Decided: none by default; a project lists all of its own.**
+  VMs used to get Go, Python, Node, Kubernetes, infra, container and
+  database packs unless told otherwise, and most recipes were lists of
+  packs to remove. Now `PACKS` is empty: a VM has `core`, Docker and
+  Python, and gets what `new`'s form picks (`PACKS` pre-checked), what
+  `--with` names, or what its `.limabean.yaml` lists. A project's packs
+  are exact, ignoring `PACKS`, so `up` builds the same VM for everyone;
+  `without` still loads, with a warning, so older files work. Configs
+  written by `init` before keep the old list in `PACKS`, so existing users
+  see no change until they clear it. Smaller default images build faster
+  too.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
