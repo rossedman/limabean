@@ -25,7 +25,7 @@ project.
 
 | Pack | Installs |
 |---|---|
-| `core` (every VM) | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
+| `core` (every VM) | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, jq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
 | `go` | go, goreleaser, golangci-lint, gofumpt, goimports, gopls (`go vet` comes with go) |
 | `python` | uv, ruff, yamllint, pyright (Python itself is in every VM, from apt) |
 | `node` | node (LTS), pnpm, bun, typescript, typescript-language-server |
