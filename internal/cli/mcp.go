@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/rossedman/limabean/internal/config"
 	"github.com/rossedman/limabean/internal/lima"
+	"github.com/rossedman/limabean/internal/project"
 	"github.com/rossedman/limabean/internal/secrets"
 	"github.com/rossedman/limabean/internal/ui"
 )
@@ -30,11 +32,15 @@ func newMCPCmd(a *App) *cobra.Command {
 your Mac can manage limabean VMs: list, create, start and stop them, run
 commands in them, clone repositories, see forwarded ports and save
 snapshots. An agent can then make itself a scratch VM, work in it, and
-checkpoint it before something risky.
+checkpoint it before something risky. For a checkout with a
+.limabean.yaml, the project tools plan, bring up, inspect and stop its VM
+as "limabean up" would; Claude Code asks you before every project_up.
 
 What the tools can't do:
-  - run anything on your Mac: commands run inside VMs only
+  - run anything on your Mac: commands run inside VMs only, and the
+    project tools read only a checkout's .limabean.yaml and .git/config
   - read secret values, or add secrets (a cmd: secret would run on the Mac)
+  - widen a VM's network, from a project file or otherwise
   - delete, rebuild or restore a VM, unless you pass --allow-destructive.
     Even then, deleting stops at unsaved work as "limabean rm" does, and
     Claude Code asks you before every call to them.
@@ -93,6 +99,14 @@ type (
 		Name string `json:"name" jsonschema:"the VM's name"`
 		Tag  string `json:"snapshot,omitempty" jsonschema:"snapshot name; default the date and time when saving, the latest when restoring"`
 	}
+	mcpProject struct {
+		Dir string `json:"dir" jsonschema:"absolute path of the project's checkout on the Mac: the directory that holds its .limabean.yaml"`
+	}
+	mcpProjectLogs struct {
+		Dir   string `json:"dir" jsonschema:"absolute path of the project's checkout on the Mac: the directory that holds its .limabean.yaml"`
+		Log   string `json:"log,omitempty" jsonschema:"which log: provision (default; creating the VM), setup, or start"`
+		Lines int    `json:"lines,omitempty" jsonschema:"how many lines from the end; default 100, at most 2000"`
+	}
 )
 
 const (
@@ -103,9 +117,11 @@ const (
 
 // mcpServer builds the MCP server and its tools.
 func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
+	a.mcpMode, a.noRecreate = true, !allowDestructive
 	s := mcp.NewServer(&mcp.Implementation{Name: "limabean", Version: a.Version}, &mcp.ServerOptions{
 		Instructions: "limabean manages disposable Ubuntu dev VMs on this Mac. Commands run inside VMs, never on the Mac. " +
-			"Repositories live in ~/code/<host>/<owner>/<repo>. Save a snapshot before risky changes.",
+			"Repositories live in ~/code/<host>/<owner>/<repo>. Save a snapshot before risky changes. " +
+			"A checkout with a .limabean.yaml describes its own VM: use the project_ tools with its directory, and show the user project_plan's output before project_up.",
 	})
 	no, yes := false, true
 	var mu sync.Mutex // one limabean command at a time
@@ -123,6 +139,67 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			Title: title, ReadOnlyHint: readOnly, DestructiveHint: destructive, OpenWorldHint: &no,
 		}}
 	}
+
+	// Claude Code asks before every call to a tool with this, whatever its
+	// permission mode, with no "don't ask again"; other clients see
+	// destructiveHint.
+	ask := func(t *mcp.Tool) *mcp.Tool {
+		t.Meta = mcp.Meta{"anthropic/requiresUserInteraction": true}
+		return t
+	}
+
+	mcp.AddTool(s, tool("project_status", "Show a project's VM", "For a checkout with a .limabean.yaml: as JSON, whether its VM exists and runs, whether its start commands run, the ports it serves and whether each reaches the Mac, and what project_up would change.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "ps", "--json", "--file="+file)
+		})
+	mcp.AddTool(s, tool("project_plan", "Plan a project's VM", "For a checkout with a .limabean.yaml: what project_up would do, changing nothing. For a new VM, its packs, size, network, secrets, variables, setup and start commands; for an existing one, what differs from the file. Show this to the user before calling project_up. Network changes that would widen what the VM reaches are listed as commands only the user can run.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "up", "--dry-run", "--file="+file)
+		})
+	mcp.AddTool(s, ask(tool("project_up", "Bring up a project's VM", "For a checkout with a .limabean.yaml: create its VM (cloning the repository, running its setup) or start it and apply the file's changes, then run its start commands in the background. The user is asked first; call project_plan and show them its output before this. It never widens the VM's network, and refuses changes that need a rebuild unless the server allows destructive tools.", false, &no)),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "up", "--yes", "--file="+file)
+		})
+	mcp.AddTool(s, tool("project_down", "Stop a project's VM", "For a checkout with a .limabean.yaml: stop its VM, keeping everything in it; project_up starts it again.", false, &no),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "down", "--file="+file)
+		})
+	mcp.AddTool(s, tool("project_logs", "Read a project's logs", "For a checkout with a .limabean.yaml: the end of its VM's provisioning log, or of its setup or start output. Read it when project_up fails, or to see what a dev server started by start printed.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProjectLogs) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			args := []string{"logs", "--file=" + file}
+			switch in.Log {
+			case "", "provision":
+			case "setup", "start":
+				args = append(args, "--"+in.Log)
+			default:
+				return nil, nil, fmt.Errorf("log %q: provision, setup or start", in.Log)
+			}
+			lines := 100
+			if in.Lines > 0 {
+				lines = min(in.Lines, 2000)
+			}
+			return cli(ctx, append(args, "-n", strconv.Itoa(lines))...)
+		})
 
 	mcp.AddTool(s, tool("list_vms", "List VMs", "List limabean VMs as JSON: name, status (Running or Stopped), environment, size, number of secrets and SSH host.", true, nil),
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
@@ -253,13 +330,6 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 	if !allowDestructive {
 		return s
 	}
-	// Claude Code asks before every call to a tool with this, whatever its
-	// permission mode, with no "don't ask again"; other clients see
-	// destructiveHint.
-	ask := func(t *mcp.Tool) *mcp.Tool {
-		t.Meta = mcp.Meta{"anthropic/requiresUserInteraction": true}
-		return t
-	}
 	mcp.AddTool(s, ask(tool("snapshot_restore", "Restore a snapshot", "Put a VM's system and ~/code back the way a snapshot saved them. Everything changed since is lost, pushed or not.", false, &yes)),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpSnapshot) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name); err != nil {
@@ -291,6 +361,32 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 	return s
 }
 
+// projectFileIn finds the project file directly in dir, an absolute path
+// to a checkout. Only that file is read: no parent directories, and no
+// other path, so a tool call can't make limabean read anything else.
+func projectFileIn(dir string) (string, error) {
+	if !filepath.IsAbs(dir) {
+		return "", fmt.Errorf("dir %q: give the checkout's absolute path", dir)
+	}
+	dir = filepath.Clean(dir)
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return "", fmt.Errorf("%s isn't a directory", dir)
+	}
+	var found []string
+	for _, name := range project.FileNames {
+		if fi, err := os.Lstat(filepath.Join(dir, name)); err == nil && fi.Mode().IsRegular() {
+			found = append(found, filepath.Join(dir, name))
+		}
+	}
+	switch len(found) {
+	case 0:
+		return "", fmt.Errorf("%s has no .limabean.yaml; create_vm makes a VM without one", dir)
+	case 2:
+		return "", fmt.Errorf("%s has both .limabean.yaml and .limabean.yml", dir)
+	}
+	return found[0], nil
+}
+
 // checkNames validates VM and environment names before they reach the
 // command line, where "--force" would otherwise be taken as a flag.
 func checkNames(names ...string) error {
@@ -314,8 +410,14 @@ func (a *App) runCLI(ctx context.Context, args ...string) (string, error) {
 	sub.Cfg = nil
 	sub.UI = ui.NewPlain(&out)
 	// Nothing may take over the terminal: stdio carries the protocol.
-	noTTY := func(lima.Instance, ...string) error { return errors.New("not available over MCP") }
-	sub.execSSH, sub.attachSSH = noTTY, noTTY
+	sub.execSSH = func(lima.Instance, ...string) error { return errors.New("not available over MCP") }
+	// What would attach to a terminal (a project's setup) runs without one,
+	// its output going into the reply.
+	sub.attachSSH = func(inst lima.Instance, command ...string) error {
+		got, err := a.Lima.Runner.Output(ctx, nil, true, "ssh", lima.SSHArgs(inst, true, command...)...)
+		out.WriteString(tail(got) + "\n")
+		return err
+	}
 	root := NewRootCmd(&sub)
 	if a.configPath != "" {
 		args = append([]string{"--config", a.configPath}, args...)

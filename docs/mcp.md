@@ -119,10 +119,43 @@ network, never your Mac's. Combine it with a [project file](projects.md)
 [`limabean run --rm`](lifecycle.md#throwaway-vms) for a VM that's gone when
 the task is done.
 
+## Projects
+
+When a checkout has a [`.limabean.yaml`](projects.md), Claude can use it the
+way you use `limabean up`: *"bring up the VM for ~/src/shop and get its
+tests passing"*. The project tools take the checkout's absolute path:
+
+1. `project_plan` shows what `up` would do: a new VM's packs, size,
+   network, environment, setup and start commands, or what differs from an
+   existing one. Claude should show you this first.
+2. `project_up` does it. Claude Code asks you before **every** call, so you
+   approve with the plan in front of you. Changed `start` commands count as
+   approved when you say yes.
+3. `project_status`, `project_logs` and `project_down` check on it, read its
+   provisioning, setup or start output, and stop it.
+
+The same rules hold as in your terminal, plus a few for MCP:
+
+- A file never widens a VM's network; those changes come back as
+  `limabean network` commands for you to run.
+- A change that rebuilds the VM (new packs or environment template) is
+  refused unless the server runs with `--allow-destructive`.
+- Only the directory's own `.limabean.yaml` is read: not a parent
+  directory's, not a symlink, not any other path, so a tool call can't make
+  limabean read something else on your Mac.
+- The checkout's origin is read from `.git/config` as a file; git doesn't
+  run on the Mac.
+- Setup runs without a terminal, and its output comes back to Claude.
+
 ## Tools
 
 | Tool | Does |
 |---|---|
+| `project_plan` | What `up` would create or change for a checkout's `.limabean.yaml`, changing nothing |
+| `project_up` | Creates or updates the checkout's VM and runs its start commands; Claude Code asks you first ([projects](#projects)) |
+| `project_status` | The checkout's VM as JSON: status, start, ports, pending changes |
+| `project_logs` | The end of its provisioning, setup or start log |
+| `project_down` | Stops the checkout's VM |
 | `list_vms` | Lists VMs: status, environment, size, secrets, network |
 | `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` (the [packs](packs.md) the task needs; without it, only core and the `PACKS` setting's), `allow`, `locked`, and `ttl` to have it deleted later. It gets your shared secrets |
 | `clone_vm` | Copies a VM in seconds, `~/code` and all ([clones](lifecycle.md#clones)) |
@@ -158,7 +191,9 @@ server with `limabean mcp --allow-destructive`. Even then:
   your shared secrets: adding a secret could run a `cmd:` reference on the
   Mac.
 - **Widen a VM's network.** It can create a restricted VM, but not change an
-  existing VM's allowlist or lock.
+  existing VM's allowlist or lock, from a project file or otherwise.
+- **Read arbitrary files.** The project tools read only a checkout's own
+  `.limabean.yaml` (and its `.git/config` for the origin).
 - **Delete a VM it didn't ask to be temporary.** `ttl` only applies to a VM
   as `create_vm` makes it; no tool sets one on an existing VM.
 - **Pass names as flags.** VM names, environments, snapshot names and

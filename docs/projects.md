@@ -37,7 +37,7 @@ parent directory, shows what it's about to do, and asks:
 
 ```
 myapp (from ~/src/myapp/.limabean.yaml)
-    environment: scratch
+    env: scratch
     packs: core, node
     clone: github.com/acme/myapp
     setup, run in the VM:
@@ -75,6 +75,7 @@ are in it:
 limabean up                      # create the VM, or start it and apply the file's changes
 limabean ssh myapp               # a shell
 limabean code myapp              # VS Code, Cursor or another editor, over SSH
+limabean ps                      # is it running, is start, which ports, what changed
 limabean logs --start -f         # follow what start is running
 limabean down                    # stop it; everything in it is kept
 ```
@@ -101,6 +102,7 @@ Apply these changes to myapp? Yes
 | `cpus`, `memory` | Stops the VM, resizes it and starts it again |
 | `disk` | Grows the disk the same way; Lima can't shrink one, so a smaller number is only a warning |
 | `secrets` | Gives the VM the secrets it doesn't have yet |
+| `vars` | Writes the new variables in the running VM |
 | `claude` | Adds the plugins to the VM's Claude settings |
 | `network`: fewer domains, `locked: true` | Applied straight away |
 | `network`: more domains, no allowlist, no `locked` | **Not applied.** A file from a repository can't widen what a VM reaches; `up` prints the `limabean network …` command for you to run if you agree |
@@ -127,6 +129,7 @@ Every key is optional.
 | `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
 | `network.allow` | list | open | Domains and presets the VM may reach ([sandboxes](network.md)) |
 | `network.locked` | bool | `false` | Take sudo and Docker away from the VM's user, so the allowlist holds |
+| `vars` | map | none | Plain variables for the VM's shells, `setup` and `start`; [details](#vars) |
 | `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
 | `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
 | `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
@@ -157,6 +160,26 @@ claude:
     - marketplace: rossedman/guardrails
       plugins: [guardrails@guardrails]
 ```
+
+### Vars
+
+`vars` sets plain variables in the VM, for its shells, `setup` and
+`start`:
+
+```yaml
+vars:
+  NODE_ENV: development
+  DATABASE_URL: postgres://postgres@localhost:5432/app
+```
+
+- They're in the file, and so in the repository: anything secret goes
+  under [`secrets`](#secrets) instead, which only names it.
+- `up` writes them to `~/.config/limabean/project.env` in the VM, which
+  every shell reads. A change to them is applied to the running VM, no
+  rebuild needed; shells already open see it in their next login.
+- A project file can't set `PATH`, `HOME`, `SHELL` and the like, or the
+  dynamic linker's `LD_*` variables, and a name can't be both a variable
+  and a secret. Secrets are read after these, so they always win.
 
 ### Secrets
 

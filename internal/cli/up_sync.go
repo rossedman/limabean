@@ -30,6 +30,8 @@ type upChanges struct {
 	secrets []secrets.Secret // the file's secrets the VM doesn't have yet
 
 	start bool // start commands that differ from the ones last approved
+
+	vars bool // variables that differ from the ones last applied
 }
 
 // empty reports whether the VM already matches the file.
@@ -52,7 +54,7 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 	}
 	if env := firstNonEmpty(a.envOf(inst.Name), "scratch"); env != c.env {
 		c.recreate = true
-		c.lines = append(c.lines, fmt.Sprintf("environment: %s → %s (rebuild, keeping ~/code)", env, c.env))
+		c.lines = append(c.lines, fmt.Sprintf("env: %s → %s (rebuild, keeping ~/code)", env, c.env))
 	}
 
 	if f.CPUs > 0 && f.CPUs != inst.CPUs {
@@ -75,6 +77,11 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 
 	if err := a.diffNetwork(&c, inst, f); err != nil {
 		return c, err
+	}
+
+	if lines := varsChanges(a.appliedVars(inst.Name), f.Vars); len(lines) > 0 {
+		c.vars = true
+		c.lines = append(c.lines, lines...)
 	}
 
 	if f.Start != a.approvedStart(inst.Name) {
@@ -221,6 +228,15 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 			return err
 		}
 	}
+	// A rebuild starts from a fresh system disk, so it needs the file again.
+	if c.vars || (c.recreate && len(f.Vars) > 0) {
+		if err := a.writeVars(ctx, inst, f.Vars); err != nil {
+			return err
+		}
+		if err := a.saveVars(inst.Name, f.Vars); err != nil {
+			return err
+		}
+	}
 	if len(c.widening) > 0 {
 		a.UI.Warn("The file allows more than %s does now, which only you can change:", f.Name)
 		a.UI.Hint(c.widening...)
@@ -262,6 +278,9 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 
 // upApply makes the changes c lists and returns the VM, running.
 func (a *App) upApply(ctx context.Context, inst lima.Instance, f *project.File, c upChanges) (lima.Instance, error) {
+	if c.recreate && a.noRecreate {
+		return inst, fmt.Errorf("the file's packs or environment changed, which rebuilds %s (keeping ~/code); the user can run limabean up, or start the MCP server with --allow-destructive", inst.Name)
+	}
 	if c.recreate {
 		keepsCode := a.hasCodeDisk(ctx, inst.Name)
 		if !keepsCode {

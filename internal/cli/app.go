@@ -71,6 +71,11 @@ type App struct {
 	plain        bool
 	templatesDir string
 
+	// Set when serving MCP: read a checkout's origin from .git/config instead
+	// of running git on the Mac, and with noRecreate refuse changes that
+	// would rebuild a VM (destructive tools are off).
+	mcpMode, noRecreate bool
+
 	// Overridable for tests.
 	stateDir       string
 	keychainPrefix string

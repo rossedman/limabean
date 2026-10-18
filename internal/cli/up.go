@@ -56,6 +56,8 @@ limabean down stops a VM; limabean rm deletes it.
   network:                    # see: limabean network --help
     allow: [github, npm]
     locked: true
+  vars:                       # plain variables for shells, setup and start
+    NODE_ENV: development
   secrets: [OPENAI_API_KEY]   # names only; values stay on your Mac
   ports: [3000]               # shown as http://localhost:<port> after up
   claude:                     # plugins for Claude Code in the VM
@@ -238,7 +240,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	repo := a.projectRepo(ctx, f, dir)
 	own, missing := a.projectSecrets(f.Secrets)
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
-	plan := []string{"environment: " + firstNonEmpty(f.Env, "scratch")}
+	plan := []string{"env: " + firstNonEmpty(f.Env, "scratch")}
 	plan = append(plan, "packs: "+strings.Join(append([]string{"core"}, f.Packs...), ", "))
 	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
 		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
@@ -253,6 +255,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 		}
 		plan = append(plan, network)
 	}
+	plan = append(plan, varsPlan(f.Vars)...)
 	if len(f.Secrets) > 0 {
 		plan = append(plan, "secrets: shared ones, plus "+strings.Join(f.Secrets, ", "))
 	}
@@ -316,6 +319,14 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	if err != nil {
 		return err
 	}
+	if len(f.Vars) > 0 {
+		if err := a.writeVars(ctx, inst, f.Vars); err != nil {
+			return err
+		}
+	}
+	if err := a.saveVars(f.Name, f.Vars); err != nil {
+		return err
+	}
 	clone := ""
 	if repo != "" {
 		if clone, err = a.cloneForRun(ctx, inst, repo); err != nil {
@@ -344,8 +355,39 @@ func (a *App) projectRepo(ctx context.Context, f *project.File, dir string) stri
 	if f.Repo != "" {
 		return f.Repo
 	}
+	if a.mcpMode {
+		if origin := originFromConfig(dir); origin != "" {
+			return repoQuery(origin)
+		}
+		return ""
+	}
 	if origin, err := gitOrigin(ctx, dir); err == nil {
 		return repoQuery(origin)
+	}
+	return ""
+}
+
+// originFromConfig reads the origin remote's url from a checkout's
+// .git/config as a file, without running git; "" if there's none.
+func originFromConfig(dir string) string {
+	b, err := os.ReadFile(filepath.Join(dir, ".git", "config"))
+	if err != nil {
+		return ""
+	}
+	inOrigin := false
+	for line := range strings.Lines(string(b)) {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "[") {
+			inOrigin = line == `[remote "origin"]`
+			continue
+		}
+		if key, value, ok := strings.Cut(line, "="); ok && inOrigin && strings.TrimSpace(key) == "url" {
+			url := strings.TrimSpace(value)
+			if strings.HasPrefix(url, "-") {
+				return ""
+			}
+			return url
+		}
 	}
 	return ""
 }

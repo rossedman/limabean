@@ -84,10 +84,11 @@ hosts, ask for a locked sandbox: *"create a locked VM that can only reach
 github and python"*. Nothing runs on your Mac, Claude never sees secret values,
 and deleting or restoring VMs needs `--allow-destructive`.
 
-A project's `.limabean.yaml` can turn on Claude Code plugins in its VM, such
-as [guardrails](https://github.com/rossedman/guardrails) to hold Claude to
-your standards, and the `claude-agent` recipe is a locked-down sandbox to
-start from.
+With a project's `.limabean.yaml`, Claude can plan and bring up its VM too;
+you approve each `project_up`. The file can also turn on Claude Code plugins
+in its VM, such as [guardrails](https://github.com/rossedman/guardrails) to
+hold Claude to your standards, and the `claude-agent` recipe is a
+locked-down sandbox to start from.
 
 [Claude and MCP](docs/mcp.md) covers Claude Desktop, example prompts, every
 tool and the safety model.
@@ -120,6 +121,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean up [name]` | In a project: create its VM, or start it and apply the file's changes. With a name: start that VM, or create it, choosing packs and secrets (`--with go`) |
+| `limabean ps` | Show the project's VM: status, `start`, ports and pending changes |
 | `limabean logs [name]` | Show a VM's provisioning log, or its project's setup and start output (`-f` to follow) |
 | `limabean down [name]` | Stop the project's VM, or the one named; `--idle 2h` stops every VM nobody is using |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
