@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestUpEnvironment(t *testing.T) {
+func TestUpVars(t *testing.T) {
 	h := newHarness(t)
 	t.Setenv("LIMABEAN_CODE_DISK", "")
 	file := projectFile(t, "envy", "vars:\n  NODE_ENV: development\n  GREETING: \"it's here\"\n")
