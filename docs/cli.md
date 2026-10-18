@@ -6,9 +6,9 @@ help: `limabean <command> --help` explains it and shows examples.
 
 | Command | What it does |
 |---|---|
-| `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
+| `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor`. `--project` writes a [`.limabean.yaml`](projects.md#your-first-project-file) for the repository you're in instead, from what's in it (`--print` to show it, `--overwrite` to replace one) |
 | `limabean config` | Shows every setting, its value, and whether it came from a flag, a `LIMABEAN_*` variable, the config file or the default (`--json` for scripts) |
-| `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
+| `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference; in a project, that its file's packs, network presets and secrets exist on this Mac, and whether its VM matches it |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
 | `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--overwrite` to replace a project file) |
 | `limabean up [name] [env]` | Brings a VM up. In a project, without a name (or with the project's): creates the VM its [`.limabean.yaml`](projects.md) describes (clones the repository, turns on its Claude plugins, runs its setup), or starts it and [applies the file's changes](projects.md#changing-the-file), then runs its [`start`](projects.md#start) in the background; `--setup` runs the setup again, and `--preview` shows what `up` would create or change without changing anything. With another name: starts that VM, adding it back to Claude Desktop, or creates it; in a terminal a form asks which [packs](packs.md) and secrets it gets, `--with`/`--without` choose packs instead, `--allow`, `--locked` and `--learn` set its [network policy](network.md), and `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |

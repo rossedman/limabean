@@ -35,6 +35,9 @@ exact fix for anything missing:
   GitHub        the saved token works, and when it expires
   Secrets       every reference can be looked up (values aren't read)
   AWS           whether ~/.aws will be mounted
+  Project       in a checkout with a .limabean.yaml: the file loads, and its
+                packs, network presets and secrets exist on this Mac; and
+                whether its VM matches it
 
 It exits non-zero if something needs fixing, so it can gate scripts.`,
 		Example: `  limabean doctor
@@ -145,6 +148,10 @@ func (a *App) doctor(ctx context.Context) bool {
 		a.UI.OK("%s is mounted read-only in new VMs", a.Cfg.AWSDir)
 	default:
 		a.UI.Hint(a.Cfg.AWSDir + " doesn't exist, so nothing is mounted")
+	}
+
+	if !a.doctorProject(ctx) {
+		ok = false
 	}
 
 	a.UI.Section("Config", shortPath(a.Cfg.Path))

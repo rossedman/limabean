@@ -13,9 +13,34 @@ limabean up
 
 ## Your first project file
 
-The quickest start is a [recipe](recipes.md), a commented starter file for
-a kind of project (a Go service, a web frontend, a Rails app, a Claude
-sandbox and more):
+The quickest start is to let limabean write it from what's in the
+repository:
+
+```bash
+cd ~/src/myapp
+limabean init --project          # shows what it found, asks, writes .limabean.yaml
+limabean init --project --print  # or just show it
+```
+
+It looks at the repository's root and the directories directly below it,
+so a monorepo's `web/` and `api/` count too:
+
+| It finds | It writes |
+|---|---|
+| `go.mod`, `package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `Gemfile`, `mix.exs`, `pom.xml`, `build.gradle`, a `.csproj` | the [pack](packs.md), and a `setup` command that fits the lockfile: `npm ci`, `pnpm install --frozen-lockfile`, `uv sync`, `go mod download`, `bundle install` and so on |
+| `*.tf`, `Chart.yaml`, `kustomization.yaml`, `skaffold.yaml` | the `infra` or `kubernetes` pack |
+| Vite, Next.js, Astro, Rails, Django, FastAPI, Flask, Phoenix or Spring Boot | the port it serves on |
+| `compose.yaml` | `start: docker compose up -d` |
+| `.tool-versions`, `mise.toml` | the pack with that tool, or the tool under [`tools`](#tools-and-apt) if no pack has it |
+| `.env.example` | its credentials (`*_KEY`, `*_TOKEN`, …) as a commented-out `secrets:` line to set up first |
+
+It only reads files, never runs anything from the repository, and doesn't
+follow symlinks out of it. The file it writes passes the same checks as
+`up`; read it before you bring the VM up, since a guess can be wrong.
+
+Or start from a [recipe](recipes.md), a commented starter file for a kind
+of project (a Go service, a web frontend, a Rails app, a Claude sandbox
+and more):
 
 ```bash
 limabean recipes                 # list them
@@ -65,6 +90,10 @@ http://localhost:3000
 The VM is a normal limabean VM: `limabean ssh myapp`, `limabean code myapp`,
 Claude Desktop and MCP all work with it. Commit the file so everyone on the
 project gets the same VM.
+
+`limabean doctor` in the checkout checks the file against this Mac: that
+its packs, network presets and secrets exist here, and whether the VM
+matches it.
 
 ### In your editor
 
