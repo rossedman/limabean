@@ -30,6 +30,8 @@ type upChanges struct {
 	secrets []secrets.Secret // the file's secrets the VM doesn't have yet
 
 	start bool // start commands that differ from the ones last approved
+
+	environment bool // variables that differ from the ones last applied
 }
 
 // empty reports whether the VM already matches the file.
@@ -75,6 +77,11 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 
 	if err := a.diffNetwork(&c, inst, f); err != nil {
 		return c, err
+	}
+
+	if lines := environmentChanges(a.appliedEnvironment(inst.Name), f.Environment); len(lines) > 0 {
+		c.environment = true
+		c.lines = append(c.lines, lines...)
 	}
 
 	if f.Start != a.approvedStart(inst.Name) {
@@ -218,6 +225,15 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 	}
 	if c.start {
 		if err := a.approveStart(inst.Name, f.Start); err != nil {
+			return err
+		}
+	}
+	// A rebuild starts from a fresh system disk, so it needs the file again.
+	if c.environment || (c.recreate && len(f.Environment) > 0) {
+		if err := a.writeEnvironment(ctx, inst, f.Environment); err != nil {
+			return err
+		}
+		if err := a.saveEnvironment(inst.Name, f.Environment); err != nil {
 			return err
 		}
 	}

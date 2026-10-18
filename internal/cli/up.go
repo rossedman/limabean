@@ -56,6 +56,8 @@ limabean down stops a VM; limabean rm deletes it.
   network:                    # see: limabean network --help
     allow: [github, npm]
     locked: true
+  environment:                # plain variables for shells, setup and start
+    NODE_ENV: development
   secrets: [OPENAI_API_KEY]   # names only; values stay on your Mac
   ports: [3000]               # shown as http://localhost:<port> after up
   claude:                     # plugins for Claude Code in the VM
@@ -253,6 +255,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 		}
 		plan = append(plan, network)
 	}
+	plan = append(plan, environmentPlan(f.Environment)...)
 	if len(f.Secrets) > 0 {
 		plan = append(plan, "secrets: shared ones, plus "+strings.Join(f.Secrets, ", "))
 	}
@@ -314,6 +317,14 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	}
 	inst, err := a.vm(ctx, f.Name)
 	if err != nil {
+		return err
+	}
+	if len(f.Environment) > 0 {
+		if err := a.writeEnvironment(ctx, inst, f.Environment); err != nil {
+			return err
+		}
+	}
+	if err := a.saveEnvironment(f.Name, f.Environment); err != nil {
 		return err
 	}
 	clone := ""

@@ -20,6 +20,14 @@ for d in "$HOME/.local/share/mise/shims" "$PYTHONUSERBASE/bin" "$GOBIN"; do
 done
 export PATH
 
+# A project's environment, from `environment:` in its .limabean.yaml: export
+# lines written by `limabean up`. Before secrets, so a project file can't
+# replace one.
+if [ -r "$HOME/.config/limabean/project.env" ]; then
+  # shellcheck source=/dev/null
+  . "$HOME/.config/limabean/project.env"
+fi
+
 # Secrets from `limabean secrets` and `limabean github`: export lines written
 # by `limabean secrets sync` (mode 600). The references they came from stay on
 # the Mac; see docs/secrets.md.

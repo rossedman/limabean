@@ -64,6 +64,7 @@ type fakeWorld struct {
 	logText        string            // what tail prints in a VM
 	logErr         bool              // tail fails, as without sudo or a log
 	startRunning   bool              // a project's start is still running
+	oldEnvSh       bool              // the VM's env.sh predates environment:
 	sizes          map[string][2]int // VM → CPUs and GiB of memory, as started or edited (default 4, 8)
 	extensions     string            // what the editor's --list-extensions prints
 	extensionsErr  error             // --list-extensions fails
@@ -237,6 +238,17 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return []byte("no such file"), errors.New("exit status 1")
 			}
 			return []byte(w.logText), nil
+		case strings.Contains(remote, "project.env.new"):
+			w.sshStdin[vm+".env"] = in
+			return nil, nil
+		case strings.HasPrefix(remote, `rm -f "$HOME/.config/limabean/project.env"`):
+			delete(w.sshStdin, vm+".env")
+			return nil, nil
+		case strings.Contains(remote, "sed -n /project.env/p"):
+			if w.oldEnvSh {
+				return nil, errors.New("exit status 1")
+			}
+			return nil, nil
 		case strings.Contains(remote, "setsid nohup"):
 			w.sshStdin[vm+".start"] = remote
 			if w.startRunning {
