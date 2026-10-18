@@ -249,6 +249,11 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return nil, errors.New("exit status 1")
 			}
 			return nil, nil
+		case strings.Contains(remote, "else echo stopped"): // ps's start check
+			if w.startRunning {
+				return []byte("running\n"), nil
+			}
+			return []byte("stopped\n"), nil
 		case strings.Contains(remote, "setsid nohup"):
 			w.sshStdin[vm+".start"] = remote
 			if w.startRunning {

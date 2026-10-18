@@ -75,6 +75,7 @@ are in it:
 limabean up                      # create the VM, or start it and apply the file's changes
 limabean ssh myapp               # a shell
 limabean code myapp              # VS Code, Cursor or another editor, over SSH
+limabean ps                      # is it running, is start, which ports, what changed
 limabean logs --start -f         # follow what start is running
 limabean down                    # stop it; everything in it is kept
 ```

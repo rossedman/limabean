@@ -34,8 +34,21 @@ func startScript(dir, start string) string {
 		cd += " " + secrets.ShellQuote(dir)
 	}
 	return `d="` + vmLogDir + `" && mkdir -p "$d" && ` +
-		`if s=$(ps -o stat= -p "$(cat "$d/start.pid" 2>/dev/null)" 2>/dev/null) && [ -n "$s" ] && [ "${s#Z}" = "$s" ]; then echo running; exit 0; fi && ` +
+		`if ` + startRunning + `; then echo running; exit 0; fi && ` +
 		cd + ` && { setsid nohup bash -ec ` + secrets.ShellQuote(start) + ` >"$d/start.log" 2>&1 </dev/null & echo $! >"$d/start.pid"; }`
+}
+
+// startRunning is a shell test for a project's start still running, with
+// $d set to vmLogDir.
+const startRunning = `s=$(ps -o stat= -p "$(cat "$d/start.pid" 2>/dev/null)" 2>/dev/null) && [ -n "$s" ] && [ "${s#Z}" = "$s" ]`
+
+// startState reports whether a running VM's start is still running.
+func (a *App) startState(ctx context.Context, inst lima.Instance) string {
+	out, err := a.Lima.Run(ctx, inst, nil, `d="`+vmLogDir+`"; if `+startRunning+`; then echo running; else echo stopped; fi`)
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // runStart starts a project's start commands in the VM, unless they're

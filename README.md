@@ -120,6 +120,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | Command | What it does |
 |---|---|
 | `limabean up [name]` | In a project: create its VM, or start it and apply the file's changes. With a name: start that VM, or create it, choosing packs and secrets (`--with go`) |
+| `limabean ps` | Show the project's VM: status, `start`, ports and pending changes |
 | `limabean logs [name]` | Show a VM's provisioning log, or its project's setup and start output (`-f` to follow) |
 | `limabean down [name]` | Stop the project's VM, or the one named; `--idle 2h` stops every VM nobody is using |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
