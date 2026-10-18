@@ -1,0 +1,8 @@
+# A gRPC service in Go, with buf and grpcurl.
+# Start from it: limabean recipes grpc && limabean up
+packs: [api]
+without: [node, kubernetes, infra, db]
+ports: [8080, 50051]
+setup: |
+  buf dep update || true
+  go mod download

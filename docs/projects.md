@@ -13,7 +13,16 @@ limabean up
 
 ## Your first project file
 
-Start small. This is enough for a Node app that serves on port 3000:
+The quickest start is a [recipe](recipes.md), a commented starter file for
+a kind of project (a Go service, a web frontend, a Rails app, a Claude
+sandbox and more):
+
+```bash
+limabean recipes                 # list them
+limabean recipes node-web        # write one to .limabean.yaml, then edit it
+```
+
+Or write one by hand. This is enough for a Node app that serves on port 3000:
 
 ```yaml
 # .limabean.yaml
@@ -211,45 +220,11 @@ Claude only uses headless.
 
 ## Examples
 
-**A web app with a dev server**
-
-```yaml
-ports: [5173]
-setup: |
-  pnpm install
-```
-
-**A Go service with Postgres, run in Docker**
-
-```yaml
-disk: 30
-ports: [8080]
-setup: |
-  docker compose up -d db
-  go mod download
-  make migrate
-```
-
-**A sandbox for Claude Code**
-
-The [`claude` pack](packs.md#claude-code-in-a-vm), a network that only
-reaches GitHub, npm and Anthropic, and no sudo or Docker for anything inside:
-
-```yaml
-name: myapp-agent
-packs: [claude]
-network:
-  allow: [github, npm, claude]
-  locked: true
-secrets: [CLAUDE_CODE_OAUTH_TOKEN]
-setup: |
-  npm ci
-```
-
-```bash
-limabean up
-limabean ssh myapp-agent 'cd ~/code/github.com/acme/myapp && claude -p "fix the failing test"'
-```
+The [recipes](recipes.md) are complete examples, one per kind of VM: a Go
+service with Postgres, a web frontend, Python APIs and notebooks, Rust,
+Java, Rails, gRPC, Kubernetes, Terraform, a locked-down Claude Code
+sandbox, a VM for reviewing untrusted code, and a minimal one. Start from
+one with `limabean recipes <name>`.
 
 ## Trust
 

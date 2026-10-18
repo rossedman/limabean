@@ -1,0 +1,8 @@
+# Kubernetes work: a kind cluster in Docker, with kubectl, helm and k9s.
+# Start from it: limabean recipes kubernetes && limabean up
+without: [node, python, db]       # keeps go, kubernetes, infra, containers
+cpus: 4
+memory: 8
+disk: 40                          # node images and whatever you deploy
+setup: |
+  kind get clusters | grep -qx dev || kind create cluster --name dev

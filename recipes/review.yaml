@@ -1,0 +1,13 @@
+# Reviewing code you don't trust yet, with scanners at hand.
+# No secrets, a network that reaches only GitHub and Anthropic, no sudo or
+# Docker, and syft, grype and cosign for the supply chain.
+# Start from it: limabean recipes review && limabean up
+packs: [supply-chain, claude]
+without: [kubernetes, infra, db, containers]
+network:
+  allow: [github, claude]
+  locked: true
+claude:
+  marketplaces:
+    - marketplace: anthropics/claude-plugins-official
+      plugins: [security-guidance@claude-plugins-official, code-review@claude-plugins-official]

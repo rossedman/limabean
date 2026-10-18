@@ -1,0 +1,9 @@
+# A Go service with Postgres in Docker.
+# Start from it: limabean recipes go-service && limabean up
+# The default packs bring go (golangci-lint, gofumpt), containers and db (psql).
+without: [node, kubernetes, infra]
+disk: 30                          # room for Docker images
+ports: [8080]
+setup: |
+  if [ -f compose.yaml ] || [ -f docker-compose.yml ]; then docker compose up -d; fi
+  go mod download

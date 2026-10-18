@@ -1,0 +1,7 @@
+# Infrastructure with Terraform and the AWS CLI.
+# ~/.aws on your Mac is mounted read-only in the VM, so profiles work as
+# they do on the Mac; run aws sso login on the Mac.
+# Start from it: limabean recipes terraform && limabean up
+without: [go, node, python, db]   # keeps infra (terraform, tflint, aws), kubernetes, containers
+setup: |
+  terraform init -backend=false

@@ -1,0 +1,9 @@
+# A Ruby on Rails app with Postgres in Docker.
+# Start from it: limabean recipes rails && limabean up
+packs: [ruby]
+without: [go, kubernetes, infra]  # node stays, for the asset pipeline
+disk: 30
+ports: [3000]
+setup: |
+  if [ -f compose.yaml ] || [ -f docker-compose.yml ]; then docker compose up -d; fi
+  bundle install

@@ -1,0 +1,12 @@
+# A web frontend: Node, pnpm and a dev server (Vite, Next.js and the like).
+# Start from it: limabean recipes node-web && limabean up
+without: [go, kubernetes, infra, db]
+ports: [5173, 3000]               # Vite, Next.js
+setup: |
+  if [ -f pnpm-lock.yaml ]; then pnpm install
+  elif [ -f bun.lock ] || [ -f bun.lockb ]; then bun install
+  else npm ci; fi
+claude:
+  marketplaces:
+    - marketplace: anthropics/claude-plugins-official
+      plugins: [frontend-design@claude-plugins-official]

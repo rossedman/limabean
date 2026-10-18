@@ -90,7 +90,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/lightning-bolt.svg" %}</div>
           <h3>One command per VM</h3>
-          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity. It's a copy of a ready-made image, so it only has to boot. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes.</p>
+          <p><code>limabean new dev</code> gives you an Ubuntu 26.04 VM with your git identity. It's a copy of a ready-made image, so it only has to boot. <code>limabean up</code> builds the one a repo's <code>.limabean.yaml</code> describes, and <code>limabean recipes</code> starts that file for you.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/package-variant-closed.svg" %}</div>
@@ -110,7 +110,7 @@
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/robot-happy-outline.svg" %}</div>
           <h3>Built for Claude and your editor</h3>
-          <p>Claude manages VMs through MCP, each running VM is an SSH connection in Claude Desktop, and <code>limabean code</code> opens one in VS Code, Cursor or another editor. Work happens with the VM's tools, away from your Mac's files.</p>
+          <p>Claude manages VMs through MCP, each running VM is an SSH connection in Claude Desktop, and <code>limabean code</code> opens one in VS Code, Cursor or another editor. Claude Code in a VM runs with guardrails and the plugins your project names, away from your Mac's files.</p>
         </article>
         <article class="lb-card">
           <div class="lb-card__icon">{% include ".icons/material/delete-restore.svg" %}</div>
@@ -189,6 +189,7 @@
           <dl>
             <dt>new</dt><dd>Create a VM, choosing its secrets</dd>
             <dt>up</dt><dd>The VM a repo's <code>.limabean.yaml</code> describes</dd>
+            <dt>recipes</dt><dd>Starter <code>.limabean.yaml</code> files for common VMs</dd>
             <dt>run --rm</dt><dd>One command in a fresh VM, then gone</dd>
             <dt>ls</dt><dd>List VMs, or print JSON with <code>--json</code></dd>
             <dt>ssh</dt><dd>Open a shell, starting the VM if needed</dd>

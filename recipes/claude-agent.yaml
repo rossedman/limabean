@@ -1,0 +1,16 @@
+# A locked-down sandbox for Claude Code agents.
+# It reaches only GitHub, package registries and Anthropic, and has no sudo
+# or Docker. Set the token once on your Mac:
+#   claude setup-token
+#   limabean secrets set CLAUDE_CODE_OAUTH_TOKEN --vm <name>
+# Start from it: limabean recipes claude-agent && limabean up
+packs: [claude]
+without: [kubernetes, infra]
+network:
+  allow: [github, npm, python, go, claude]
+  locked: true
+secrets: [CLAUDE_CODE_OAUTH_TOKEN]
+claude:
+  marketplaces:
+    - marketplace: anthropics/claude-plugins-official
+      plugins: [commit-commands@claude-plugins-official, pr-review-toolkit@claude-plugins-official]

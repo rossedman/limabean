@@ -382,6 +382,15 @@ An opt-in `--mount` of a host directory (B) is still open.
     Claude Desktop's copy), and leaving it to a repository's own
     `.claude/settings.json` (needs a trusted folder; nothing for headless
     runs or other folders).
+- **D19 Recipes. Decided: embedded starter project files, tested by
+  bringing each one up.** `recipes/*.yaml` are `.limabean.yaml` files with
+  comments, embedded by a small `recipes` package so the binary carries
+  them; `limabean recipes` lists them (the first comment line is the
+  description) and writes one into the current directory without
+  replacing a project file unless forced. They live outside `templates/`
+  so editing one doesn't change the templates hash and outdate every image.
+  `TestRecipesBringVMsUp` runs `up` on each, so a recipe naming a missing
+  pack or preset fails CI, and the docs include the files themselves.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
