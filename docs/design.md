@@ -443,9 +443,9 @@ An opt-in `--mount` of a host directory (B) is still open.
   Mac; different ones are a change `up` shows and asks about, and until
   then neither old nor new run. `up --dry-run` prints the plan or the
   changes and stops.
-- **D24 environment, ps and project tools over MCP. Decided: the project
+- **D24 vars, ps and project tools over MCP. Decided: the project
   file stays the one description, for people and for Claude.**
-  `environment:` writes plain variables to `~/.config/limabean/project.env`,
+  `vars:` writes plain variables to `~/.config/limabean/project.env`,
   which `env.sh` sources before `secrets.env` so secrets win; names the
   shell or linker reads first (`PATH`, `LD_*`, …) and names that are also
   secrets are refused. The applied set is kept on the Mac so changes are

@@ -56,7 +56,7 @@ limabean down stops a VM; limabean rm deletes it.
   network:                    # see: limabean network --help
     allow: [github, npm]
     locked: true
-  environment:                # plain variables for shells, setup and start
+  vars:                       # plain variables for shells, setup and start
     NODE_ENV: development
   secrets: [OPENAI_API_KEY]   # names only; values stay on your Mac
   ports: [3000]               # shown as http://localhost:<port> after up
@@ -241,7 +241,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	repo := a.projectRepo(ctx, f, dir)
 	own, missing := a.projectSecrets(f.Secrets)
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
-	plan := []string{"environment: " + firstNonEmpty(f.Env, "scratch")}
+	plan := []string{"env: " + firstNonEmpty(f.Env, "scratch")}
 	plan = append(plan, "packs: "+strings.Join(append([]string{"core"}, f.Packs...), ", "))
 	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
 		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
@@ -256,7 +256,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 		}
 		plan = append(plan, network)
 	}
-	plan = append(plan, environmentPlan(f.Environment)...)
+	plan = append(plan, varsPlan(f.Vars)...)
 	if len(f.Secrets) > 0 {
 		plan = append(plan, "secrets: shared ones, plus "+strings.Join(f.Secrets, ", "))
 	}
@@ -320,12 +320,12 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	if err != nil {
 		return err
 	}
-	if len(f.Environment) > 0 {
-		if err := a.writeEnvironment(ctx, inst, f.Environment); err != nil {
+	if len(f.Vars) > 0 {
+		if err := a.writeVars(ctx, inst, f.Vars); err != nil {
 			return err
 		}
 	}
-	if err := a.saveEnvironment(f.Name, f.Environment); err != nil {
+	if err := a.saveVars(f.Name, f.Vars); err != nil {
 		return err
 	}
 	clone := ""

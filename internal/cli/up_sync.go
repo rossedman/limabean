@@ -31,7 +31,7 @@ type upChanges struct {
 
 	start bool // start commands that differ from the ones last approved
 
-	environment bool // variables that differ from the ones last applied
+	vars bool // variables that differ from the ones last applied
 }
 
 // empty reports whether the VM already matches the file.
@@ -54,7 +54,7 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 	}
 	if env := firstNonEmpty(a.envOf(inst.Name), "scratch"); env != c.env {
 		c.recreate = true
-		c.lines = append(c.lines, fmt.Sprintf("environment: %s → %s (rebuild, keeping ~/code)", env, c.env))
+		c.lines = append(c.lines, fmt.Sprintf("env: %s → %s (rebuild, keeping ~/code)", env, c.env))
 	}
 
 	if f.CPUs > 0 && f.CPUs != inst.CPUs {
@@ -79,8 +79,8 @@ func (a *App) upDiff(inst lima.Instance, f *project.File, own []secrets.Secret) 
 		return c, err
 	}
 
-	if lines := environmentChanges(a.appliedEnvironment(inst.Name), f.Environment); len(lines) > 0 {
-		c.environment = true
+	if lines := varsChanges(a.appliedVars(inst.Name), f.Vars); len(lines) > 0 {
+		c.vars = true
 		c.lines = append(c.lines, lines...)
 	}
 
@@ -229,11 +229,11 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 		}
 	}
 	// A rebuild starts from a fresh system disk, so it needs the file again.
-	if c.environment || (c.recreate && len(f.Environment) > 0) {
-		if err := a.writeEnvironment(ctx, inst, f.Environment); err != nil {
+	if c.vars || (c.recreate && len(f.Vars) > 0) {
+		if err := a.writeVars(ctx, inst, f.Vars); err != nil {
 			return err
 		}
-		if err := a.saveEnvironment(inst.Name, f.Environment); err != nil {
+		if err := a.saveVars(inst.Name, f.Vars); err != nil {
 			return err
 		}
 	}
