@@ -1,8 +1,9 @@
-# Go: the toolchain, goreleaser, golangci-lint, gofumpt and goimports.
+# Go: the toolchain, goreleaser, golangci-lint, gofumpt, goimports and gopls.
 [tools]
 go = "1.27.2"
 goreleaser = "2.18.3"
 golangci-lint = "2.14.0"
 gofumpt = "0.12.0"   # stricter gofmt
 "go:golang.org/x/tools/cmd/goimports" = "0.52.0"
+"go:golang.org/x/tools/gopls" = "0.24.0"   # language server, for editors and Claude's gopls-lsp
 "go:github.com/posener/complete/v2/gocomplete" = "2.1.0"   # completion for `go` (see zshrc)

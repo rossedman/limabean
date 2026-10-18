@@ -21,6 +21,9 @@ remote.
   lazygit, gh, ghq, just, shellcheck, shfmt, …); Go, Node, Python's uv,
   Kubernetes, Terraform, Rust, Java, Ruby and more are packs you pick.
   Use `mise use node@22` or `mise use terraform@1.9` for other versions.
+- **Language servers** for Go, Python, TypeScript and Rust, in their
+  packs, for your editor and for Claude's LSP plugins
+  ([packs](packs.md#language-servers)).
 - **Formatters and linters** for Go, Python, shell and YAML: gofumpt,
   goimports, golangci-lint and `go vet`; ruff and yamllint; shellcheck and
   shfmt. shellcheck and shfmt are in every VM; the rest come with the `go`

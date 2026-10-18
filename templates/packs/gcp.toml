@@ -1,0 +1,3 @@
+# Google Cloud: the gcloud CLI, with gsutil and bq.
+[tools]
+gcloud = "589.0.0"   # log in in the VM: gcloud auth login --no-launch-browser

@@ -1,0 +1,3 @@
+# .NET: the SDK, for C# and F#.
+[tools]
+dotnet = "10.0.402"
