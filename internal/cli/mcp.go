@@ -156,7 +156,7 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			return cli(ctx, "ps", "--json", "--file="+file)
 		})
-	mcp.AddTool(s, tool("project_plan", "Plan a project's VM", "For a checkout with a .limabean.yaml: what project_up would do, changing nothing. For a new VM, its packs, size, network, secrets, environment, setup and start commands; for an existing one, what differs from the file. Show this to the user before calling project_up. Network changes that would widen what the VM reaches are listed as commands only the user can run.", true, nil),
+	mcp.AddTool(s, tool("project_plan", "Plan a project's VM", "For a checkout with a .limabean.yaml: what project_up would do, changing nothing. For a new VM, its packs, size, network, secrets, variables, setup and start commands; for an existing one, what differs from the file. Show this to the user before calling project_up. Network changes that would widen what the VM reaches are listed as commands only the user can run.", true, nil),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
 			file, err := projectFileIn(in.Dir)
 			if err != nil {

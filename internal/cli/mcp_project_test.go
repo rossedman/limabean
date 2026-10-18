@@ -11,7 +11,7 @@ import (
 func TestMCPProjectTools(t *testing.T) {
 	h := newHarness(t)
 	t.Setenv("LIMABEAN_CODE_DISK", "")
-	dir := filepath.Dir(projectFile(t, "proj", "packs: [go]\nsetup: make deps\nstart: make serve\nenvironment:\n  MODE: dev\n"))
+	dir := filepath.Dir(projectFile(t, "proj", "packs: [go]\nsetup: make deps\nstart: make serve\nvars:\n  MODE: dev\n"))
 	// The origin comes from .git/config, read as a file: git never runs.
 	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func TestMCPProjectTools(t *testing.T) {
 	}
 
 	// A change that needs a rebuild is refused without --allow-destructive.
-	if err := os.WriteFile(filepath.Join(dir, ".limabean.yaml"), []byte("packs: [go, rust]\nstart: make serve\nenvironment:\n  MODE: dev\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".limabean.yaml"), []byte("packs: [go, rust]\nstart: make serve\nvars:\n  MODE: dev\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if out, isErr := call(t, cs, "project_up", map[string]any{"dir": dir}); !isErr || !strings.Contains(out, "--allow-destructive") || h.world.called("limactl delete") {

@@ -37,7 +37,7 @@ parent directory, shows what it's about to do, and asks:
 
 ```
 myapp (from ~/src/myapp/.limabean.yaml)
-    environment: scratch
+    env: scratch
     packs: core, node
     clone: github.com/acme/myapp
     setup, run in the VM:
@@ -102,7 +102,7 @@ Apply these changes to myapp? Yes
 | `cpus`, `memory` | Stops the VM, resizes it and starts it again |
 | `disk` | Grows the disk the same way; Lima can't shrink one, so a smaller number is only a warning |
 | `secrets` | Gives the VM the secrets it doesn't have yet |
-| `environment` | Writes the new variables in the running VM |
+| `vars` | Writes the new variables in the running VM |
 | `claude` | Adds the plugins to the VM's Claude settings |
 | `network`: fewer domains, `locked: true` | Applied straight away |
 | `network`: more domains, no allowlist, no `locked` | **Not applied.** A file from a repository can't widen what a VM reaches; `up` prints the `limabean network …` command for you to run if you agree |
@@ -129,7 +129,7 @@ Every key is optional.
 | `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
 | `network.allow` | list | open | Domains and presets the VM may reach ([sandboxes](network.md)) |
 | `network.locked` | bool | `false` | Take sudo and Docker away from the VM's user, so the allowlist holds |
-| `environment` | map | none | Plain variables for the VM's shells, `setup` and `start`; [details](#environment) |
+| `vars` | map | none | Plain variables for the VM's shells, `setup` and `start`; [details](#vars) |
 | `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
 | `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
 | `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
@@ -161,13 +161,13 @@ claude:
       plugins: [guardrails@guardrails]
 ```
 
-### Environment
+### Vars
 
-`environment` sets plain variables in the VM, for its shells, `setup` and
+`vars` sets plain variables in the VM, for its shells, `setup` and
 `start`:
 
 ```yaml
-environment:
+vars:
   NODE_ENV: development
   DATABASE_URL: postgres://postgres@localhost:5432/app
 ```

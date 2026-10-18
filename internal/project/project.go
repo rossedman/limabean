@@ -50,8 +50,8 @@ type File struct {
 	Start   string   `yaml:"start"`   // shell commands run in the clone, in the background, after every up
 	// Environment is plain variables for the VM's shells, setup and start;
 	// secrets go in Secrets instead.
-	Environment map[string]string `yaml:"environment"`
-	Claude      Claude            `yaml:"claude"` // plugins for Claude Code in the VM
+	Vars   map[string]string `yaml:"vars"`
+	Claude Claude            `yaml:"claude"` // plugins for Claude Code in the VM
 }
 
 // Claude is what Claude Code in the VM gets: plugins, from their
@@ -176,7 +176,7 @@ func (f *File) check() error {
 	if strings.HasPrefix(f.Repo, "-") {
 		return fmt.Errorf("repo %q isn't a repository", f.Repo)
 	}
-	if err := f.checkEnvironment(); err != nil {
+	if err := f.checkVars(); err != nil {
 		return err
 	}
 	return f.Claude.check()
@@ -212,20 +212,20 @@ func (c Claude) check() error {
 // dynamic linker read them before anything the project runs.
 var reservedEnv = map[string]bool{"PATH": true, "HOME": true, "USER": true, "SHELL": true, "ENV": true, "BASH_ENV": true, "ZDOTDIR": true, "PROMPT_COMMAND": true, "IFS": true}
 
-func (f *File) checkEnvironment() error {
-	if len(f.Environment) > 200 {
-		return errors.New("environment: at most 200 variables")
+func (f *File) checkVars() error {
+	if len(f.Vars) > 200 {
+		return errors.New("vars: at most 200 variables")
 	}
-	for name, value := range f.Environment {
+	for name, value := range f.Vars {
 		switch {
 		case !secretRE.MatchString(name):
-			return fmt.Errorf("environment: %q isn't a variable name", name)
+			return fmt.Errorf("vars: %q isn't a variable name", name)
 		case reservedEnv[name] || strings.HasPrefix(name, "LD_") || strings.HasPrefix(name, "DYLD_"):
-			return fmt.Errorf("environment: %s is set by the VM, not a project file", name)
+			return fmt.Errorf("vars: %s is set by the VM, not a project file", name)
 		case slices.Contains(f.Secrets, name):
-			return fmt.Errorf("environment: %s is also a secret; keep it under secrets only", name)
+			return fmt.Errorf("vars: %s is also a secret; keep it under secrets only", name)
 		case strings.ContainsAny(value, "\x00\n\r") || len(value) > 4096:
-			return fmt.Errorf("environment: %s's value must be one line of at most 4096 characters", name)
+			return fmt.Errorf("vars: %s's value must be one line of at most 4096 characters", name)
 		}
 	}
 	return nil

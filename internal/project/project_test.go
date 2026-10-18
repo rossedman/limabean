@@ -56,21 +56,21 @@ setup: |
 func TestLoadRejects(t *testing.T) {
 	dir := t.TempDir()
 	for body, want := range map[string]string{
-		"pakcs: [rust]":                             "pakcs",
-		"name: bad_name":                            "name",
-		"env: ../x":                                 "env",
-		"packs: [--with]":                           "pack",
-		"secrets: [X=cmd:id]":                       "only names",
-		"cpus: -1":                                  "positive",
-		"ports: [70000]":                            "out of range",
-		"repo: --upload-pack=evil":                  "isn't a repository",
-		"network: {allow: github}":                  "cannot unmarshal",
-		"environment: {1BAD: x}":                    "isn't a variable name",
-		"environment: {PATH: /evil}":                "set by the VM",
-		"environment: {LD_PRELOAD: /x.so}":          "set by the VM",
-		"environment: {BASH_ENV: /x}":               "set by the VM",
-		"environment: {TOKEN: x}\nsecrets: [TOKEN]": "also a secret",
-		"environment: {A: \"one\\ntwo\"}":           "one line",
+		"pakcs: [rust]":                      "pakcs",
+		"name: bad_name":                     "name",
+		"env: ../x":                          "env",
+		"packs: [--with]":                    "pack",
+		"secrets: [X=cmd:id]":                "only names",
+		"cpus: -1":                           "positive",
+		"ports: [70000]":                     "out of range",
+		"repo: --upload-pack=evil":           "isn't a repository",
+		"network: {allow: github}":           "cannot unmarshal",
+		"vars: {1BAD: x}":                    "isn't a variable name",
+		"vars: {PATH: /evil}":                "set by the VM",
+		"vars: {LD_PRELOAD: /x.so}":          "set by the VM",
+		"vars: {BASH_ENV: /x}":               "set by the VM",
+		"vars: {TOKEN: x}\nsecrets: [TOKEN]": "also a secret",
+		"vars: {A: \"one\\ntwo\"}":           "one line",
 	} {
 		p := filepath.Join(dir, FileName)
 		write(t, p, body)

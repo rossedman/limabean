@@ -64,7 +64,7 @@ type fakeWorld struct {
 	logText        string            // what tail prints in a VM
 	logErr         bool              // tail fails, as without sudo or a log
 	startRunning   bool              // a project's start is still running
-	oldEnvSh       bool              // the VM's env.sh predates environment:
+	oldEnvSh       bool              // the VM's env.sh predates vars:
 	sizes          map[string][2]int // VM → CPUs and GiB of memory, as started or edited (default 4, 8)
 	extensions     string            // what the editor's --list-extensions prints
 	extensionsErr  error             // --list-extensions fails
