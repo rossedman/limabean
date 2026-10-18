@@ -44,8 +44,7 @@ Claude Desktop as an SSH connection.
 ## Quick start
 
 ```bash
-brew install lima
-go install github.com/rossedman/limabean/cmd/limabean@latest   # or download a release
+brew install rossedman/tap/limabean   # installs Lima too; or: go install, or a release
 
 limabean init       # save settings, fix ~/.ssh/config, check your setup
 
