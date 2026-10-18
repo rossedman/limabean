@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -141,7 +140,7 @@ func (a *App) newVM(cmd *cobra.Command, args []string, nf *newFlags) error {
 		return err
 	}
 	if o.Name == "" && !a.UI.Prompting {
-		return errors.New("name the VM: limabean up <name>")
+		return usageErr("name the VM: limabean up <name>")
 	}
 
 	flagSecrets, err := parseSecretFlags(nf.secrets)
@@ -167,12 +166,12 @@ func (a *App) newVM(cmd *cobra.Command, args []string, nf *newFlags) error {
 		o.Env = "scratch"
 	}
 	if err := validVMName(o.Name); err != nil {
-		return fmt.Errorf("VM name %q: %w", o.Name, err)
+		return usageErr("VM name %q: %w", o.Name, err)
 	}
 	if _, exists, err := a.Lima.Get(ctx, o.Name); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("a VM named %q already exists", o.Name)
+		return conflictErr("a VM named %q already exists", o.Name)
 	}
 	if err := a.prepareVM(&o, vmChoices{secrets: flagSecrets, with: nf.with, without: nf.without, allow: nf.allow, locked: nf.locked, learn: nf.learn}); err != nil {
 		return err

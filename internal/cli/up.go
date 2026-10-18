@@ -126,11 +126,11 @@ as a change, so a git pull can't slip new ones in.`,
 				return errors.New("--setup runs a project file's setup; there's no .limabean.yaml here")
 			}
 			if len(args) == 0 && !a.UI.Prompting {
-				return errors.New("no .limabean.yaml here or in a parent directory; name a VM to start or create: limabean up <name>")
+				return usageErr("no .limabean.yaml here or in a parent directory; name a VM to start or create: limabean up <name>")
 			}
 			if len(args) > 0 {
 				if err := validVMName(args[0]); err != nil {
-					return fmt.Errorf("VM name %q: %w", args[0], err)
+					return usageErr("VM name %q: %w", args[0], err)
 				}
 				inst, ok, err := a.Lima.Get(ctx, args[0])
 				if err != nil {
@@ -145,7 +145,7 @@ as a change, so a git pull can't slip new ones in.`,
 						given = append(given, "an environment")
 					}
 					if len(given) > 0 {
-						return fmt.Errorf("%s already exists, and %s only apply when creating a VM (packs: limabean rebuild %s --with …; network: limabean network)", args[0], strings.Join(given, ", "), args[0])
+						return usageErr("%s already exists, and %s only apply when creating a VM (packs: limabean rebuild %s --with …; network: limabean network)", args[0], strings.Join(given, ", "), args[0])
 					}
 					return a.upStart(ctx, inst)
 				}
@@ -286,7 +286,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	}
 	if !opt.yes {
 		if !a.UI.Prompting {
-			return errors.New("check the plan above, then run again with --yes to create it")
+			return usageErr("check the plan above, then run again with --yes to create it")
 		}
 		ok, err := a.UI.Confirm("Create "+f.Name+"?", true)
 		if err != nil {

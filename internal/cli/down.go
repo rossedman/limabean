@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -98,7 +97,7 @@ func (a *App) targetVM(ctx context.Context, args []string, file, command, verb s
 		}
 		return f.Name, nil
 	case !a.UI.Prompting:
-		return "", fmt.Errorf("no .limabean.yaml here or in a parent directory; name the VM: limabean %s <name>", command)
+		return "", usageErr("no .limabean.yaml here or in a parent directory; name the VM: limabean %s <name>", command)
 	}
 	return a.vmArg(ctx, args, verb)
 }

@@ -78,34 +78,53 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 	add("vms", newNewCmd(a), newUpCmd(a), newDownCmd(a), newLogsCmd(a), newPsCmd(a), newRecipesCmd(a), newRunCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCpCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newCloneCmd(a), newRmCmd(a), newSnapshotCmd(a), newImagesCmd(a), newAutostopCmd(a))
 	add("access", newSecretsCmd(a), newGitHubCmd(a), newNetworkCmd(a), newClaudeCmd(a), newMCPCmd(a))
 	root.AddCommand(newCompletionCmd(a), newVersionCmd(a))
+	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return &cliError{code: exitUsage, kind: "usage", err: err}
+	})
+	usageArgs(root)
 	return root
 }
 
 // Execute runs limabean with args (os.Args[1:]) and returns the process exit
 // code.
-func Execute(version string, embedded fs.FS, args []string) int {
+func Execute(version string, embedded fs.FS, args []string) (status int) {
+	defer func() {
+		if r := recover(); r != nil {
+			bugReport(os.Stderr, version, args, r)
+			status = exitError
+		}
+	}()
 	a := NewApp(version, embedded)
 	root := NewRootCmd(a)
 	root.SetArgs(args)
 	err := root.ExecuteContext(context.Background())
 	switch {
 	case err == nil:
-		return 0
+		return exitOK
 	case errors.Is(err, ui.ErrAborted):
 		return 130
 	case errors.Is(err, errSilent):
-		return 1
+		return exitError
 	}
 	var code exitCode
 	if errors.As(err, &code) {
 		return int(code)
+	}
+	status, _ = classify(err)
+	var ce *cliError
+	if errors.As(err, &ce) && ce.silent {
+		return status
+	}
+	if wantsJSON(args) {
+		writeJSONError(os.Stderr, err)
+		return status
 	}
 	u := a.UI
 	if u == nil {
 		u = ui.New(true, false)
 	}
 	fmt.Fprintf(os.Stderr, "%s %v\n", u.Dimmed("limabean:"), err)
-	return 1
+	return status
 }
 
 // errSilent fails a command whose problems were already printed.

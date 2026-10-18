@@ -1389,11 +1389,20 @@ func TestCompletionFunctions(t *testing.T) {
 
 func TestExecuteExitCodes(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Chdir(t.TempDir())
 	if code := Execute("test", fstest.MapFS{}, []string{"version"}); code != 0 {
 		t.Errorf("version exit = %d", code)
 	}
-	if code := Execute("test", fstest.MapFS{}, []string{"no-such-command"}); code != 1 {
-		t.Errorf("unknown command exit = %d", code)
+	for args, want := range map[string]int{
+		"no-such-command":   exitUsage,
+		"ls --no-such-flag": exitUsage,
+		"ls extra-arg":      exitUsage,
+		"recipes cobol":     exitNotFound,
+		"ps --json":         exitNotFound, // in an empty directory
+	} {
+		if code := Execute("test", fstest.MapFS{}, strings.Fields(args)); code != want {
+			t.Errorf("%s: exit %d, want %d", args, code, want)
+		}
 	}
 	if code := Execute("test", fstest.MapFS{}, []string{"--config", t.TempDir(), "version"}); code != 1 {
 		t.Errorf("a directory as config should fail with 1, got %d", code)

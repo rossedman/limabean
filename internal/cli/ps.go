@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -60,7 +59,7 @@ ps changes nothing. For every VM at once, use limabean ls.`,
 				return err
 			}
 			if f == nil {
-				return errors.New("no .limabean.yaml here or in a parent directory; for every VM, use limabean ls")
+				return notFoundErr("no .limabean.yaml here or in a parent directory; for every VM, use limabean ls")
 			}
 			e := psEntry{Name: f.Name, File: shortPath(path), Status: "none", Start: "none", Ports: []psPort{}, Changes: []string{}, Widening: []string{}}
 			inst, ok, err := a.Lima.Get(ctx, f.Name)

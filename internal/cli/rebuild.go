@@ -72,7 +72,7 @@ both.`,
 						return err
 					}
 					if !clean {
-						return errSilent
+						return errUnsaved
 					}
 					question = fmt.Sprintf("Rebuild %s from the current %s template? Its disk is erased.", name, env)
 				}

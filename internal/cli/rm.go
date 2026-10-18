@@ -59,7 +59,7 @@ checks; the autostop agent does this every 10 minutes.`,
 			}
 			if !ok {
 				if a.envOf(name) == "" && !a.hasLeftovers(ctx, name) {
-					return fmt.Errorf("no VM named %q (see: limabean ls)", name)
+					return notFoundErr("no VM named %q (see: limabean ls)", name)
 				}
 				a.forget(ctx, name)
 				a.UI.OK("No VM named %s; removed what was left of it", name)
@@ -71,7 +71,7 @@ checks; the autostop agent does this every 10 minutes.`,
 					return err
 				}
 				if !clean {
-					return errSilent
+					return errUnsaved
 				}
 				if a.UI.Prompting {
 					yes, err := a.UI.Confirm(fmt.Sprintf("Delete %s? This can't be undone.", name), false)

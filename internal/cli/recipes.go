@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -75,7 +74,7 @@ func recipeNames() []string {
 func recipe(name string) ([]byte, error) {
 	body, err := fs.ReadFile(recipes.Files, name+".yaml")
 	if err != nil {
-		return nil, fmt.Errorf("no recipe %q; there are: %s", name, strings.Join(recipeNames(), ", "))
+		return nil, notFoundErr("no recipe %q; there are: %s", name, strings.Join(recipeNames(), ", "))
 	}
 	return body, nil
 }
@@ -104,7 +103,7 @@ func (a *App) writeRecipe(name string, body []byte, force bool) error {
 	for _, f := range project.FileNames {
 		if _, err := os.Stat(f); err == nil {
 			if !force {
-				return fmt.Errorf("%s is already here; --force replaces it, or --print shows the recipe", f)
+				return conflictErr("%s is already here; --force replaces it, or --print shows the recipe", f)
 			}
 			target = f
 		} else if !errors.Is(err, fs.ErrNotExist) {

@@ -69,6 +69,32 @@ missing names are errors, and questions take their defaults.
   `-v`/`--verbose` also prints each `limactl` and ssh command limabean runs;
   with both, `--verbose` wins.
 
+## Exit codes
+
+Scripts can rely on these; they won't be renumbered.
+
+| Code | Means |
+|---|---|
+| 0 | It worked, or there was nothing to do |
+| 1 | Something else went wrong; the message says what |
+| 2 | A bad flag or argument, or a value missing without a terminal to ask (`--yes`, a VM name) |
+| 3 | Reserved for authentication and permission failures |
+| 4 | The VM, project file, recipe or other target doesn't exist |
+| 5 | It's in the way: a VM of that name exists, a file would be replaced, or [unsaved work](lifecycle.md#unsaved-work-is-protected) stopped `rm` or `rebuild` |
+| 130 | You cancelled with Ctrl-C |
+
+`limabean run` exits with its command's own status instead.
+
+With `--json`, a failure prints a JSON object on stderr rather than a line
+of text, so a script parsing the output gets something it can read:
+
+```json
+{"error": {"code": "not_found", "exit": 4, "message": "no VM named \"api\" (see: limabean ls)"}}
+```
+
+If limabean itself crashes, it says so and prints what to include in a
+[bug report](https://github.com/rossedman/limabean/issues/new).
+
 ## Settings
 
 `~/.config/limabean/config` is a small `KEY="value"` file written by `init`.

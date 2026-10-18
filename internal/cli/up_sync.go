@@ -208,7 +208,7 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 	if !c.empty() {
 		if !opt.yes {
 			if !a.UI.Prompting {
-				return errors.New("check the changes above, then run again with --yes to apply them")
+				return usageErr("check the changes above, then run again with --yes to apply them")
 			}
 			ok, err := a.UI.Confirm("Apply these changes to "+f.Name+"?", true)
 			if err != nil {

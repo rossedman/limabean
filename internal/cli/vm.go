@@ -52,7 +52,7 @@ func (a *App) vm(ctx context.Context, name string) (lima.Instance, error) {
 		return inst, err
 	}
 	if !ok {
-		return inst, fmt.Errorf("no VM named %q (see: limabean ls)", name)
+		return inst, notFoundErr("no VM named %q (see: limabean ls)", name)
 	}
 	return inst, nil
 }
@@ -70,7 +70,7 @@ func (a *App) vmArg(ctx context.Context, args []string, verb string) (string, er
 		return "", errors.New("no VMs yet (limabean up <name>)")
 	}
 	if !a.UI.Prompting {
-		return "", errors.New("name a VM (see: limabean ls)")
+		return "", usageErr("name a VM (see: limabean ls)")
 	}
 	if len(list) == 1 {
 		return list[0].Name, nil
