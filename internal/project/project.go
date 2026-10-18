@@ -31,8 +31,8 @@ type File struct {
 	Name    string   `yaml:"name"`    // the VM's name; default the directory's
 	Env     string   `yaml:"env"`     // environment template; default scratch
 	Repo    string   `yaml:"repo"`    // what to clone; default the checkout's origin
-	Packs   []string `yaml:"packs"`   // added to the default packs
-	Without []string `yaml:"without"` // default packs to leave out
+	Packs   []string `yaml:"packs"`   // the VM's packs besides core; PACKS doesn't apply
+	Without []string `yaml:"without"` // no longer used: accepted so older files still load
 	CPUs    int      `yaml:"cpus"`
 	Memory  int      `yaml:"memory"` // GiB
 	Disk    int      `yaml:"disk"`   // GiB of the system disk

@@ -22,9 +22,9 @@ Claude Desktop as an SSH connection.
   and `limabean up` builds the VM a repository's `.limabean.yaml` describes;
   `limabean recipes` starts one for a Go service, a web app, a Claude
   sandbox and more.
-- **Batteries included, in packs.** Docker, Go, Python, Node, Kubernetes,
-  Terraform and 30+ CLI tools by default, every version pinned; add Rust,
-  Java, Ruby and more with `--with`.
+- **Only what you need, in packs.** Every VM has Docker, Python and core CLI
+  tools (ripgrep, fd, gh, …); Go, Node, Kubernetes, Terraform, Rust, Java, Ruby and more are
+  packs you pick per VM or per project, every version pinned.
 - **Keys stay on your Mac.** SSH keys stay in your agent, a scoped GitHub
   token lives in your Keychain, and your git and AWS config are mounted
   read-only.
@@ -53,7 +53,7 @@ limabean init       # save settings, fix ~/.ssh/config, check your setup
 # optional: log VMs into GitHub for gh and the API (scoped tokens: docs/github.md)
 gh auth token --hostname github.com | limabean github login --with-token
 
-limabean new dev    # create a VM; a form asks which secrets it gets
+limabean new dev    # create a VM; a form asks which packs and secrets it gets
 limabean ssh dev    # or: ssh lima-dev
 
 cd ~/src/myapp && limabean up   # the VM a repository's .limabean.yaml describes
@@ -124,7 +124,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean up` | Create or start the VM a repository's `.limabean.yaml` describes |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
 | `limabean run --rm -- <cmd>` | Run one command in a new VM, then delete it |
-| `limabean packs` | List the tool packs and which VMs get by default |
+| `limabean packs` | List the tool packs a VM can get |
 | `limabean ls` | List VMs, or print them as JSON with `--json` |
 | `limabean ssh [name] [cmd]` | Open a shell or run a command, starting the VM if needed |
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |

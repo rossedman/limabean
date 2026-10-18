@@ -26,6 +26,7 @@ Or write one by hand. This is enough for a Node app that serves on port 3000:
 
 ```yaml
 # .limabean.yaml
+packs: [node]
 ports: [3000]
 setup: |
   npm ci
@@ -37,6 +38,7 @@ parent directory, shows what it's about to do, and asks:
 ```
 myapp (from ~/src/myapp/.limabean.yaml)
     environment: scratch
+    packs: core, node
     clone: github.com/acme/myapp
     setup, run in the VM:
       npm ci
@@ -45,8 +47,8 @@ Create myapp? Yes
 
 Then it:
 
-1. creates a VM named after the directory (`myapp`), with the default
-   [packs](packs.md) and your shared secrets;
+1. creates a VM named after the directory (`myapp`), with the
+   [packs](packs.md) the file lists and your shared secrets;
 2. clones the checkout's `origin` into the VM, at
    `~/code/github.com/acme/myapp`;
 3. runs `setup` there, once;
@@ -100,8 +102,7 @@ Every key is optional.
 | `name` | string | the directory's name | The VM's name: letters, digits and dashes |
 | `env` | string | `scratch` | The [environment template](customizing.md) |
 | `repo` | string | the checkout's `origin` | What to clone: `owner/repo`, `host/owner/repo` or a URL |
-| `packs` | list | none | [Packs](packs.md) to add to the defaults (`PACKS`) |
-| `without` | list | none | Default packs to leave out |
+| `packs` | list | none | The VM's [packs](packs.md) besides `core`; the `PACKS` setting doesn't apply, so everyone gets the same VM |
 | `cpus` | number | `CPUS`, or 2 | CPUs |
 | `memory` | number | `MEMORY`, or 4 | GiB of memory |
 | `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
@@ -119,8 +120,7 @@ doesn't go unnoticed. A complete file:
 # .limabean.yaml
 name: myapp
 env: scratch
-packs: [rust, claude]
-without: [kubernetes]
+packs: [node, rust, claude]
 cpus: 4
 memory: 8
 disk: 30

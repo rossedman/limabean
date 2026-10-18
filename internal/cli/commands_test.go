@@ -1001,8 +1001,8 @@ func TestNewForm(t *testing.T) {
 	t.Setenv("FORM_VALUE", "from-env")
 	// Name; then the secrets step: add a new secret (env var), just this VM.
 	forms := [][]string{
-		{"formvm", ui.Enter}, // Name
-		{"y"},                // Add a new secret?
+		{"formvm", ui.Enter, ui.Space, ui.Enter}, // Name; packs: the first (api)
+		{"y"},                                    // Add a new secret?
 		{"FORM_SECRET", ui.Enter, ui.Down, ui.Down, ui.Enter, "FORM_VALUE", ui.Enter, "n"}, // env var, just this VM
 		{"n"}, // Add another secret?
 	}
@@ -1020,7 +1020,7 @@ func TestNewForm(t *testing.T) {
 	// A second VM is offered the first VM's secret, and a pasted one for
 	// every VM goes to the Keychain.
 	forms = [][]string{
-		{"second", ui.Enter},
+		{"second", ui.Enter, ui.Enter},                          // no packs
 		{ui.Space, ui.Enter, "y"},                               // pick FORM_SECRET from formvm; add a new secret
 		{"PASTED", ui.Enter, ui.Enter, "s3cret", ui.Enter, "y"}, // pasted value, every VM
 		{"n"},
@@ -1035,8 +1035,12 @@ func TestNewForm(t *testing.T) {
 		t.Errorf("pasted shared secret: %v / %q", h.world.keychain, h.read("secrets.env"))
 	}
 
-	// --secret skips the secrets step.
-	if out, err := h.runTTY(nil, "new", "third", "--secret", "X=1"); err != nil {
+	if got := h.read("../state/limabean/formvm.packs"); got != "api\n" {
+		t.Errorf("formvm's packs = %q", got)
+	}
+
+	// --secret skips the secrets step; --with skips the packs question.
+	if out, err := h.runTTY(nil, "new", "third", "--secret", "X=1", "--with", "rust"); err != nil || !strings.Contains(out, "Packs: core, rust") {
 		t.Fatalf("%v\n%s", err, out)
 	}
 }

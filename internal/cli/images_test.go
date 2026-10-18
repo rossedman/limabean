@@ -25,6 +25,7 @@ func imageNames(t *testing.T, h *harness) []imageEntry {
 func TestImagesMakeNewVMsCopies(t *testing.T) {
 	h := newHarness(t)
 	t.Setenv("LIMABEAN_IMAGES", "yes")
+	t.Setenv("LIMABEAN_PACKS", "go,python,node,kubernetes,infra,containers,db")
 
 	// No image yet: the VM is made the slow way, and one is built in the background.
 	out := h.must("", "new", "dev")

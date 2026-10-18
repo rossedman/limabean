@@ -1,6 +1,6 @@
 # Data work in Python: notebooks and libraries that want memory.
 # Start from it: limabean recipes python-data && limabean up
-without: [go, node, kubernetes, infra, containers]
+packs: [python]
 cpus: 4
 memory: 8
 disk: 30

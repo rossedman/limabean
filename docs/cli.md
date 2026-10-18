@@ -9,11 +9,11 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
-| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which secrets the VM gets; `--with` and `--without` change its [packs](packs.md); `--allow`, `--locked` and `--learn` set its [network policy](network.md); `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
+| `limabean new [name] [env]` | Creates a VM. In a terminal, a form asks for missing values and which [packs](packs.md) and secrets the VM gets; `--with` and `--without` choose its packs instead; `--allow`, `--locked` and `--learn` set its [network policy](network.md); `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
 | `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--force` to replace a project file) |
 | `limabean up` | Creates or starts the VM a repository's [`.limabean.yaml`](projects.md) describes, clones the repository, turns on its Claude plugins, and runs its setup |
 | `limabean run [flags] -- <cmd>` | Creates a VM, runs one command in it (in a fresh clone with `--repo`), and with `--rm` deletes it after; exits with the command's status ([details](lifecycle.md#throwaway-vms)) |
-| `limabean packs` | Lists the [packs](packs.md) of tools a VM can get and which new VMs get by default; `--json` for scripts |
+| `limabean packs` | Lists the [packs](packs.md) of tools a VM can get; `--json` for scripts |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets, network and SSH host, and when throwaway ones expire; `--json` prints them for scripts |
 | `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
@@ -68,7 +68,8 @@ MEMORY=""                        # GiB; empty: template default (4); flag: new -
 DISK=""                          # GiB of system disk; empty: template default (10); flag: new --disk
 CLAUDE_DESKTOP="yes"             # register VMs as SSH connections in Claude Desktop
 AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exists; empty: never
-PACKS="go,python,node,kubernetes,infra,containers,db"   # packs new VMs get; flag: new --with/--without
+PACKS=""                         # packs every new VM gets besides core; empty: none (new asks);
+                                 # flag: new --with/--without; project files ignore it
 IMAGES="yes"                     # copy new VMs from a provisioned image; no: provision each one
 IDE=""                           # editor limabean code opens: code, code-insiders, cursor, windsurf, codium, …;
                                  # empty: the first installed; flag: code --ide

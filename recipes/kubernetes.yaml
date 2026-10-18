@@ -1,6 +1,6 @@
 # Kubernetes work: a kind cluster in Docker, with kubectl, helm and k9s.
 # Start from it: limabean recipes kubernetes && limabean up
-without: [node, python, db]       # keeps go, kubernetes, infra, containers
+packs: [kubernetes, containers]   # kubectl, helm, kind, k9s; dive, skopeo
 cpus: 4
 memory: 8
 disk: 40                          # node images and whatever you deploy

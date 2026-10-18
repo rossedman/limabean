@@ -164,3 +164,27 @@ func TestUpClaude(t *testing.T) {
 		t.Errorf("failure:\n%s", out)
 	}
 }
+
+// A project's VM gets the packs its file lists, whatever PACKS says, so
+// everyone gets the same VM.
+func TestUpPacksAreExact(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	t.Setenv("LIMABEAN_PACKS", "go,node,kubernetes")
+	dir := filepath.Join(t.TempDir(), "exact")
+	file := filepath.Join(dir, ".limabean.yaml")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte("packs: [rust]\nwithout: [kubernetes]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := h.must("", "up", "--file", file, "--yes")
+	calls := strings.Join(h.world.calls, "\n")
+	if !strings.Contains(out, "packs: core, rust") || !strings.Contains(calls, "50-rust.toml") || strings.Contains(calls, "50-go.toml") || strings.Contains(calls, "50-node.toml") {
+		t.Errorf("packs:\n%s\n%s", out, calls)
+	}
+	if !strings.Contains(out, "without isn't needed any more") {
+		t.Errorf("no warning about without:\n%s", out)
+	}
+}

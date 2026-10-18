@@ -31,8 +31,7 @@ before them when it's made again: limabean rm <name> && limabean up.
   # .limabean.yaml
   name: myapp                 # default: the directory's name
   env: scratch                # environment template
-  packs: [rust, claude]       # added to the default packs
-  without: [kubernetes]       # default packs to leave out
+  packs: [go, db, claude]     # besides core, Docker and Python (limabean packs)
   cpus: 6
   memory: 12                  # GiB
   disk: 30                    # GiB of system disk
@@ -109,16 +108,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	own, missing := a.projectSecrets(f.Secrets)
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
 	plan := []string{"environment: " + firstNonEmpty(f.Env, "scratch")}
-	if len(f.Packs) > 0 || len(f.Without) > 0 {
-		packs := "packs: the defaults"
-		if len(f.Packs) > 0 {
-			packs += ", plus " + strings.Join(f.Packs, ", ")
-		}
-		if len(f.Without) > 0 {
-			packs += ", without " + strings.Join(f.Without, ", ")
-		}
-		plan = append(plan, packs)
-	}
+	plan = append(plan, "packs: "+strings.Join(append([]string{"core"}, f.Packs...), ", "))
 	if f.CPUs > 0 || f.Memory > 0 || f.Disk > 0 {
 		plan = append(plan, fmt.Sprintf("size: %d CPUs, %d GiB of memory, a %d GiB disk (0: the default)", f.CPUs, f.Memory, f.Disk))
 	}
@@ -146,6 +136,9 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 		}
 	}
 	a.UI.Hint(plan...)
+	if len(f.Without) > 0 {
+		a.UI.Warn("without isn't needed any more: a project's VM gets only core and the packs it lists")
+	}
 	if len(missing) > 0 {
 		a.UI.Warn("Not set up on this Mac, so the VM won't get them: %s", strings.Join(missing, ", "))
 		a.UI.Hint("limabean secrets set NAME --vm " + f.Name)
@@ -174,7 +167,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 		a.Cfg.Disk = f.Disk
 	}
 	o := createOptions{Name: f.Name, Env: firstNonEmpty(f.Env, "scratch")}
-	if err := a.prepareVM(&o, vmChoices{secrets: own, with: f.Packs, without: f.Without, allow: f.Network.Allow, locked: f.Network.Locked}); err != nil {
+	if err := a.prepareVM(&o, vmChoices{secrets: own, exact: true, with: f.Packs, allow: f.Network.Allow, locked: f.Network.Locked}); err != nil {
 		return err
 	}
 	a.prune(ctx)

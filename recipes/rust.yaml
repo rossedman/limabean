@@ -1,7 +1,6 @@
 # A Rust crate or CLI.
 # Start from it: limabean recipes rust && limabean up
 packs: [rust]
-without: [go, node, kubernetes, infra, db]
 cpus: 4                           # cargo builds in parallel
 disk: 30                          # target/ grows quickly
 setup: |

@@ -37,7 +37,7 @@ every VM from scratch instead, set `IMAGES="no"` in the config.
 
 ```bash
 limabean images ls
-limabean images build              # the default packs, now
+limabean images build --with go    # the image for new VMs with Go, now
 limabean images prune
 limabean images rm --all
 ```

@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,6 +29,10 @@ Claude Desktop. The first VM of a kind (environment and packs) is
 provisioned from scratch, which takes a few minutes, and an image of it is
 built in the background; later ones are copies of that image and only
 have to boot (see: limabean images --help).
+
+A VM gets the core shell tools, Docker and Python, plus the packs you pick:
+in a terminal, new asks which (the PACKS setting is checked already), and
+--with and --without choose them on the command line (see: limabean packs).
 
 In a terminal, new asks for anything you didn't pass and then shows the
 secrets step:
@@ -62,8 +67,8 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
   # A throwaway VM, deleted in four hours
   limabean new spike --ttl 4h
 
-  # The default packs, plus Rust and Java, without Kubernetes
-  limabean new api --with rust,java --without kubernetes
+  # Go and Postgres's client, without the questions about packs
+  limabean new api --with go,db
 
   # An agent sandbox: GitHub and PyPI only, and no way to undo that
   limabean new agent --allow github --allow python --locked`,
@@ -95,8 +100,18 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 				return err
 			}
 			if a.UI.Prompting {
-				if err := a.newForm(&o, envs, len(flagSecrets) > 0); err != nil {
+				var packs []templates.Pack
+				if !cmd.Flags().Changed("with") && !cmd.Flags().Changed("without") {
+					if packs, err = templates.Packs(root); err != nil {
+						return err
+					}
+				}
+				picked, err := a.newForm(&o, envs, packs, len(flagSecrets) > 0)
+				if err != nil {
 					return err
+				}
+				if packs != nil {
+					withPacks, withoutPacks = packChoice(templates.SplitList(a.Cfg.Packs), picked)
 				}
 			}
 			if o.Env == "" {
@@ -131,8 +146,8 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	}
 	f := cmd.Flags()
 	f.StringArrayVar(&secretFlags, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
-	f.StringSliceVar(&withPacks, "with", nil, "add these packs to the defaults, e.g. rust,java (see: limabean packs)")
-	f.StringSliceVar(&withoutPacks, "without", nil, "leave these packs out, e.g. kubernetes")
+	f.StringSliceVar(&withPacks, "with", nil, "give the VM these packs, e.g. go,node (see: limabean packs)")
+	f.StringSliceVar(&withoutPacks, "without", nil, "leave out packs the PACKS setting would add")
 	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
 	f.BoolVar(&learn, "learn", false, "record the domains the VM looks up, to build its allowlist (see: limabean network learn --help)")
 	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
@@ -146,10 +161,12 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 	return cmd
 }
 
-// newForm asks for the name and environment if missing, then which secrets
-// the VM gets. skipSecrets is set when --secret flags already chose them.
-func (a *App) newForm(o *createOptions, envs []string, skipSecrets bool) error {
+// newForm asks for the name and environment if missing and, given packs,
+// which of them the VM gets; then which secrets it gets. skipSecrets is set
+// when --secret flags already chose them. It returns the packs picked.
+func (a *App) newForm(o *createOptions, envs []string, packs []templates.Pack, skipSecrets bool) ([]string, error) {
 	var fields []huh.Field
+	var picked []string
 	if o.Name == "" {
 		fields = append(fields, huh.NewInput().Title("Name").
 			Description("Also its SSH host: ssh lima-<name>").
@@ -164,16 +181,45 @@ func (a *App) newForm(o *createOptions, envs []string, skipSecrets bool) error {
 		}
 		fields = append(fields, huh.NewSelect[string]().Title("Environment").Options(opts...).Value(&o.Env))
 	}
+	if opts := packOptions(packs, templates.SplitList(a.Cfg.Packs)); len(opts) > 0 {
+		fields = append(fields, huh.NewMultiSelect[string]().Title("Packs").
+			Description("Besides core shell tools, Docker and Python · space to select, enter to continue").
+			Options(opts...).Value(&picked))
+	}
 	if len(fields) > 0 {
 		if err := a.UI.Run(huh.NewGroup(fields...)); err != nil {
-			return err
+			return nil, err
 		}
 		o.Name = strings.TrimSpace(o.Name)
 	}
 	if skipSecrets {
-		return nil
+		return picked, nil
 	}
-	return a.secretsStep(o.Name)
+	return picked, a.secretsStep(o.Name)
+}
+
+// packOptions are the packs a VM can get besides core, the defaults
+// selected.
+func packOptions(packs []templates.Pack, defaults []string) []huh.Option[string] {
+	var opts []huh.Option[string]
+	for _, p := range packs {
+		if p.Name == templates.CorePack {
+			continue
+		}
+		opts = append(opts, huh.NewOption(fmt.Sprintf("%-12s %s", p.Name, p.Description), p.Name).Selected(slices.Contains(defaults, p.Name)))
+	}
+	return opts
+}
+
+// packChoice turns the packs picked in the form into --with and --without
+// against the defaults.
+func packChoice(defaults, picked []string) (with, without []string) {
+	for _, d := range defaults {
+		if !slices.Contains(picked, d) {
+			without = append(without, d)
+		}
+	}
+	return picked, without
 }
 
 // secretsStep shows which secrets the new VM gets, offers ones from other
@@ -265,6 +311,7 @@ func completeEnvs(a *App) func(*cobra.Command, []string, string) ([]string, cobr
 type vmChoices struct {
 	secrets       []secrets.Secret // its own, as NAME=reference
 	with, without []string         // packs, on top of the PACKS setting
+	exact         bool             // with is every pack; PACKS doesn't apply (project files)
 	allow         []string         // domains and presets; none: open
 	locked, learn bool
 }
@@ -272,7 +319,11 @@ type vmChoices struct {
 // prepareVM saves what a VM gets before it's created: its own secrets, its
 // network policy, and its packs, which it puts in o.
 func (a *App) prepareVM(o *createOptions, c vmChoices) error {
-	packs, err := a.resolvePacks(templates.SplitList(a.Cfg.Packs), c.with, c.without)
+	base := templates.SplitList(a.Cfg.Packs)
+	if c.exact {
+		base = nil
+	}
+	packs, err := a.resolvePacks(base, c.with, c.without)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@
 # Docker, and syft, grype and cosign for the supply chain.
 # Start from it: limabean recipes review && limabean up
 packs: [supply-chain, claude]
-without: [kubernetes, infra, db, containers]
 network:
   allow: [github, claude]
   locked: true

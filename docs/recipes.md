@@ -40,7 +40,7 @@ plugins are always real.
 
 ### go-service
 
-For an HTTP or worker service in Go. Docker runs its Postgres (or anything else in `compose.yaml`) next to it, and the default packs bring golangci-lint, gofumpt and `psql`.
+For an HTTP or worker service in Go. Docker runs its Postgres (or anything else in `compose.yaml`) next to it, and its packs bring golangci-lint, gofumpt and `psql`.
 
 ```yaml
 --8<-- "recipes/go-service.yaml"
@@ -153,8 +153,8 @@ For when you'd rather add packs as you go: `limabean rebuild <name> --with go`.
 A recipe is only a starting point; the [reference](projects.md#reference)
 lists every key. Some changes that come up often:
 
-- **Another language next to the main one**: add its pack, such as
-  `packs: [rust]`, or drop one you don't need with `without`.
+- **Another language next to the main one**: add its pack to `packs`,
+  such as `rust`; `limabean packs` lists them all.
 - **A sandbox**: add `network.allow` with the [presets](network.md) setup
   needs, and `locked: true`. If you don't know the list, find it with
   [learn mode](network.md#learn-what-a-vm-needs).

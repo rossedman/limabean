@@ -6,11 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rossedman/limabean/internal/templates"
 )
 
 func TestNewWithPacks(t *testing.T) {
 	h := newHarness(t)
 	t.Setenv("LIMABEAN_CODE_DISK", "")
+	t.Setenv("LIMABEAN_PACKS", "go,python,node,kubernetes,infra,containers,db") // the old default, as init wrote it
 	out := h.must("", "new", "api", "--with", "rust,java", "--without", "kubernetes")
 	if !strings.Contains(out, "Packs: core, containers, db, go, infra, java, node, python, rust") {
 		t.Fatalf("new --with --without:\n%s", out)
@@ -112,5 +115,37 @@ func TestPacksCommand(t *testing.T) {
 	}
 	if !defaults["core"] || !defaults["go"] || !defaults["rust"] || defaults["node"] || defaults["java"] {
 		t.Errorf("defaults with PACKS=go,rust: %v", defaults)
+	}
+}
+
+func TestNewDefaultsToCore(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	out := h.must("", "new", "bare")
+	if !strings.Contains(out, "Packs: core only (more later: limabean rebuild bare --with go,node)") {
+		t.Fatalf("out:\n%s", out)
+	}
+	if strings.Contains(strings.Join(h.world.calls, "\n"), "/etc/limabean/mise/50-") {
+		t.Errorf("a pack was added: %v", h.world.calls)
+	}
+}
+
+func TestPackChoice(t *testing.T) {
+	with, without := packChoice([]string{"go", "node"}, []string{"go", "rust"})
+	if strings.Join(with, ",") != "go,rust" || strings.Join(without, ",") != "node" {
+		t.Errorf("packChoice = %v, %v", with, without)
+	}
+	all, err := templates.Packs(filepath.Join(repoRoot, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts := packOptions(all, []string{"go"})
+	for _, o := range opts {
+		if o.Value == "core" {
+			t.Error("core is offered")
+		}
+	}
+	if len(opts) != len(all)-1 {
+		t.Errorf("options: %d of %d packs", len(opts), len(all))
 	}
 }

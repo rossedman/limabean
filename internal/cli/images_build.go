@@ -17,9 +17,9 @@ func newImagesBuildCmd(a *App) *cobra.Command {
 		Use:   "build",
 		Short: "Build an image now",
 		Long: `Build the image new VMs of an environment and set of packs are copied
-from, replacing an older one. VMs get the default packs (the PACKS
-setting) with --with and --without as for "limabean new", or exactly the
-packs in --packs.
+from, replacing an older one. VMs get the PACKS setting's packs (none
+besides core, unless you set it) with --with and --without as for
+"limabean new", or exactly the packs in --packs.
 
 limabean builds images in the background by itself; build one by hand so
 that even the first VM of a kind starts in seconds, or to pick up updates
@@ -79,7 +79,7 @@ before the week is up.`,
 	}
 	f := cmd.Flags()
 	f.StringVar(&env, "env", "scratch", "environment template")
-	f.StringSliceVar(&with, "with", nil, "add these packs to the defaults")
+	f.StringSliceVar(&with, "with", nil, "add these packs to the PACKS setting's")
 	f.StringSliceVar(&without, "without", nil, "leave these packs out")
 	f.StringVar(&packList, "packs", "", "exactly these packs besides core, e.g. go,node")
 	f.BoolVar(&ifNeeded, "if-needed", false, "do nothing if the image exists and is under a week old, or is being built")

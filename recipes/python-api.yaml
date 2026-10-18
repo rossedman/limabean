@@ -1,6 +1,6 @@
 # A Python web API (FastAPI, Django, Flask) managed with uv.
 # Start from it: limabean recipes python-api && limabean up
-without: [go, node, kubernetes, infra]
+packs: [python]                   # uv, ruff, yamllint
 ports: [8000]
 setup: |
   uv sync
