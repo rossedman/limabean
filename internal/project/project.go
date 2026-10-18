@@ -46,6 +46,7 @@ type File struct {
 	Secrets []string `yaml:"secrets"` // names of secrets the VM needs
 	Ports   []int    `yaml:"ports"`   // what the project serves, to show after up
 	Setup   string   `yaml:"setup"`   // shell commands run in the clone once, after creating
+	Start   string   `yaml:"start"`   // shell commands run in the clone, in the background, after every up
 	Claude  Claude   `yaml:"claude"`  // plugins for Claude Code in the VM
 }
 

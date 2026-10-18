@@ -429,6 +429,20 @@ An opt-in `--mount` of a host directory (B) is still open.
   scripts keep working, and autostop agents installed earlier run
   `stop --idle`. `up` applies its size flags itself, since a setting can
   bind only one flag and `new` keeps its binding.
+- **D23 start and logs. Decided: start runs detached after every up, and
+  is approved like a change.** `setup` runs once; what should be running
+  whenever the VM is (services, a dev server) goes in `start`, which `up`
+  launches with `setsid nohup` so it outlives the ssh session, keeping a
+  pid file and skipping the launch while the last one still runs (a
+  zombie doesn't count, for inits that don't reap). Its output and
+  setup's (through `tee`, keeping the exit status) go to
+  `~/.local/state/limabean/` in the VM, which `limabean logs` reads, along
+  with cloud-init's log (needs sudo, so not in a locked VM) and Lima's
+  host log on the Mac. Because start runs again on every `up` and the file
+  can change with a `git pull`, the last approved commands are kept on the
+  Mac; different ones are a change `up` shows and asks about, and until
+  then neither old nor new run. `up --dry-run` prints the plan or the
+  changes and stops.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

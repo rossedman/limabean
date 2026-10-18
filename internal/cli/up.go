@@ -19,7 +19,7 @@ import (
 
 func newUpCmd(a *App) *cobra.Command {
 	var file string
-	var yes, setup bool
+	var yes, setup, dryRun bool
 	var nf newFlags
 	cmd := &cobra.Command{
 		Use:   "up [name] [environment]",
@@ -33,7 +33,10 @@ applies whatever in the file changed: new packs or environment rebuild it
 (keeping ~/code), a new size resizes it, new secrets and Claude plugins are
 added, and a tighter network is applied. A file can't widen a VM's
 network: up prints the command for you to run instead. Setup runs once;
---setup runs it again.
+--setup runs it again. Start runs in the background after every up
+(unless it's still running), until the VM stops; limabean logs --start
+shows its output. --dry-run shows what up would create or change, and
+changes nothing.
 
 With a name, up starts that VM, or creates it if there's none: in a
 terminal it asks which packs and secrets it gets, and --with, --allow,
@@ -61,6 +64,9 @@ limabean down stops a VM; limabean rm deletes it.
         plugins: [guardrails@guardrails]      # plugin@marketplace
   setup: |                    # run once in the clone, with bash -e
     make deps
+  start: |                    # run in the clone, in the background, after every up
+    docker compose up -d
+    npm run dev
 
 The repository cloned is the checkout's origin (or repo: in the file).
 Secrets are names only: each must already be set up on your Mac (limabean
@@ -72,9 +78,13 @@ allowlist needs github (or the marketplace's host).
 
 The file comes with the repository, so up shows what it asks for, or what
 it would change, and waits for you to confirm; --yes skips that, for files
-you trust.`,
+you trust. Start commands that changed since you last approved them count
+as a change, so a git pull can't slip new ones in.`,
 		Example: `  # The project you're in: create it, or start it and apply the file's changes
   cd ~/src/myapp && limabean up
+
+  # See what up would change after editing the file, without changing it
+  limabean up --dry-run
 
   # Run the project's setup again
   limabean up --setup
@@ -106,9 +116,9 @@ you trust.`,
 				if inst, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
 					return err
 				} else if ok {
-					return a.upExisting(ctx, inst, f, filepath.Dir(path), yes, setup)
+					return a.upExisting(ctx, inst, f, filepath.Dir(path), upOptions{yes: yes, setup: setup, dryRun: dryRun})
 				}
-				return a.upCreate(ctx, f, filepath.Dir(path), yes)
+				return a.upCreate(ctx, f, filepath.Dir(path), upOptions{yes: yes, dryRun: dryRun})
 			}
 			if setup {
 				return errors.New("--setup runs a project file's setup; there's no .limabean.yaml here")
@@ -124,6 +134,10 @@ you trust.`,
 				if err != nil {
 					return err
 				}
+				if ok && dryRun {
+					a.UI.Info("Would start %s (--dry-run)", args[0])
+					return nil
+				}
 				if ok {
 					if len(args) > 1 {
 						given = append(given, "an environment")
@@ -134,6 +148,9 @@ you trust.`,
 					return a.upStart(ctx, inst)
 				}
 			}
+			if dryRun {
+				return errors.New("--dry-run shows what up would do with a project file or an existing VM; a new VM needs its choices made")
+			}
 			if err := a.sizeFlags(cmd); err != nil {
 				return err
 			}
@@ -143,6 +160,7 @@ you trust.`,
 	cmd.Flags().StringVarP(&file, "file", "f", "", "the project file (default: .limabean.yaml here or in a parent directory)")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "create the project's VM, or apply changes to it, without asking")
 	cmd.Flags().BoolVar(&setup, "setup", false, "run the project file's setup again in its existing VM")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what up would create or change, and change nothing")
 	nf.add(cmd.Flags())
 	return cmd
 }
@@ -211,7 +229,12 @@ func (a *App) completeUp(cmd *cobra.Command, args []string, s string) ([]string,
 }
 
 // upCreate creates a project's VM, clones the project and runs its setup.
-func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes bool) error {
+// upOptions are up's flags for a project's VM.
+type upOptions struct {
+	yes, setup, dryRun bool
+}
+
+func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upOptions) error {
 	repo := a.projectRepo(ctx, f, dir)
 	own, missing := a.projectSecrets(f.Secrets)
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
@@ -237,6 +260,9 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	if repo != "" {
 		plan = append(plan, "clone: "+repo)
 	}
+	if f.Start != "" {
+		plan = append(plan, startPlan(f.Start)...)
+	}
 	if f.Setup != "" {
 		plan = append(plan, "setup, run in the VM:")
 		for line := range strings.Lines(strings.TrimSpace(f.Setup)) {
@@ -251,7 +277,11 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 		a.UI.Warn("Not set up on this Mac, so the VM won't get them: %s", strings.Join(missing, ", "))
 		a.UI.Hint("limabean secrets set NAME --vm " + f.Name)
 	}
-	if !yes {
+	if opt.dryRun {
+		a.UI.Info("Nothing created (--dry-run)")
+		return nil
+	}
+	if !opt.yes {
 		if !a.UI.Prompting {
 			return errors.New("check the plan above, then run again with --yes to create it")
 		}
@@ -298,6 +328,12 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	if err := a.upSetup(inst, f, clone); err != nil {
 		return err
 	}
+	if err := a.approveStart(f.Name, f.Start); err != nil {
+		return err
+	}
+	if err := a.runStart(ctx, inst, f, clone); err != nil {
+		return err
+	}
 	a.upBox(f, clone)
 	return nil
 }
@@ -320,7 +356,7 @@ func (a *App) upSetup(inst lima.Instance, f *project.File, dir string) error {
 		return nil
 	}
 	a.UI.Info("Running setup in %s", a.UI.Code(inst.Name))
-	if err := a.attachSSH(inst, runScript(dir, []string{"bash", "-ec", f.Setup})); err != nil {
+	if err := a.attachSSH(inst, logged(runScript(dir, []string{"bash", "-ec", f.Setup}), "setup")); err != nil {
 		a.UI.Hint("Look in the VM (limabean ssh "+inst.Name+"), fix the setup, then run it again:", "limabean up --setup")
 		return fmt.Errorf("setup failed: %w", err)
 	}

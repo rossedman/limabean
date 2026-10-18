@@ -23,7 +23,7 @@ docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 
 `docs/go-cli.md` and `docs/design.md` explain the architecture and the
-decisions (D1–D22); read the relevant note before changing a design.
+decisions (D1–D23); read the relevant note before changing a design.
 
 ## Checks
 

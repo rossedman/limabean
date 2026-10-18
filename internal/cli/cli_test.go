@@ -61,6 +61,9 @@ type fakeWorld struct {
 	failDelete     bool              // limactl delete fails
 	spawnErr       error             // starting a background build fails
 	claudeErr      bool              // up's Claude plugins fail
+	logText        string            // what tail prints in a VM
+	logErr         bool              // tail fails, as without sudo or a log
+	startRunning   bool              // a project's start is still running
 	sizes          map[string][2]int // VM → CPUs and GiB of memory, as started or edited (default 4, 8)
 	extensions     string            // what the editor's --list-extensions prints
 	extensionsErr  error             // --list-extensions fails
@@ -229,6 +232,17 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 		case remote == "python3 -" && w.claudeErr: // up's Claude plugins
 			w.sshStdin[vm] = in
 			return []byte("settings.json isn't valid JSON\n"), errors.New("exit status 1")
+		case strings.Contains(remote, "tail -n "):
+			if w.logErr {
+				return []byte("no such file"), errors.New("exit status 1")
+			}
+			return []byte(w.logText), nil
+		case strings.Contains(remote, "setsid nohup"):
+			w.sshStdin[vm+".start"] = remote
+			if w.startRunning {
+				return []byte("running\n"), nil
+			}
+			return nil, nil
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):

@@ -75,6 +75,7 @@ are in it:
 limabean up                      # create the VM, or start it and apply the file's changes
 limabean ssh myapp               # a shell
 limabean code myapp              # VS Code, Cursor or another editor, over SSH
+limabean logs --start -f         # follow what start is running
 limabean down                    # stop it; everything in it is kept
 ```
 
@@ -84,7 +85,7 @@ limabean down                    # stop it; everything in it is kept
 
 Edit the file and run `limabean up` again. It compares the file with the VM
 as it is, lists what differs and asks before changing anything (`--yes`
-skips the question):
+skips the question; `--dry-run` only lists it):
 
 ```
 myapp (changes from ~/src/myapp/.limabean.yaml)
@@ -104,6 +105,7 @@ Apply these changes to myapp? Yes
 | `network`: fewer domains, `locked: true` | Applied straight away |
 | `network`: more domains, no allowlist, no `locked` | **Not applied.** A file from a repository can't widen what a VM reaches; `up` prints the `limabean network …` command for you to run if you agree |
 | `setup` | Runs only when the VM is created; `limabean up --setup` runs it again in the clone |
+| `start` | Shows the new commands and asks; once approved, they run after this and every later `up` |
 | `name` | Makes a different VM; the old one stays until you `limabean rm` it |
 
 A VM without its own `~/code` disk (made with `CODE_DISK=""`) loses its
@@ -128,6 +130,7 @@ Every key is optional.
 | `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
 | `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
 | `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
+| `start` | string | none | Shell commands run in the clone, [in the background](#start), after every `up` |
 | `claude.marketplaces` | list | none | [Claude plugins](#claude-plugins) for the VM: each entry a `marketplace` (GitHub `owner/repo` or an https git URL) and the `plugins` to turn on from it, as `plugin@marketplace` |
 
 Unknown keys, malformed names and out-of-range values are errors, so a typo
@@ -195,8 +198,32 @@ with `limabean network lock myapp`.
 `setup` runs with `bash -e`, so it stops at the first failing command. It
 runs in the clone (in your home directory if nothing was cloned), as the
 VM's user, with your secrets in the environment. If it fails, `up` stops and
-keeps the VM so you can look: `limabean ssh myapp`. Fix the setup, then run
-it again with `limabean up --setup`.
+keeps the VM so you can look: `limabean ssh myapp`, or read what it printed
+with `limabean logs --setup`. Fix the setup, then run it again with
+`limabean up --setup`.
+
+### Start
+
+`start` is for what should be running whenever the VM is up: services in
+Docker, a dev server, a watcher. It runs after every `up`, in the clone,
+with `bash -e` and your secrets, in the background, so `up` returns while
+it keeps going:
+
+```yaml
+start: |
+  docker compose up -d
+  npm run dev -- --host 0.0.0.0
+```
+
+- If the last `start` is still running, `up` leaves it alone rather than
+  starting a second one.
+- It stops with the VM: `limabean down`, and it runs again at the next `up`.
+- `limabean logs --start -f` follows its output; `start` keeps only the
+  latest run's.
+- `start` commands come with the repository and run on every `up`, so `up`
+  remembers the ones you approved (on your Mac) and asks again whenever they
+  change, as after a `git pull` that edits them. Until you approve, the old
+  ones don't run either.
 
 ### Claude plugins
 
