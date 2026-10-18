@@ -19,9 +19,8 @@ import (
 func newCodeCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "code [name] [repo]",
-		Short: "Open a VM, or a repository in it, in VS Code or Cursor",
-		Long: `Open a VM in your editor over SSH, using VS Code's Remote-SSH (or Cursor's
-built-in equivalent). A stopped VM is started first.
+		Short: "Open a VM, or a repository in it, in VS Code, Cursor or another editor",
+		Long: `Open a VM in your editor over SSH, using its Remote - SSH extension. A stopped VM is started first.
 
 With a repository, the editor opens that clone under ~/code. It's matched
 against the VM's ghq clones the way "ghq list" matches: limabean,
@@ -38,7 +37,13 @@ windsurf, codium, or any other editor whose command line takes VS Code's
 limabean opens the first of those it finds. It finds an editor on your
 PATH or inside its app in /Applications, so "Install 'code' command in
 PATH" isn't needed. It connects to lima-<name> through ~/.ssh/config, so
-that needs Lima's Include (limabean doctor checks it).`,
+that needs Lima's Include (limabean doctor checks it).
+
+VS Code, VS Code Insiders and VSCodium need a Remote - SSH extension to
+open a VM, and each keeps its own extensions. If it's missing, limabean
+offers to install it: ms-vscode-remote.remote-ssh, or
+jeanp413.open-remote-ssh for VSCodium. Cursor and Windsurf ship their own,
+so limabean doesn't check them.`,
 		Example: `  # dev's ~/code in VS Code
   limabean code dev
 
@@ -83,6 +88,9 @@ that needs Lima's Include (limabean doctor checks it).`,
 			if a.Cfg.IDE != "" && ide != a.Cfg.IDE {
 				a.UI.Warn("%s isn't installed, so this opens %s", a.Cfg.IDE, ide)
 				a.UI.Hint(fmt.Sprintf("To make it the default: IDE=%q in ~/.config/limabean/config", ide))
+			}
+			if err := a.ensureRemoteSSH(ctx, ide, path); err != nil {
+				return err
 			}
 			a.UI.Info("Opening %s in %s", a.UI.Code(name+":"+dir), ide)
 			return a.openEditor(ctx, path, "--remote", "ssh-remote+lima-"+name, dir)
@@ -235,6 +243,52 @@ func pickEditor(named string) (ide, path string, err error) {
 		return "", "", fmt.Errorf("%s isn't on your PATH, and none of %s is installed", named, strings.Join(editors, ", "))
 	}
 	return "", "", fmt.Errorf("no editor found: limabean code opens %s, on your PATH or in /Applications", strings.Join(editors, ", "))
+}
+
+// remoteSSHExtensions give an editor its ssh-remote+ paths, for the editors
+// that don't have one built in. Without it, the editor opens a window that
+// says "Unable to resolve resource vscode-remote://…".
+var remoteSSHExtensions = map[string]string{
+	"code":          "ms-vscode-remote.remote-ssh",
+	"code-insiders": "ms-vscode-remote.remote-ssh",
+	"codium":        "jeanp413.open-remote-ssh",
+}
+
+// ensureRemoteSSH installs the editor's Remote - SSH extension if it's
+// missing, after asking. If the editor can't list its extensions, it opens
+// the VM anyway.
+func (a *App) ensureRemoteSSH(ctx context.Context, ide, path string) error {
+	ext, ok := remoteSSHExtensions[ide]
+	if !ok {
+		return nil
+	}
+	out, err := a.editorOutput(ctx, path, "--list-extensions")
+	if err != nil {
+		return nil
+	}
+	for line := range strings.Lines(string(out)) {
+		if strings.EqualFold(strings.TrimSpace(line), ext) {
+			return nil
+		}
+	}
+	install := ide + " --install-extension " + ext
+	ok, err = a.UI.Confirm(fmt.Sprintf("%s needs the Remote - SSH extension (%s) to open a VM. Install it?", ide, ext), true)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("%s can't open a VM without Remote - SSH: %s", ide, install)
+	}
+	a.UI.Info("Installing %s in %s", ext, ide)
+	if out, err := a.editorOutput(ctx, path, "--install-extension", ext); err != nil {
+		return fmt.Errorf("%s failed: %w\n%s", install, err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// editorOutput runs the editor's command line tool and returns its output.
+func editorOutput(ctx context.Context, path string, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, path, args...).CombinedOutput()
 }
 
 // openEditor runs the editor's command line tool, which hands the window to
