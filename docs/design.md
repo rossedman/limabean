@@ -366,6 +366,21 @@ An opt-in `--mount` of a host directory (B) is still open.
   - Considered: `claude plugin install` during provisioning (needs Claude
     Code installed and the network at that moment; Claude Desktop's copy
     arrives only on first connect).
+- **D18 Claude plugins from a project file. Decided: settings and skills
+  written in the VM by `up`.** `.limabean.yaml`'s `claude:` names
+  marketplaces (GitHub `owner/repo` or an https git URL), plugins and skills
+  (a GitHub directory, optionally `@ref`). `project.Load` checks every entry
+  against a strict pattern, the plan lists them, and `up` sends them to a
+  python script in the VM as base64 JSON on stdin, so the file's text never
+  reaches a command line on either side. The script merges the plugins into
+  `~/.claude/settings.json` (Claude Code fetches them at session start, as
+  in D17) and sparse-clones each skill into `~/.claude/skills`. Fetching
+  happens in the VM, under its network policy; a failure warns rather than
+  stopping `up`.
+  - Considered: `claude plugin install` (needs the claude pack, and misses
+    Claude Desktop's copy), and leaving it to a repository's own
+    `.claude/settings.json` (needs a trusted folder; nothing for headless
+    runs or other folders).
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

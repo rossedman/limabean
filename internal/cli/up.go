@@ -41,12 +41,22 @@ before them when it's made again: limabean rm <name> && limabean up.
     locked: true
   secrets: [OPENAI_API_KEY]   # names only; values stay on your Mac
   ports: [3000]               # shown as http://localhost:<port> after up
+  claude:                     # for Claude Code in the VM
+    marketplaces:             # name: GitHub owner/repo, or an https git URL
+      guardrails: rossedman/guardrails
+    plugins: [guardrails@guardrails]
+    skills: [anthropics/skills/skills/pdf]   # owner/repo/path[@branch or tag]
   setup: |                    # run once in the clone, with bash -e
     make deps
 
 The repository cloned is the checkout's origin (or repo: in the file).
 Secrets are names only: each must already be set up on your Mac (limabean
 secrets ls), and shared secrets are included as always.
+
+Claude plugins go into the VM's ~/.claude/settings.json, and Claude Code
+fetches them when a session starts; skills are copied into ~/.claude/skills.
+Both are fetched inside the VM, so one with a network allowlist needs
+github (or the marketplace's host).
 
 The file comes with the repository, so up shows what it asks for and
 waits for you to confirm before creating anything; --yes skips that, for
@@ -127,6 +137,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	if len(f.Secrets) > 0 {
 		plan = append(plan, "secrets: shared ones, plus "+strings.Join(f.Secrets, ", "))
 	}
+	plan = append(plan, claudePlan(f.Claude)...)
 	if repo != "" {
 		plan = append(plan, "clone: "+repo)
 	}
@@ -184,6 +195,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	} else {
 		a.UI.Warn("No repository to clone: the checkout has no origin, and the file names no repo")
 	}
+	a.upClaude(ctx, inst, f.Claude)
 	if err := a.upSetup(inst, f, clone); err != nil {
 		return err
 	}

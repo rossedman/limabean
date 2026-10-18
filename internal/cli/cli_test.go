@@ -59,6 +59,7 @@ type fakeWorld struct {
 	attachErr      error           // what commands run on the terminal return
 	failDelete     bool            // limactl delete fails
 	spawnErr       error           // starting a background build fails
+	claudeErr      bool            // up's Claude plugins and skills fail
 	extensions     string          // what the editor's --list-extensions prints
 	extensionsErr  error           // --list-extensions fails
 	installExtErr  error           // --install-extension fails
@@ -219,6 +220,9 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			return nil, errors.New("exit status 1")
 		case strings.Contains(remote, "dns.log"):
 			return []byte(w.lookups), nil
+		case remote == "python3 -" && w.claudeErr: // up's Claude plugins and skills
+			w.sshStdin[vm] = in
+			return []byte("couldn't install skills: a/b/c\n"), errors.New("exit status 1")
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):

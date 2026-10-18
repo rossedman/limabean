@@ -56,15 +56,28 @@ setup: |
 func TestLoadRejects(t *testing.T) {
 	dir := t.TempDir()
 	for body, want := range map[string]string{
-		"pakcs: [rust]":            "pakcs",
-		"name: bad_name":           "name",
-		"env: ../x":                "env",
-		"packs: [--with]":          "pack",
-		"secrets: [X=cmd:id]":      "only names",
-		"cpus: -1":                 "positive",
-		"ports: [70000]":           "out of range",
-		"repo: --upload-pack=evil": "isn't a repository",
-		"network: {allow: github}": "cannot unmarshal",
+		"pakcs: [rust]":                           "pakcs",
+		"name: bad_name":                          "name",
+		"env: ../x":                               "env",
+		"packs: [--with]":                         "pack",
+		"secrets: [X=cmd:id]":                     "only names",
+		"cpus: -1":                                "positive",
+		"ports: [70000]":                          "out of range",
+		"repo: --upload-pack=evil":                "isn't a repository",
+		"network: {allow: github}":                "cannot unmarshal",
+		"claude: {marketplaces: {Bad_Name: a/b}}": "marketplace name",
+		"claude: {marketplaces: {m: --upload-pack=x}}":      "GitHub owner/repo",
+		"claude: {marketplaces: {m: 'http://x.com/a.git'}}": "https git URL",
+		"claude: {marketplaces: {m: 'https://x.com/../a'}}": "https git URL",
+		"claude: {marketplaces: {m: 'https://x.com/a b'}}":  "https git URL",
+		"claude: {plugins: [guardrails]}":                   "plugin@marketplace",
+		"claude: {plugins: [guardrails@guardrails]}":        "add it under claude.marketplaces",
+		"claude: {skills: [a/b]}":                           "owner/repo/path",
+		"claude: {skills: [a/b/../../etc]}":                 "owner/repo/path",
+		"claude: {skills: [-a/b/c]}":                        "owner/repo/path",
+		"claude: {skills: ['a/b/c;rm']}":                    "owner/repo/path",
+		"claude: {skills: [a/b/x/pdf, c/d/pdf@v1]}":         "two skills are named pdf",
+		"claude: {skils: [a/b/c]}":                          "skils",
 	} {
 		p := filepath.Join(dir, FileName)
 		write(t, p, body)
@@ -72,7 +85,22 @@ func TestLoadRejects(t *testing.T) {
 			t.Errorf("%q: %v", body, err)
 		}
 	}
-	p := filepath.Join(dir, "empty", FileName)
+	p := filepath.Join(dir, "claude", FileName)
+	write(t, p, `claude:
+  marketplaces:
+    guardrails: rossedman/guardrails
+    internal: https://git.example.com/team/plugins.git
+  plugins: [guardrails@guardrails, review@internal]
+  skills: [anthropics/skills/skills/pdf, me/skills/docx@v1.2]
+`)
+	f, err := Load(p)
+	if err != nil || len(f.Claude.Plugins) != 2 || f.Claude.Empty() {
+		t.Fatalf("claude: %+v %v", f, err)
+	}
+	if SkillName("me/skills/docx@v1.2") != "docx" || SkillName("a/b/c/pdf") != "pdf" || !(Claude{}).Empty() {
+		t.Errorf("SkillName or Empty")
+	}
+	p = filepath.Join(dir, "empty", FileName)
 	write(t, p, "")
 	if f, err := Load(p); err != nil || f.Name != "empty" {
 		t.Errorf("an empty file: %+v %v", f, err)

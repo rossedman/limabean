@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"encoding/base64"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rossedman/limabean/internal/project"
 )
 
 func TestUp(t *testing.T) {
@@ -110,5 +113,62 @@ func TestUpFindsFileAndSetupFails(t *testing.T) {
 	}
 	if _, err := h.run("", "up", "--file", filepath.Join(dir, "nope.yaml")); err == nil {
 		t.Error("a missing file should fail")
+	}
+}
+
+func TestUpClaude(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	dir := filepath.Join(t.TempDir(), "agent")
+	file := filepath.Join(dir, ".limabean.yaml")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(`claude:
+  marketplaces:
+    guardrails: rossedman/guardrails
+    internal: https://git.example.com/team/plugins.git
+  plugins: [guardrails@guardrails]
+  skills: [anthropics/skills/skills/pdf]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := h.run("", "up", "--file", file)
+	for _, want := range []string{
+		"claude marketplaces: guardrails (rossedman/guardrails), internal (https://git.example.com/team/plugins.git)",
+		"claude plugins: guardrails@guardrails",
+		"claude skills: anthropics/skills/skills/pdf",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("plan missing %q:\n%s", want, out)
+		}
+	}
+
+	out = h.must("", "up", "--file", file, "--yes")
+	if !strings.Contains(out, "Claude Code in agent gets: 1 plugin and 1 skill") {
+		t.Errorf("out:\n%s", out)
+	}
+	// The list reaches the VM as base64 JSON on stdin, never on a command line.
+	in := h.world.sshStdin["agent"]
+	line, _, _ := strings.Cut(in, "\n")
+	data, err := base64.StdEncoding.DecodeString(strings.Trim(strings.TrimPrefix(line, "DATA = "), `"`))
+	if err != nil || !strings.Contains(string(data), `"guardrails@guardrails"`) || !strings.Contains(in, "enabledPlugins") {
+		t.Errorf("stdin: %q (%s, %v)", in, data, err)
+	}
+	if strings.Contains(strings.Join(h.world.calls, "\n"), "rossedman/guardrails") {
+		t.Errorf("the list reached a command line: %v", h.world.calls)
+	}
+
+	// A failure is a warning: the VM is still there and usable.
+	h.world.vms = map[string]string{}
+	h.world.claudeErr = true
+	out = h.must("", "up", "--file", file, "--yes")
+	if !strings.Contains(out, "couldn't install skills: a/b/c") || !strings.Contains(out, "limabean network allow agent github") {
+		t.Errorf("failure:\n%s", out)
+	}
+
+	// Marketplaces alone.
+	if s := claudeSummary(project.Claude{Marketplaces: map[string]string{"a": "b/c"}}); s != "1 marketplace" {
+		t.Errorf("summary = %q", s)
 	}
 }

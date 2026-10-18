@@ -43,6 +43,21 @@ type File struct {
 	Secrets []string `yaml:"secrets"` // names of secrets the VM needs
 	Ports   []int    `yaml:"ports"`   // what the project serves, to show after up
 	Setup   string   `yaml:"setup"`   // shell commands run in the clone once, after creating
+	Claude  Claude   `yaml:"claude"`  // plugins and skills for Claude Code in the VM
+}
+
+// Claude is what Claude Code in the VM gets: marketplaces and plugins in
+// its user settings, and skills in ~/.claude/skills. All of it is fetched
+// inside the VM.
+type Claude struct {
+	Marketplaces map[string]string `yaml:"marketplaces"` // name → GitHub owner/repo or https git URL
+	Plugins      []string          `yaml:"plugins"`      // plugin@marketplace
+	Skills       []string          `yaml:"skills"`       // owner/repo/path/to/skill[@ref] on GitHub
+}
+
+// Empty reports whether the file asks for nothing for Claude.
+func (c Claude) Empty() bool {
+	return len(c.Marketplaces) == 0 && len(c.Plugins) == 0 && len(c.Skills) == 0
 }
 
 // Find looks for the project file in dir and its parents, and returns its
@@ -77,6 +92,11 @@ var (
 	nameRE   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*$`)
 	secretRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	invalid  = regexp.MustCompile(`[^a-z0-9-]+`)
+
+	githubRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$`)
+	gitURLRE = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(:[0-9]+)?/[A-Za-z0-9._~/-]+$`)
+	pluginRE = regexp.MustCompile(`^([A-Za-z0-9][A-Za-z0-9._-]*)@([A-Za-z0-9][A-Za-z0-9._-]*)$`)
+	skillRE  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+(@[A-Za-z0-9._/-]+)?$`)
 )
 
 // Load reads and checks a project file. Unknown keys are errors, so typos
@@ -129,7 +149,46 @@ func (f *File) check() error {
 	if strings.HasPrefix(f.Repo, "-") {
 		return fmt.Errorf("repo %q isn't a repository", f.Repo)
 	}
+	return f.Claude.check()
+}
+
+func (c Claude) check() error {
+	for name, src := range c.Marketplaces {
+		if !nameRE.MatchString(name) {
+			return fmt.Errorf("claude.marketplaces: %q isn't a marketplace name", name)
+		}
+		if !githubRE.MatchString(src) && (!gitURLRE.MatchString(src) || strings.Contains(src, "..")) {
+			return fmt.Errorf("claude.marketplaces.%s: %q isn't a GitHub owner/repo or an https git URL", name, src)
+		}
+	}
+	for _, p := range c.Plugins {
+		m := pluginRE.FindStringSubmatch(p)
+		if m == nil {
+			return fmt.Errorf("claude.plugins: %q isn't plugin@marketplace", p)
+		}
+		if _, ok := c.Marketplaces[m[2]]; !ok {
+			return fmt.Errorf("claude.plugins: %s comes from marketplace %q; add it under claude.marketplaces", p, m[2])
+		}
+	}
+	seen := map[string]bool{}
+	for _, s := range c.Skills {
+		if !skillRE.MatchString(s) || strings.Contains(s, "..") {
+			return fmt.Errorf("claude.skills: %q isn't owner/repo/path/to/skill (with an optional @ref)", s)
+		}
+		name := SkillName(s)
+		if seen[name] {
+			return fmt.Errorf("claude.skills: two skills are named %s", name)
+		}
+		seen[name] = true
+	}
 	return nil
+}
+
+// SkillName is the directory a skill is installed as: its path's last
+// part.
+func SkillName(skill string) string {
+	path, _, _ := strings.Cut(skill, "@")
+	return path[strings.LastIndex(path, "/")+1:]
 }
 
 // DefaultName turns a directory's name into a VM name.
