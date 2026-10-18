@@ -29,7 +29,7 @@ func newImagesCmd(a *App) *cobra.Command {
 		Short: "Manage the images that make new VMs start in seconds",
 		Long: `New VMs are copies of an image: a VM that has already booted, installed
 every update, Docker and its packs' tools, and then shut down. Copying it
-is an APFS clone, so "limabean new", "up", "run" and "rebuild" take
+is an APFS clone, so "limabean up", "run" and "rebuild" take
 seconds instead of minutes.
 
 There's an image for each environment and set of packs, built from the

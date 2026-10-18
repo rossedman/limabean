@@ -33,7 +33,7 @@ exit status.
 --repo clones a repository first and runs the command in it. The VM gets
 your shared secrets, the PACKS setting's packs (none besides core, unless
 you set it) and an open network, unless flags say otherwise, as for
-"limabean new". Without --rm the VM is kept, named
+"limabean up <name>". Without --rm the VM is kept, named
 run-<random> unless you name it; --ttl deletes it later.
 
 A single argument is run by the shell as it is, so pipes and && work;

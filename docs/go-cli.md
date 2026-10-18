@@ -67,8 +67,8 @@ its `dotenv` format, so configs written by the bash `init` keep working.
 | `GIT_CONFIG_DIR` | `~/.config/git` | | `LIMABEAN_GIT_CONFIG_DIR` |
 | `CODE_DIR` | `~/code` | | `LIMABEAN_CODE_DIR` |
 | `CODE_DISK` | `50` (GiB) | | `LIMABEAN_CODE_DISK` |
-| `CPUS` / `MEMORY` / `DISK` | template defaults (2, 4 GiB, 10 GiB) | `--cpus` / `--memory` / `--disk` on `new` | `LIMABEAN_CPUS` / `LIMABEAN_MEMORY` / `LIMABEAN_DISK` |
-| `PACKS` | empty: only `core` | `--with` / `--without` on `new` | `LIMABEAN_PACKS` |
+| `CPUS` / `MEMORY` / `DISK` | template defaults (2, 4 GiB, 10 GiB) | `--cpus` / `--memory` / `--disk` on `up` | `LIMABEAN_CPUS` / `LIMABEAN_MEMORY` / `LIMABEAN_DISK` |
+| `PACKS` | empty: only `core` | `--with` / `--without` on `up` | `LIMABEAN_PACKS` |
 | `IMAGES` | `yes` | | `LIMABEAN_IMAGES` |
 | `CLAUDE_DESKTOP` | `yes` | | `LIMABEAN_CLAUDE_DESKTOP` |
 | `AWS_DIR` | `~/.aws` | | `LIMABEAN_AWS_DIR` |
@@ -115,7 +115,7 @@ Commands: `secrets ls`, `secrets set`, `secrets rm`, `secrets edit` and
 `secrets sync`. `secrets set NAME`, given no reference, prompts for the value
 and stores it in the Keychain as `limabean-secret-NAME`.
 
-**At creation**, `limabean new` shows a form: the name, the environment, the
+**At creation**, `limabean up` shows a form: the name, the environment, the
 existing secrets to include (all shared ones are pre-selected), and "Add a
 secret…", which asks for a name and a source (paste into the Keychain, a
 1Password reference, an environment variable or a command). Choices made here

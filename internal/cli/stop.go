@@ -17,8 +17,9 @@ func newStopCmd(a *App) *cobra.Command {
 	var idle time.Duration
 	var dryRun bool
 	cmd := &cobra.Command{
-		Use:   "stop [name]",
-		Short: "Stop a running VM",
+		Use:    "stop [name]",
+		Hidden: true, // "limabean down <name>"; autostop agents installed before down run stop --idle
+		Short:  "Stop a running VM (limabean down <name> does this now)",
 		Long: `Shut a VM down. Its disk, and everything in ~/code, is kept; start it again
 with "limabean start <name>" (or "limabean ssh <name>").
 

@@ -9,7 +9,7 @@ func newNetworkUnlockCmd(a *App) *cobra.Command {
 		Use:   "unlock <name>",
 		Short: "Give a VM's user sudo and Docker back",
 		Long: `Unlock a VM: its user gets passwordless sudo back at once, and Docker on
-the next boot (limabean stop and start). Its allowlist, if it has one, stays,
+the next boot (limabean down, then up). Its allowlist, if it has one, stays,
 but anything in the VM can now turn it off.`,
 		Example: `  limabean network unlock agent`,
 		Args:    cobra.ExactArgs(1),

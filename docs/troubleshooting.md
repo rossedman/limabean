@@ -18,11 +18,11 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | `op couldn't read it` during sync | 1Password is locked or the op CLI isn't signed in. Unlock it and run `limabean secrets sync` again. |
 | macOS says limabean "cannot be opened" after downloading | The binary is quarantined (Homebrew clears this itself): `xattr -d com.apple.quarantine ~/.local/bin/limabean`. |
 | The editor says `Unable to resolve resource vscode-remote://ssh-remote+lima-…` | It has no Remote - SSH extension; VS Code Insiders and VSCodium don't share VS Code's extensions. `limabean code` offers to install it, or run `code-insiders --install-extension ms-vscode-remote.remote-ssh` (`codium --install-extension jeanp413.open-remote-ssh`). |
-| A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean start <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
-| `limabean new` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
-| `limabean new` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it is `~/.lima/<name>/ha.stderr.log`. |
+| A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean up <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
+| `limabean up` hangs on "mise tools are installed" | Read the provisioning log: `limactl shell <name> sudo tail -50 /var/log/cloud-init-output.log`. |
+| `limabean up` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it is `~/.lima/<name>/ha.stderr.log`. |
 | A new VM wasn't fast | It was the first of its kind (environment and packs), or the templates changed since its image was built: an image is being built in the background (`~/Library/Logs/limabean-images.log`). `limabean images ls` shows what there is. |
-| A VM runs out of disk (`no space left on device`) | Docker images live on the 10 GiB system disk; `~/code` has its own. `docker system prune` frees space; for more, set `DISK="30"` (or `new --disk 30`) and `limabean rebuild <name>`. |
+| A VM runs out of disk (`no space left on device`) | Docker images live on the 10 GiB system disk; `~/code` has its own. `docker system prune` frees space; for more, set `DISK="30"` (or `up --disk 30`) and `limabean rebuild <name>`. |
 | `limabean up` says to run again with `--yes` | It needs your OK to act on the file, and there's no terminal to ask in. Read the plan it printed, then pass `--yes`. |
 | `setup` fails in `limabean up` | The VM is kept: `limabean ssh <name>` to look. With `network.allow`, setup can only reach those domains (`limabean network log <name>` shows what it tried); with `locked`, it has no sudo or Docker. Fix the file, then run it again: `limabean up --setup`. |
 | `rm` or `rebuild` refuses to run | A repository under `~/code` has unpushed work, listed in the output. Push it, or pass `--force`. (`rebuild` only checks VMs without a code disk, whose `~/code` it would erase.) |

@@ -94,7 +94,7 @@ func (a *App) latestLookup(ctx context.Context, vm string) (func(context.Context
 		return nil, err
 	}
 	if !inst.Running() {
-		return nil, fmt.Errorf("%s is stopped (limabean start %s)", vm, vm)
+		return nil, fmt.Errorf("%s is stopped (limabean up %s)", vm, vm)
 	}
 	return func(ctx context.Context, spec string) (string, error) {
 		out, err := a.Lima.Run(ctx, inst, nil, "mise latest "+secrets.ShellQuote(spec))

@@ -81,7 +81,7 @@ about tidying up go to stderr. An environment that isn't known is "".`,
 				return enc.Encode(entries)
 			}
 			if len(list) == 0 {
-				a.UI.Info("No VMs yet. Create one with: limabean new <name>")
+				a.UI.Info("No VMs yet. Create one with: limabean up <name>")
 				return nil
 			}
 			rows := make([][]string, 0, len(list))

@@ -13,7 +13,7 @@ func newAutostopRunCmd(a *App) *cobra.Command {
 		Use:   "run",
 		Short: "Stop idle VMs and delete expired ones, once",
 		Long: `Do what the autostop agent does every 10 minutes, once: stop every VM
-nobody has used for --idle (as "limabean stop --idle"), and delete every VM
+nobody has used for --idle (as "limabean down --idle"), and delete every VM
 made with "new --ttl" that has expired (as "limabean rm --expired"), and
 delete images that are no longer used (as "limabean images prune").`,
 		Example: `  limabean autostop run --idle 2h`,

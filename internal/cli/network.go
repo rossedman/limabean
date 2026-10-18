@@ -39,7 +39,7 @@ apply to a running VM at once, and to a stopped one when it starts.
 Disallowed names don't resolve, so data can't leave through DNS either.
 VMs created before this feature need a rebuild first.`,
 		Example: `  # A sandbox that can reach GitHub and PyPI, and can't undo that
-  limabean new agent --allow github --allow python --locked
+  limabean up agent --allow github --allow python --locked
 
   limabean network ls agent
   limabean network allow agent registry.npmjs.org

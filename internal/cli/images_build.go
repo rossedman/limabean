@@ -19,15 +19,15 @@ func newImagesBuildCmd(a *App) *cobra.Command {
 		Long: `Build the image new VMs of an environment and set of packs are copied
 from, replacing an older one. VMs get the PACKS setting's packs (none
 besides core, unless you set it) with --with and --without as for
-"limabean new", or exactly the packs in --packs.
+"limabean up <name>", or exactly the packs in --packs.
 
 limabean builds images in the background by itself; build one by hand so
 that even the first VM of a kind starts in seconds, or to pick up updates
 before the week is up.`,
-		Example: `  # The image "limabean new" uses
+		Example: `  # The image "limabean up <name>" uses
   limabean images build
 
-  # The one "limabean new api --with rust" uses
+  # The one "limabean up api --with rust" uses
   limabean images build --with rust`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

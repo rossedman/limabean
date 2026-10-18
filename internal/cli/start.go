@@ -6,8 +6,9 @@ import (
 
 func newStartCmd(a *App) *cobra.Command {
 	return &cobra.Command{
-		Use:   "start [name]",
-		Short: "Start a stopped VM",
+		Use:    "start [name]",
+		Hidden: true, // "limabean up <name>"; start stays for scripts
+		Short:  "Start a stopped VM (limabean up <name> does this now)",
 		Long: `Boot a stopped VM and add its Claude Desktop connection back ("stop"
 removes it, since Claude Desktop shows an error for a VM it can't reach).
 "limabean ssh" and "limabean get" also start a stopped VM; use start when
