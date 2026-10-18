@@ -19,9 +19,9 @@ lists them. Claude can choose them too: [`create_vm`](mcp.md#tools) takes
 
 | Pack | Default | Installs |
 |---|---|---|
-| `core` | always | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, svu |
-| `go` | yes | go, goreleaser, golangci-lint |
-| `python` | yes | uv, ruff (Python itself is in every VM, from apt) |
+| `core` | always | ripgrep, fd, fzf, bat, delta, lazygit, gh, ghq, yq, direnv, just, hyperfine, glow, gum, shellcheck, shfmt, svu |
+| `go` | yes | go, goreleaser, golangci-lint, gofumpt, goimports (`go vet` comes with go) |
+| `python` | yes | uv, ruff, yamllint (Python itself is in every VM, from apt) |
 | `node` | yes | node (LTS), pnpm, bun |
 | `kubernetes` | yes | kubectl, helm, kind, k9s |
 | `infra` | yes | terraform, tflint, aws-cli |
