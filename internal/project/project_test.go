@@ -71,6 +71,12 @@ func TestLoadRejects(t *testing.T) {
 		"vars: {BASH_ENV: /x}":               "set by the VM",
 		"vars: {TOKEN: x}\nsecrets: [TOKEN]": "also a secret",
 		"vars: {A: \"one\\ntwo\"}":           "one line",
+		"tools: {'go\"x': 1.23}":             "isn't a mise tool",
+		"tools: {-rf: 1}":                    "isn't a mise tool",
+		"tools: {go: \"1.23\\n[tools]\"}":    "isn't a version",
+		"tools: {go: '1 2'}":                 "isn't a version",
+		"apt: [--allow-unauthenticated]":     "isn't an Ubuntu package",
+		"apt: ['libpq-dev; curl x | sh']":    "isn't an Ubuntu package",
 	} {
 		p := filepath.Join(dir, FileName)
 		write(t, p, body)

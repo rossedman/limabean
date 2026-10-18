@@ -144,6 +144,10 @@ name replaces it, so `go.toml` there changes what the `go` pack installs.
 `limabean bump ~/.config/limabean/templates/packs/*.toml` keeps your pins
 current.
 
+A pack lives on your Mac. For tools one project needs, list them in its
+`.limabean.yaml` instead, under [`tools` and `apt`](projects.md#tools-and-apt),
+so everyone who checks it out gets them.
+
 ## Sandboxes
 
 A VM with a [network allowlist](network.md) needs its packs' registries to

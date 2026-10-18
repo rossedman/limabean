@@ -30,7 +30,9 @@ won't replace a project file that's already there unless you pass --overwrite.
 --print writes it to standard output instead.
 
 See what a recipe asks for before you use it: the file's keys are described
-in "limabean up --help".`,
+in "limabean up --help". The file's first line points editors at its JSON
+Schema, so VS Code, Cursor and others complete and check its keys (with the
+YAML language server, e.g. the Red Hat YAML extension).`,
 		Example: `  limabean recipes
 
   # Start a Go service's project file, then bring the VM up
@@ -48,6 +50,9 @@ in "limabean up --help".`,
 			if err != nil {
 				return err
 			}
+			// Editors with the YAML language server complete and check the
+			// file's keys.
+			body = append([]byte(project.SchemaComment), body...)
 			if toStdout {
 				_, err := a.UI.Out.Write(body)
 				return err

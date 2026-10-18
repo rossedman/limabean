@@ -144,7 +144,8 @@ func (a *App) discardClone(ctx context.Context, dst string, code bool) {
 	}
 }
 
-// copyVMState gives dst src's saved environment, packs and own secrets.
+// copyVMState gives dst src's saved environment, packs, project tools and
+// own secrets.
 func (a *App) copyVMState(src, dst string) error {
 	if err := a.saveEnv(dst, a.envOf(src)); err != nil {
 		return err
@@ -153,6 +154,9 @@ func (a *App) copyVMState(src, dst string) error {
 		if err := a.savePacks(dst, packs); err != nil {
 			return err
 		}
+	}
+	if err := a.saveTools(dst, a.toolsOf(src)); err != nil {
+		return err
 	}
 	list, _ := secrets.LoadFile(secrets.VMFile(a.Cfg.Dir(), src))
 	for _, s := range list {

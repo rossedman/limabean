@@ -89,7 +89,7 @@ the question; --force skips both.`,
 			}
 			// delete --force kills a running VM; shut it down first so
 			// everything written to the code disk reaches it.
-			if err := a.recreate(ctx, inst, env, packs, keepsCode); err != nil {
+			if err := a.recreate(ctx, inst, env, packs, a.toolsOf(name), keepsCode); err != nil {
 				return err
 			}
 			if keepsCode {
@@ -110,7 +110,7 @@ the question; --force skips both.`,
 // recreate deletes a VM and creates it again with env and packs, keeping
 // the disk ~/code is on when keepsCode (stopping the VM first, so the disk
 // is detached cleanly). Callers check for unsaved work and ask first.
-func (a *App) recreate(ctx context.Context, inst lima.Instance, env string, packs []string, keepsCode bool) error {
+func (a *App) recreate(ctx context.Context, inst lima.Instance, env string, packs []string, tools projectTools, keepsCode bool) error {
 	if keepsCode && inst.Running() {
 		if err := a.limaStep(ctx, "Stopping "+inst.Name, func(ctx context.Context) ([]byte, error) {
 			return a.Lima.Stop(ctx, inst.Name)
@@ -123,5 +123,5 @@ func (a *App) recreate(ctx context.Context, inst lima.Instance, env string, pack
 	}); err != nil {
 		return err
 	}
-	return a.create(ctx, createOptions{Name: inst.Name, Env: env, Packs: packs})
+	return a.create(ctx, createOptions{Name: inst.Name, Env: env, Packs: packs, Tools: tools})
 }

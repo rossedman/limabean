@@ -155,7 +155,8 @@ func (a *App) limaStep(ctx context.Context, title string, fn func(context.Contex
 // createOptions are the choices for a new VM.
 type createOptions struct {
 	Name, Env string
-	Packs     []string // besides core, which layer-base installs
+	Packs     []string     // besides core, which layer-base installs
+	Tools     projectTools // a project file's own tools and apt packages
 }
 
 // create builds a VM, finishes its updates, installs its secrets and
@@ -204,6 +205,8 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 				`.mounts += [{"location": %q, "mountPoint": "{{.Home}}/.aws", "writable": false}]`, aws))
 		}
 	}
+	// A project's own tools aren't in images; each VM installs its own.
+	own = append(own, o.Tools.provision()...)
 	im, fromImage := image{}, false
 	key := ""
 	if a.Cfg.Images {
@@ -244,10 +247,19 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	if err := a.savePacks(o.Name, o.Packs); err != nil {
 		return err
 	}
+	if err := a.saveTools(o.Name, o.Tools); err != nil {
+		return err
+	}
 	if len(o.Packs) > 0 {
 		a.UI.OK("Packs: core, %s", strings.Join(o.Packs, ", "))
 	} else {
 		a.UI.OK("Packs: core only (more later: limabean rebuild %s --with go,node)", o.Name)
+	}
+	if len(o.Tools.Tools) > 0 {
+		a.UI.OK("Project tools: %s", o.Tools.toolList())
+	}
+	if len(o.Tools.Apt) > 0 {
+		a.UI.OK("Project apt packages: %s", o.Tools.aptList())
 	}
 	inst, err := a.vm(ctx, o.Name)
 	if err != nil {
@@ -506,6 +518,9 @@ func (a *App) envOf(name string) string {
 func (a *App) forget(ctx context.Context, name string) {
 	_ = os.Remove(filepath.Join(a.stateDir, name+".env"))
 	_ = os.Remove(filepath.Join(a.stateDir, name+".packs"))
+	_ = os.Remove(a.toolsState(name))
+	_ = os.Remove(a.varsState(name))
+	_ = os.Remove(a.startFile(name))
 	_ = os.Remove(filepath.Join(a.stateDir, name+".expires"))
 	_ = os.RemoveAll(a.networkDir(name))
 	if disk := codeDiskName(name); a.hasCodeDisk(ctx, name) {
@@ -673,16 +688,19 @@ func packProvision(root string, names []string) ([]string, error) {
 		if i < 0 {
 			return nil, fmt.Errorf("unknown pack %q (see: limabean packs)", name)
 		}
-		add := func(path, content string) {
-			c, _ := json.Marshal(content)
-			sets = append(sets, fmt.Sprintf(`.provision += [{"mode": "data", "path": %q, "content": %s}]`, path, c))
-		}
-		add("/etc/limabean/mise/50-"+name+".toml", all[i].TOML)
+		sets = append(sets, provisionData("/etc/limabean/mise/50-"+name+".toml", all[i].TOML))
 		if list := all[i].AptList(); list != "" {
-			add("/etc/limabean/apt/"+name+".list", list)
+			sets = append(sets, provisionData("/etc/limabean/apt/"+name+".list", list))
 		}
 	}
 	return sets, nil
+}
+
+// provisionData is the limactl --set expression that writes a file into a
+// new VM at its first boot.
+func provisionData(path, content string) string {
+	c, _ := json.Marshal(content)
+	return fmt.Sprintf(`.provision += [{"mode": "data", "path": %q, "content": %s}]`, path, c)
 }
 
 // resolvePacks works out a VM's packs: base (its saved packs, or the PACKS

@@ -66,6 +66,12 @@ The VM is a normal limabean VM: `limabean ssh myapp`, `limabean code myapp`,
 Claude Desktop and MCP all work with it. Commit the file so everyone on the
 project gets the same VM.
 
+### In your editor
+
+Your editor can complete the file's keys and flag mistakes as you type: see
+[Editor support](#editor-support). Files written by `limabean recipes`
+already have the line that turns it on.
+
 ## Every day
 
 Like `docker compose`, `up` and `down` work from the checkout, wherever you
@@ -98,7 +104,7 @@ Apply these changes to myapp? Yes
 
 | Change | What `up` does |
 |---|---|
-| `packs`, `env` | Rebuilds the VM, as [`limabean rebuild`](lifecycle.md) does: `~/code` and its repositories are kept on their own disk, the rest of the system is fresh |
+| `packs`, `tools`, `apt`, `env` | Rebuilds the VM, as [`limabean rebuild`](lifecycle.md) does: `~/code` and its repositories are kept on their own disk, the rest of the system is fresh |
 | `cpus`, `memory` | Stops the VM, resizes it and starts it again |
 | `disk` | Grows the disk the same way; Lima can't shrink one, so a smaller number is only a warning |
 | `secrets` | Gives the VM the secrets it doesn't have yet |
@@ -124,6 +130,8 @@ Every key is optional.
 | `env` | string | `scratch` | The [environment template](customizing.md) |
 | `repo` | string | the checkout's `origin` | What to clone: `owner/repo`, `host/owner/repo` or a URL |
 | `packs` | list | none | The VM's [packs](packs.md) besides `core`; the `PACKS` setting doesn't apply, so everyone gets the same VM |
+| `tools` | map | none | The project's own [mise tools](#tools-and-apt), `tool: version`, for what no pack has |
+| `apt` | list | none | The project's own [Ubuntu packages](#tools-and-apt) |
 | `cpus` | number | `CPUS`, or 2 | CPUs |
 | `memory` | number | `MEMORY`, or 4 | GiB of memory |
 | `disk` | number | `DISK`, or 10 | GiB of system disk, which holds the tools and Docker images; `~/code` has a disk of its own |
@@ -160,6 +168,30 @@ claude:
     - marketplace: rossedman/guardrails
       plugins: [guardrails@guardrails]
 ```
+
+### Tools and apt
+
+When a project needs a tool or a system package that no [pack](packs.md)
+has, list it in the file instead of making a pack on every Mac:
+
+```yaml
+tools:                        # mise tools, tool: version
+  terraform: 1.9.8
+  "npm:@biomejs/biome": 2.1.2 # any mise backend: aqua:, npm:, pipx:, cargo:, go:
+apt: [libpq-dev, graphviz]    # Ubuntu packages
+```
+
+- They're installed in the VM when it's created, the same way packs are,
+  so a VM [copied from an image](lifecycle.md#fast-vms-images) gets them
+  too. A change to them rebuilds the VM, keeping `~/code`, as a change to
+  `packs` does; `limabean rebuild` keeps them.
+- Pin exact versions, as packs do, so everyone gets the same tools.
+  `limabean bump` doesn't update these; edit the file.
+- A tool a pack already pins is best left to the pack.
+- Like packs, they're installed at the VM's first boot, before its
+  [network policy](#network) applies, so a `locked` VM still gets them.
+- Names and versions are checked: only letters, digits and `._@/:+-`
+  for tools, Debian package names for `apt`.
 
 ### Vars
 
@@ -284,6 +316,113 @@ A repository can also keep its own `.claude/settings.json` with
 the clone after you trust the folder. Use `claude:` in `.limabean.yaml` for
 what the VM should have whichever folder Claude opens, and for VMs that
 Claude only uses headless.
+
+## Editor support
+
+limabean publishes a [JSON Schema](limabean.schema.json) for the project
+file. With it, your editor:
+
+- completes keys, and offers the built-in [packs](packs.md) and
+  [network presets](network.md) as values;
+- shows what each key does when you hover over it;
+- flags what `up` would refuse while you type: an unknown key such as
+  `enviroment:`, a misspelled or reserved variable (`PATH`), a port out of
+  range, a malformed tool version or package name, a marketplace without
+  plugins.
+
+The schema is generated from the same checks `limabean up` runs, so the two
+agree. A few things only `up` can check, because they depend on your Mac:
+that a secret is set up, that a pack of your own exists (the schema accepts
+any pack name, so yours aren't flagged), and that a repository can be
+cloned.
+
+### One file: the comment line
+
+Editors that use the YAML language server read a comment at the top of the
+file. `limabean recipes` writes it for you; add it to a file you wrote by
+hand:
+
+```yaml
+# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
+packs: [node]
+```
+
+That works in VS Code and Cursor (with the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)),
+Zed, Neovim with `yamlls`, Helix, and any other editor running the YAML
+language server. Committed with the file, it works for everyone on the
+project.
+
+### Every project: editor settings
+
+To get it in every `.limabean.yaml` without the comment, map the schema to
+the file name in your editor's settings.
+
+**VS Code and Cursor**: install the
+[YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml),
+then add to your `settings.json`:
+
+```json
+"yaml.schemas": {
+  "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+}
+```
+
+**Zed**: in `settings.json`:
+
+```json
+"lsp": {
+  "yaml-language-server": {
+    "settings": {
+      "yaml": {
+        "schemas": {
+          "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+        }
+      }
+    }
+  }
+}
+```
+
+**Neovim** with [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)
+and `yaml-language-server` installed:
+
+```lua
+require("lspconfig").yamlls.setup({
+  settings = {
+    yaml = {
+      schemas = {
+        ["https://rossedman.github.io/limabean/limabean.schema.json"] = { "**/.limabean.yaml", "**/.limabean.yml" },
+      },
+    },
+  },
+})
+```
+
+**Helix**: in `languages.toml`:
+
+```toml
+[language-server.yaml-language-server.config.yaml.schemas]
+"https://rossedman.github.io/limabean/limabean.schema.json" = ["**/.limabean.yaml", "**/.limabean.yml"]
+```
+
+**JetBrains IDEs** (GoLand, IntelliJ, PyCharm and the rest): open
+**Settings → Languages & Frameworks → Schemas and DTDs → JSON Schema
+Mappings**, add a mapping with the schema's URL, and add the file patterns
+`.limabean.yaml` and `.limabean.yml`.
+
+### When it doesn't work
+
+- **Nothing is completed or flagged.** Check that the YAML language server
+  is running for the file: in VS Code and Cursor, the YAML extension must be
+  installed, and the language mode in the status bar must say YAML.
+- **The editor can't fetch the schema.** It downloads it from the docs site.
+  Offline, or behind a proxy that blocks it, save
+  [the schema](limabean.schema.json) next to your project and point the
+  comment or the mapping at the file's path instead of the URL.
+- **A pack of yours is underlined.** It shouldn't be: any pack name is
+  accepted. If your editor shows one anyway, it has an old copy of the
+  schema; restarting the language server, or the editor, refreshes it.
 
 ## Examples
 

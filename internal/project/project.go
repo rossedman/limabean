@@ -32,14 +32,18 @@ var ErrNotFound = errors.New("no " + FileName + " (or .yml) here or in a parent 
 
 // File is a .limabean.yaml.
 type File struct {
-	Name    string   `yaml:"name"`    // the VM's name; default the directory's
-	Env     string   `yaml:"env"`     // environment template; default scratch
-	Repo    string   `yaml:"repo"`    // what to clone; default the checkout's origin
-	Packs   []string `yaml:"packs"`   // the VM's packs besides core; PACKS doesn't apply
-	Without []string `yaml:"without"` // no longer used: accepted so older files still load
-	CPUs    int      `yaml:"cpus"`
-	Memory  int      `yaml:"memory"` // GiB
-	Disk    int      `yaml:"disk"`   // GiB of the system disk
+	Name  string   `yaml:"name"`  // the VM's name; default the directory's
+	Env   string   `yaml:"env"`   // environment template; default scratch
+	Repo  string   `yaml:"repo"`  // what to clone; default the checkout's origin
+	Packs []string `yaml:"packs"` // the VM's packs besides core; PACKS doesn't apply
+	// Tools are the project's own mise tools, tool: version, and Apt its
+	// own Ubuntu packages: what a pack would add, without one.
+	Tools   map[string]string `yaml:"tools"`
+	Apt     []string          `yaml:"apt"`
+	Without []string          `yaml:"without"` // no longer used: accepted so older files still load
+	CPUs    int               `yaml:"cpus"`
+	Memory  int               `yaml:"memory"` // GiB
+	Disk    int               `yaml:"disk"`   // GiB of the system disk
 	Network struct {
 		Allow  []string `yaml:"allow"`
 		Locked bool     `yaml:"locked"`
@@ -48,7 +52,7 @@ type File struct {
 	Ports   []int    `yaml:"ports"`   // what the project serves, to show after up
 	Setup   string   `yaml:"setup"`   // shell commands run in the clone once, after creating
 	Start   string   `yaml:"start"`   // shell commands run in the clone, in the background, after every up
-	// Environment is plain variables for the VM's shells, setup and start;
+	// Vars are plain variables for the VM's shells, setup and start;
 	// secrets go in Secrets instead.
 	Vars   map[string]string `yaml:"vars"`
 	Claude Claude            `yaml:"claude"` // plugins for Claude Code in the VM
@@ -124,6 +128,11 @@ var (
 	githubRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$`)
 	gitURLRE = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(:[0-9]+)?/[A-Za-z0-9._~/-]+$`)
 	pluginRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*@([A-Za-z0-9][A-Za-z0-9._-]*)$`)
+
+	// mise tools, with an optional backend: go, aqua:cli/cli, npm:@scope/pkg.
+	toolRE    = regexp.MustCompile(`^[A-Za-z0-9@][A-Za-z0-9._@/:+-]*$`)
+	versionRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:+-]*$`)
+	aptRE     = regexp.MustCompile(`^[a-z0-9][a-z0-9.+-]+$`) // Debian package names
 )
 
 // Load reads and checks a project file. Unknown keys are errors, so typos
@@ -179,6 +188,9 @@ func (f *File) check() error {
 	if err := f.checkVars(); err != nil {
 		return err
 	}
+	if err := f.checkTools(); err != nil {
+		return err
+	}
 	return f.Claude.check()
 }
 
@@ -226,6 +238,28 @@ func (f *File) checkVars() error {
 			return fmt.Errorf("vars: %s is also a secret; keep it under secrets only", name)
 		case strings.ContainsAny(value, "\x00\n\r") || len(value) > 4096:
 			return fmt.Errorf("vars: %s's value must be one line of at most 4096 characters", name)
+		}
+	}
+	return nil
+}
+
+// checkTools keeps tools and apt to names and versions, which limabean
+// writes into the VM's mise and apt lists; nothing else can get in.
+func (f *File) checkTools() error {
+	if len(f.Tools) > 100 || len(f.Apt) > 100 {
+		return errors.New("tools and apt: at most 100 each")
+	}
+	for tool, version := range f.Tools {
+		if !toolRE.MatchString(tool) || len(tool) > 200 {
+			return fmt.Errorf("tools: %q isn't a mise tool, like terraform or aqua:owner/repo", tool)
+		}
+		if !versionRE.MatchString(version) || len(version) > 100 {
+			return fmt.Errorf("tools: %s's version %q isn't a version, like 1.9.8", tool, version)
+		}
+	}
+	for _, p := range f.Apt {
+		if !aptRE.MatchString(p) || len(p) > 100 {
+			return fmt.Errorf("apt: %q isn't an Ubuntu package name", p)
 		}
 	}
 	return nil

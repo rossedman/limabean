@@ -24,7 +24,7 @@ docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 
 `docs/go-cli.md` and `docs/design.md` explain the architecture and the
-decisions (D1–D25); read the relevant note before changing a design.
+decisions (D1–D26); read the relevant note before changing a design.
 
 ## Checks
 
@@ -58,6 +58,9 @@ mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs
   applies.
 - A behavior change isn't done until its docs are: the page in `docs/`,
   `docs/cli.md`, and the README command table when commands change.
+- `docs/limabean.schema.json` is generated: after changing the project file,
+  a pack or a network preset, run
+  `go test ./internal/cli -run TestSchema -update-schema`.
 - Prefer small, verified changes. If something can't be checked here (it
   needs a Mac, Lima or a real VM), say so in the PR's test plan as an
   unchecked item.

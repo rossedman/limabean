@@ -1,0 +1,259 @@
+{
+  "$id": "https://rossedman.github.io/limabean/limabean.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "The VM a repository needs, for limabean up. Every key is optional. https://rossedman.github.io/limabean/projects/",
+  "properties": {
+    "apt": {
+      "description": "The project's own Ubuntu packages. Changing them rebuilds the VM, keeping ~/code.",
+      "items": {
+        "maxLength": 100,
+        "pattern": "^[a-z0-9][a-z0-9.+-]+$",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "claude": {
+      "additionalProperties": false,
+      "description": "Plugins for Claude Code in the VM, fetched inside it.",
+      "properties": {
+        "marketplaces": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "marketplace": {
+                "anyOf": [
+                  {
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+                  },
+                  {
+                    "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]+)?/[A-Za-z0-9._~/-]+$"
+                  }
+                ],
+                "description": "A GitHub owner/repo, or an https git URL.",
+                "type": "string"
+              },
+              "plugins": {
+                "description": "Plugins to turn on from this marketplace, as plugin@marketplace.",
+                "items": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*@([A-Za-z0-9][A-Za-z0-9._-]*)$",
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "marketplace",
+              "plugins"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "cpus": {
+      "description": "CPUs. Default: the CPUS setting, or 2.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "disk": {
+      "description": "GiB of system disk. Default: the DISK setting, or 10. Lima can grow a disk but not shrink one.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "env": {
+      "description": "The environment template. Default: scratch.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$",
+      "type": "string"
+    },
+    "memory": {
+      "description": "GiB of memory. Default: the MEMORY setting, or 4.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "name": {
+      "description": "The VM's name: letters, digits and dashes. Default: the directory's name.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$",
+      "type": "string"
+    },
+    "network": {
+      "additionalProperties": false,
+      "description": "What the VM may reach. A file can tighten a VM's network, never widen it.",
+      "properties": {
+        "allow": {
+          "description": "Domains and presets the VM may reach; others are blocked.",
+          "items": {
+            "anyOf": [
+              {
+                "enum": [
+                  "azure",
+                  "claude",
+                  "docker",
+                  "dotnet",
+                  "elixir",
+                  "gcp",
+                  "github",
+                  "go",
+                  "java",
+                  "npm",
+                  "python",
+                  "ruby",
+                  "rust",
+                  "ubuntu"
+                ]
+              },
+              {
+                "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+                "type": "string"
+              }
+            ]
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "locked": {
+          "description": "Take sudo and Docker away from the VM's user, so the allowlist holds.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "packs": {
+      "description": "The VM's packs besides core (limabean packs lists them). The PACKS setting doesn't apply.",
+      "items": {
+        "anyOf": [
+          {
+            "enum": [
+              "api",
+              "azure",
+              "claude",
+              "containers",
+              "db",
+              "dotnet",
+              "elixir",
+              "gcp",
+              "go",
+              "infra",
+              "java",
+              "kubernetes",
+              "node",
+              "python",
+              "ruby",
+              "rust",
+              "security",
+              "supply-chain"
+            ]
+          },
+          {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$",
+            "type": "string"
+          }
+        ]
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "ports": {
+      "description": "Ports the project serves, shown as http://localhost:\u003cport\u003e after up.",
+      "items": {
+        "maximum": 65535,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "repo": {
+      "description": "What to clone: owner/repo, host/owner/repo or a URL. Default: the checkout's origin.",
+      "type": "string"
+    },
+    "secrets": {
+      "description": "Names of secrets the VM needs, besides the shared ones. Values stay on your Mac: limabean secrets set NAME.",
+      "items": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "setup": {
+      "description": "Shell commands run once in the clone, as you, with bash -e, after the VM is created.",
+      "type": "string"
+    },
+    "start": {
+      "description": "Shell commands run in the clone, in the background, after every up. A change needs approving.",
+      "type": "string"
+    },
+    "tools": {
+      "additionalProperties": {
+        "description": "An exact version, like 1.9.8.",
+        "maxLength": 100,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+-]*$",
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "description": "The project's own mise tools, tool: version, for what no pack has. Any mise backend: aqua:, npm:, pipx:, cargo:, go:. Changing them rebuilds the VM, keeping ~/code.",
+      "maxProperties": 100,
+      "propertyNames": {
+        "maxLength": 200,
+        "pattern": "^[A-Za-z0-9@][A-Za-z0-9._@/:+-]*$"
+      },
+      "type": "object"
+    },
+    "vars": {
+      "additionalProperties": {
+        "maxLength": 4096,
+        "pattern": "^[^\\n\\r]*$",
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      },
+      "description": "Plain variables for the VM's shells, setup and start. Anything secret goes under secrets.",
+      "maxProperties": 200,
+      "propertyNames": {
+        "not": {
+          "anyOf": [
+            {
+              "enum": [
+                "BASH_ENV",
+                "ENV",
+                "HOME",
+                "IFS",
+                "PATH",
+                "PROMPT_COMMAND",
+                "SHELL",
+                "USER",
+                "ZDOTDIR"
+              ]
+            },
+            {
+              "pattern": "^(LD|DYLD)_"
+            }
+          ]
+        },
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "type": "object"
+    },
+    "without": {
+      "deprecated": true,
+      "description": "No longer used: a project's VM gets only core and the packs it lists.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "title": ".limabean.yaml",
+  "type": "object"
+}
