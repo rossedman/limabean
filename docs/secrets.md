@@ -10,7 +10,7 @@ only inside VMs.
 
 ## Adding secrets
 
-The easiest way is while creating a VM. In a terminal, `limabean new` shows
+The easiest way is while creating a VM. In a terminal, `limabean up <name>` shows
 a secrets step:
 - The **shared** secrets are listed. Every VM gets them.
 - **Secrets from your other VMs** can be added to this one.
@@ -32,7 +32,7 @@ op read op://Private/OpenAI/credential | limabean secrets set OPENAI_API_KEY --f
 
 `set`, `rm` and `edit` update running VMs straight away; stopped ones get
 the change at their next `limabean secrets sync`. From scripts,
-`limabean new <name> --secret NAME=reference` gives a new VM its own
+`limabean up <name> --secret NAME=reference` gives a new VM its own
 secrets.
 
 ## Where they're kept

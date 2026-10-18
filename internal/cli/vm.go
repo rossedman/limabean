@@ -67,7 +67,7 @@ func (a *App) vmArg(ctx context.Context, args []string, verb string) (string, er
 		return "", err
 	}
 	if len(list) == 0 {
-		return "", errors.New("no VMs yet (limabean new <name>)")
+		return "", errors.New("no VMs yet (limabean up <name>)")
 	}
 	if !a.UI.Prompting {
 		return "", errors.New("name a VM (see: limabean ls)")

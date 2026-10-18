@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/rossedman/limabean/internal/config"
 	"github.com/rossedman/limabean/internal/secrets"
@@ -16,13 +17,12 @@ import (
 )
 
 func newNewCmd(a *App) *cobra.Command {
-	var secretFlags, allowFlags, withPacks, withoutPacks []string
-	var locked, learn bool
-	var ttl time.Duration
+	var nf newFlags
 	cmd := &cobra.Command{
 		Use:     "new [name] [environment]",
 		Aliases: []string{"create"},
-		Short:   "Create a VM",
+		Hidden:  true, // "limabean up <name>" creates a VM; new stays for scripts
+		Short:   "Create a VM (limabean up <name> does this now)",
 		Long: `Create a VM from an environment template (default: scratch), boot it, apply
 every pending Ubuntu update, install its secrets and register it with
 Claude Desktop. The first VM of a kind (environment and packs) is
@@ -75,90 +75,122 @@ build on the built-in layers with: base: [./layer-base.yaml]`,
 		Args:              cobra.MaximumNArgs(2),
 		ValidArgsFunction: completeEnvs(a),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			o := createOptions{}
-			if len(args) > 0 {
-				o.Name = args[0]
-			}
-			if len(args) > 1 {
-				o.Env = args[1]
-			}
-			root, err := a.templatesRoot()
-			if err != nil {
-				return err
-			}
-			envs, err := templates.Envs(root)
-			if err != nil {
-				return err
-			}
-			if o.Name == "" && !a.UI.Prompting {
-				return errors.New("name the VM: limabean new <name>")
-			}
-
-			flagSecrets, err := parseSecretFlags(secretFlags)
-			if err != nil {
-				return err
-			}
-			if a.UI.Prompting {
-				var packs []templates.Pack
-				if !cmd.Flags().Changed("with") && !cmd.Flags().Changed("without") {
-					if packs, err = templates.Packs(root); err != nil {
-						return err
-					}
-				}
-				picked, err := a.newForm(&o, envs, packs, len(flagSecrets) > 0)
-				if err != nil {
-					return err
-				}
-				if packs != nil {
-					withPacks, withoutPacks = packChoice(templates.SplitList(a.Cfg.Packs), picked)
-				}
-			}
-			if o.Env == "" {
-				o.Env = "scratch"
-			}
-			if err := validVMName(o.Name); err != nil {
-				return fmt.Errorf("VM name %q: %w", o.Name, err)
-			}
-			if _, exists, err := a.Lima.Get(ctx, o.Name); err != nil {
-				return err
-			} else if exists {
-				return fmt.Errorf("a VM named %q already exists", o.Name)
-			}
-			if err := a.prepareVM(&o, vmChoices{secrets: flagSecrets, with: withPacks, without: withoutPacks, allow: allowFlags, locked: locked, learn: learn}); err != nil {
-				return err
-			}
-
-			a.prune(ctx)
-			if err := a.create(ctx, o); err != nil {
-				return err
-			}
-			if err := a.setTTL(ctx, o.Name, ttl); err != nil {
-				return err
-			}
-			lines := []string{a.UI.Code(o.Name) + " is ready", "", "ssh lima-" + o.Name + "     or: limabean ssh " + o.Name}
-			if a.Cfg.ClaudeDesktop {
-				lines = append(lines, "Claude Desktop: SSH → "+o.Name+" (limabean)")
-			}
-			a.UI.Box(lines...)
-			return nil
+			return a.newVM(cmd, args, &nf)
 		},
 	}
-	f := cmd.Flags()
-	f.StringArrayVar(&secretFlags, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
-	f.StringSliceVar(&withPacks, "with", nil, "give the VM these packs, e.g. go,node (see: limabean packs)")
-	f.StringSliceVar(&withoutPacks, "without", nil, "leave out packs the PACKS setting would add")
-	f.StringArrayVar(&allowFlags, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
-	f.BoolVar(&learn, "learn", false, "record the domains the VM looks up, to build its allowlist (see: limabean network learn --help)")
-	f.BoolVar(&locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
-	f.DurationVar(&ttl, "ttl", 0, "delete the VM, whatever is in it, once it's this old, e.g. 2h (needs: limabean autostop on)")
+	nf.add(cmd.Flags())
+	_ = a.V.BindPFlag(config.KeyCPUs, cmd.Flags().Lookup("cpus"))
+	_ = a.V.BindPFlag(config.KeyMemory, cmd.Flags().Lookup("memory"))
+	_ = a.V.BindPFlag(config.KeyDisk, cmd.Flags().Lookup("disk"))
+	return cmd
+}
+
+// newFlags are the choices for a VM made without a project file, as flags
+// on up (and on the older new).
+type newFlags struct {
+	secrets, allow, with, without []string
+	locked, learn                 bool
+	ttl                           time.Duration
+}
+
+func (nf *newFlags) add(f *pflag.FlagSet) {
+	f.StringArrayVar(&nf.secrets, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
+	f.StringSliceVar(&nf.with, "with", nil, "give the VM these packs, e.g. go,node (see: limabean packs)")
+	f.StringSliceVar(&nf.without, "without", nil, "leave out packs the PACKS setting would add")
+	f.StringArrayVar(&nf.allow, "allow", nil, "only let the VM reach this domain or preset (repeatable; see: limabean network --help)")
+	f.BoolVar(&nf.learn, "learn", false, "record the domains the VM looks up, to build its allowlist (see: limabean network learn --help)")
+	f.BoolVar(&nf.locked, "locked", false, "take sudo and Docker away from the VM's user, so its allowlist holds")
+	f.DurationVar(&nf.ttl, "ttl", 0, "delete the VM, whatever is in it, once it's this old, e.g. 2h (needs: limabean autostop on)")
 	f.Int("cpus", 0, "CPUs for the VM (default: the template's, 2)")
 	f.String("memory", "", "memory in GiB (default: the template's, 4)")
 	f.String("disk", "", "system disk in GiB (default: the template's, 10); ~/code has its own")
-	_ = a.V.BindPFlag(config.KeyCPUs, f.Lookup("cpus"))
-	_ = a.V.BindPFlag(config.KeyMemory, f.Lookup("memory"))
-	_ = a.V.BindPFlag(config.KeyDisk, f.Lookup("disk"))
-	return cmd
+}
+
+// newOnly are the flags that only mean something when a VM is created
+// without a project file.
+var newOnly = []string{"secret", "with", "without", "allow", "learn", "locked", "ttl", "cpus", "memory", "disk"}
+
+// changedFlags lists which of names were given on the command line.
+func changedFlags(cmd *cobra.Command, names []string) []string {
+	var set []string
+	for _, n := range names {
+		if cmd.Flags().Changed(n) {
+			set = append(set, "--"+n)
+		}
+	}
+	return set
+}
+
+// newVM creates a VM from flags and, in a terminal, a form: name and
+// environment if missing, packs, then secrets.
+func (a *App) newVM(cmd *cobra.Command, args []string, nf *newFlags) error {
+	ctx := cmd.Context()
+	o := createOptions{}
+	if len(args) > 0 {
+		o.Name = args[0]
+	}
+	if len(args) > 1 {
+		o.Env = args[1]
+	}
+	root, err := a.templatesRoot()
+	if err != nil {
+		return err
+	}
+	envs, err := templates.Envs(root)
+	if err != nil {
+		return err
+	}
+	if o.Name == "" && !a.UI.Prompting {
+		return errors.New("name the VM: limabean up <name>")
+	}
+
+	flagSecrets, err := parseSecretFlags(nf.secrets)
+	if err != nil {
+		return err
+	}
+	if a.UI.Prompting {
+		var packs []templates.Pack
+		if !cmd.Flags().Changed("with") && !cmd.Flags().Changed("without") {
+			if packs, err = templates.Packs(root); err != nil {
+				return err
+			}
+		}
+		picked, err := a.newForm(&o, envs, packs, len(flagSecrets) > 0)
+		if err != nil {
+			return err
+		}
+		if packs != nil {
+			nf.with, nf.without = packChoice(templates.SplitList(a.Cfg.Packs), picked)
+		}
+	}
+	if o.Env == "" {
+		o.Env = "scratch"
+	}
+	if err := validVMName(o.Name); err != nil {
+		return fmt.Errorf("VM name %q: %w", o.Name, err)
+	}
+	if _, exists, err := a.Lima.Get(ctx, o.Name); err != nil {
+		return err
+	} else if exists {
+		return fmt.Errorf("a VM named %q already exists", o.Name)
+	}
+	if err := a.prepareVM(&o, vmChoices{secrets: flagSecrets, with: nf.with, without: nf.without, allow: nf.allow, locked: nf.locked, learn: nf.learn}); err != nil {
+		return err
+	}
+
+	a.prune(ctx)
+	if err := a.create(ctx, o); err != nil {
+		return err
+	}
+	if err := a.setTTL(ctx, o.Name, nf.ttl); err != nil {
+		return err
+	}
+	lines := []string{a.UI.Code(o.Name) + " is ready", "", "ssh lima-" + o.Name + "     or: limabean ssh " + o.Name}
+	if a.Cfg.ClaudeDesktop {
+		lines = append(lines, "Claude Desktop: SSH → "+o.Name+" (limabean)")
+	}
+	a.UI.Box(lines...)
+	return nil
 }
 
 // newForm asks for the name and environment if missing and, given packs,

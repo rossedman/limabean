@@ -4,7 +4,7 @@ Each VM runs Ubuntu 26.04 LTS, with systemd 259 and its Varlink APIs, fully
 updated on first boot. It's small by default: 2 CPUs, 4 GiB of memory and
 a 10 GiB system disk, with `~/code` on a 50 GiB disk of its own. Docker
 images live on the system disk, so give a VM that builds big ones more with
-`limabean new <name> --disk 40`, or `DISK` in the config for every VM. It has no access to your Mac's files apart from a
+`limabean up <name> --disk 40`, or `DISK` in the config for every VM. It has no access to your Mac's files apart from a
 few read-only mounts: your git config, `~/.aws` if you have it, and the VM's
 own [network policy](network.md). Keep code in the VM under `~/code`, which is
 on its own disk and [survives rebuilds](lifecycle.md), and push it to a
@@ -54,7 +54,7 @@ your browser.
 
 The first boot runs a full `apt-get full-upgrade`, systemd included, and
 switches the running systemd to the new version. If an update needs a restart,
-for example a new kernel, `limabean new` restarts the VM before handing it
+for example a new kernel, `limabean up` restarts the VM before handing it
 over. Later boots skip the upgrade: `limabean rebuild` is how a VM gets newer
 packages.
 

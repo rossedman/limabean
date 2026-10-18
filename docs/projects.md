@@ -179,7 +179,7 @@ applies when `setup` runs: allow whatever `setup` downloads from (`npm`,
 list, find it out once:
 
 ```bash
-limabean new trial --learn
+limabean up trial --learn
 limabean ssh trial 'cd ~/code && git clone https://github.com/acme/myapp && cd myapp && npm ci'
 limabean network log trial          # everything it looked up
 ```

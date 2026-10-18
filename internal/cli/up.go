@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,18 +20,28 @@ import (
 func newUpCmd(a *App) *cobra.Command {
 	var file string
 	var yes, setup bool
+	var nf newFlags
 	cmd := &cobra.Command{
-		Use:   "up",
-		Short: "Create the VM a repository's .limabean.yaml describes, or bring it up to date",
-		Long: `Bring up the VM for the project you're in. A repository describes the VM it
-needs in .limabean.yaml (or .limabean.yml), here or in a parent directory.
-up creates that VM, clones the repository into it and runs its setup.
-If the VM exists, up starts it and applies whatever in the file changed:
-new packs or environment rebuild it (keeping ~/code), a new size resizes
-it, new secrets and Claude plugins are added, and a tighter network is
-applied. A file can't widen a VM's network: up prints the command for
-you to run instead. Setup runs once; --setup runs it again. limabean down
-stops the VM.
+		Use:   "up [name] [environment]",
+		Short: "Create or start a VM, or bring a project's VM up to date",
+		Long: `Bring up a VM: up is how VMs are made and started.
+
+In a project, up works from its .limabean.yaml (or .limabean.yml), here or
+in a parent directory. It creates the VM the file describes, clones the
+repository into it and runs its setup. If the VM exists, up starts it and
+applies whatever in the file changed: new packs or environment rebuild it
+(keeping ~/code), a new size resizes it, new secrets and Claude plugins are
+added, and a tighter network is applied. A file can't widen a VM's
+network: up prints the command for you to run instead. Setup runs once;
+--setup runs it again.
+
+With a name, up starts that VM, or creates it if there's none: in a
+terminal it asks which packs and secrets it gets, and --with, --allow,
+--locked, --ttl and the size flags choose on the command line. Inside a
+project, the project's own name (or no name) means its file; any other
+name is a VM of its own. Without a terminal, name the VM.
+
+limabean down stops a VM; limabean rm deletes it.
 
   # .limabean.yaml
   name: myapp                 # default: the directory's name
@@ -62,45 +73,141 @@ allowlist needs github (or the marketplace's host).
 The file comes with the repository, so up shows what it asks for, or what
 it would change, and waits for you to confirm; --yes skips that, for files
 you trust.`,
-		Example: `  cd ~/src/myapp && limabean up
+		Example: `  # The project you're in: create it, or start it and apply the file's changes
+  cd ~/src/myapp && limabean up
 
-  # After editing the file: see the changes, confirm, apply
-  limabean up
-
-  # Run the setup again
+  # Run the project's setup again
   limabean up --setup
 
-  # From a script, for a file you trust
-  limabean up --yes`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+  # A VM of its own: start dev, or create it (asking which packs and secrets)
+  limabean up dev
+
+  # Create one from a script: Go and Node, 4 CPUs, gone in a day
+  limabean up scratch --with go,node --cpus 4 --ttl 24h
+
+  # An agent sandbox: GitHub and PyPI only, and no way to undo that
+  limabean up agent --with python,claude --allow github --allow python --locked`,
+		Args:              cobra.MaximumNArgs(2),
+		ValidArgsFunction: a.completeUp,
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			path := file
-			if path == "" {
-				wd, err := os.Getwd()
-				if err != nil {
-					return err
-				}
-				if path, err = project.Find(wd); err != nil {
-					return err
-				}
-			}
-			f, err := project.Load(path)
+			path, f, err := findProject(file)
 			if err != nil {
 				return err
 			}
-			if inst, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
-				return err
-			} else if ok {
-				return a.upExisting(ctx, inst, f, filepath.Dir(path), yes, setup)
+			given := changedFlags(cmd, newOnly)
+			if f != nil && (len(args) == 0 || args[0] == f.Name) {
+				switch {
+				case len(args) > 1:
+					return fmt.Errorf("%s sets %s's environment; change it there", shortPath(path), f.Name)
+				case len(given) > 0:
+					return fmt.Errorf("%s choose what a VM without a project file gets; %s describes %s, so change it there", strings.Join(given, ", "), shortPath(path), f.Name)
+				}
+				if inst, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
+					return err
+				} else if ok {
+					return a.upExisting(ctx, inst, f, filepath.Dir(path), yes, setup)
+				}
+				return a.upCreate(ctx, f, filepath.Dir(path), yes)
 			}
-			return a.upCreate(ctx, f, filepath.Dir(path), yes)
+			if setup {
+				return errors.New("--setup runs a project file's setup; there's no .limabean.yaml here")
+			}
+			if len(args) == 0 && !a.UI.Prompting {
+				return errors.New("no .limabean.yaml here or in a parent directory; name a VM to start or create: limabean up <name>")
+			}
+			if len(args) > 0 {
+				if err := validVMName(args[0]); err != nil {
+					return fmt.Errorf("VM name %q: %w", args[0], err)
+				}
+				inst, ok, err := a.Lima.Get(ctx, args[0])
+				if err != nil {
+					return err
+				}
+				if ok {
+					if len(args) > 1 {
+						given = append(given, "an environment")
+					}
+					if len(given) > 0 {
+						return fmt.Errorf("%s already exists, and %s only apply when creating a VM (packs: limabean rebuild %s --with …; network: limabean network)", args[0], strings.Join(given, ", "), args[0])
+					}
+					return a.upStart(ctx, inst)
+				}
+			}
+			if err := a.sizeFlags(cmd); err != nil {
+				return err
+			}
+			return a.newVM(cmd, args, &nf)
 		},
 	}
 	cmd.Flags().StringVarP(&file, "file", "f", "", "the project file (default: .limabean.yaml here or in a parent directory)")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "create the VM, or apply changes to it, without asking")
-	cmd.Flags().BoolVar(&setup, "setup", false, "run the file's setup again in an existing VM")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "create the project's VM, or apply changes to it, without asking")
+	cmd.Flags().BoolVar(&setup, "setup", false, "run the project file's setup again in its existing VM")
+	nf.add(cmd.Flags())
 	return cmd
+}
+
+// findProject loads the project file: the one named, or the one found here
+// or in a parent directory. Without either it returns a nil file.
+func findProject(file string) (string, *project.File, error) {
+	path := file
+	if path == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", nil, err
+		}
+		if path, err = project.Find(wd); errors.Is(err, project.ErrNotFound) {
+			return "", nil, nil
+		} else if err != nil {
+			return "", nil, err
+		}
+	}
+	f, err := project.Load(path)
+	return path, f, err
+}
+
+// upStart starts an existing VM that isn't a project's.
+func (a *App) upStart(ctx context.Context, inst lima.Instance) error {
+	if inst.Running() {
+		a.claudeAdd(inst.Name)
+		a.UI.Info("%s is already running", inst.Name)
+		return nil
+	}
+	if _, err := a.ensureRunning(ctx, inst); err != nil {
+		return err
+	}
+	a.UI.OK("Started %s", a.UI.Code(inst.Name))
+	return nil
+}
+
+// sizeFlags applies up's --cpus, --memory and --disk. new binds its own
+// to the settings; a setting takes one flag, so up's are applied here.
+func (a *App) sizeFlags(cmd *cobra.Command) error {
+	f := cmd.Flags()
+	if f.Changed("cpus") {
+		n, _ := f.GetInt("cpus")
+		a.Cfg.CPUs = n
+	}
+	if f.Changed("memory") {
+		a.Cfg.Memory, _ = f.GetString("memory")
+	}
+	if f.Changed("disk") {
+		v, _ := f.GetString("disk")
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			return fmt.Errorf("--disk %q: a size in GiB, e.g. 30", v)
+		}
+		a.Cfg.Disk = n
+	}
+	return nil
+}
+
+// completeUp completes a VM's name, then an environment.
+func (a *App) completeUp(cmd *cobra.Command, args []string, s string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 1 {
+		return completeEnvs(a)(cmd, args, s)
+	}
+	return a.completeVMs(cmd, args, s)
 }
 
 // upCreate creates a project's VM, clones the project and runs its setup.

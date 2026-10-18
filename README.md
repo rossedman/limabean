@@ -18,7 +18,7 @@ Claude Desktop as an SSH connection.
 **Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
 
 - **One command per VM, ready as fast as it boots.** New VMs are APFS
-  copies of a provisioned image, so `limabean new dev` only has to boot,
+  copies of a provisioned image, so `limabean up dev` only has to boot,
   and `limabean up` builds the VM a repository's `.limabean.yaml` describes;
   `limabean recipes` starts one for a Go service, a web app, a Claude
   sandbox and more.
@@ -53,7 +53,7 @@ limabean init       # save settings, fix ~/.ssh/config, check your setup
 # optional: log VMs into GitHub for gh and the API (scoped tokens: docs/github.md)
 gh auth token --hostname github.com | limabean github login --with-token
 
-limabean new dev    # create a VM; a form asks which packs and secrets it gets
+limabean up dev    # create a VM; a form asks which packs and secrets it gets
 limabean ssh dev    # or: ssh lima-dev
 
 cd ~/src/myapp && limabean up   # the VM a repository's .limabean.yaml describes
@@ -94,7 +94,7 @@ recipe is a locked-down sandbox to start from.
 tool and the safety model.
 
 <p align="center">
-  <img src="docs/assets/terminal.png" alt="Creating a VM with limabean new, listing it, then running docker inside it" width="100%">
+  <img src="docs/assets/terminal.png" alt="Creating a VM with limabean up, listing it, then running docker inside it" width="100%">
 </p>
 
 ## How it works
@@ -120,9 +120,8 @@ Leave out a VM name and you pick one from a list. Every command has
 
 | Command | What it does |
 |---|---|
-| `limabean new [name] [env]` | Create a VM, choosing its secrets; `--with rust` adds a pack |
-| `limabean up` | Create the VM a repository's `.limabean.yaml` describes, or start it and apply the file's changes |
-| `limabean down` | Stop that VM |
+| `limabean up [name]` | In a project: create its VM, or start it and apply the file's changes. With a name: start that VM, or create it, choosing packs and secrets (`--with go`) |
+| `limabean down [name]` | Stop the project's VM, or the one named; `--idle 2h` stops every VM nobody is using |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
 | `limabean run --rm -- <cmd>` | Run one command in a new VM, then delete it |
 | `limabean packs` | List the tool packs a VM can get |
@@ -133,8 +132,6 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code, Cursor, Windsurf or VSCodium |
 | `limabean ports [name]` | List the ports a VM forwards to your Mac |
 | `limabean open [name] [port]` | Open a forwarded port in your browser |
-| `limabean start [name]` | Start a stopped VM |
-| `limabean stop [name]` | Stop a running VM, or with `--idle 2h` every VM nobody is using |
 | `limabean rebuild [name]` | Recreate a VM from the current templates, keeping `~/code` |
 | `limabean clone <name> <new>` | Copy a VM, `~/code` and all, in seconds |
 | `limabean rm [name]` | Delete a VM |

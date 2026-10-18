@@ -119,7 +119,7 @@ func (a *App) whileStopped(ctx context.Context, inst lima.Instance, fn func() er
 		defer func() {
 			if _, err := a.ensureRunning(ctx, lima.Instance{Name: inst.Name}); err != nil {
 				a.UI.Warn("Couldn't start %s again: %v", inst.Name, err)
-				a.UI.Hint("limabean start " + inst.Name)
+				a.UI.Hint("limabean up " + inst.Name)
 			} else {
 				a.UI.OK("Started %s again", a.UI.Code(inst.Name))
 			}

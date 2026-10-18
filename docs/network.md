@@ -7,7 +7,7 @@ anything you didn't allow.
 
 ```bash
 # GitHub and PyPI only, and no way to undo that from inside
-limabean new agent --allow github --allow python --locked
+limabean up agent --allow github --allow python --locked
 
 limabean network ls agent                        # what it can reach
 limabean network allow agent registry.npmjs.org  # one more domain
@@ -61,7 +61,7 @@ containers look up is recorded. Do the work the sandbox is for, then turn
 what was used into the allowlist:
 
 ```bash
-limabean new agent --learn             # or, for a VM you have: limabean network learn agent
+limabean up agent --learn             # or, for a VM you have: limabean network learn agent
 limabean ssh agent 'cd ~/code/github.com/me/app && make deps test'
 limabean network log agent             # what it looked up, and how often
 limabean network learn agent --done    # allow just that from now on
@@ -90,7 +90,7 @@ accidents, but it isn't a boundary.
 every boot.
 
 ```bash
-limabean new agent --allow github --locked   # locked from the start
+limabean up agent --allow github --locked   # locked from the start
 limabean network lock dev                    # or later
 limabean network unlock dev                  # sudo now, Docker on restart
 ```
@@ -106,7 +106,7 @@ the VM unlocked, or use a separate one.
 
 | Command | Does |
 |---|---|
-| `limabean new <name> --allow <x>… [--locked] [--learn]` | Creates a VM with an allowlist, locked or not, or learning |
+| `limabean up <name> --allow <x>… [--locked] [--learn]` | Creates a VM with an allowlist, locked or not, or learning |
 | `limabean network ls [name]` | Shows the policy |
 | `limabean network allow <name> <x>…` | Adds domains or presets; an open VM gets an allowlist of just these |
 | `limabean network rm <name> <x>…` | Removes some; it won't remove the last one |
@@ -136,7 +136,7 @@ Inside the VM, `limabean-network` applies it:
 - Containers resolve through dnsmasq too, on the `docker0` address.
 
 The first boot installs the toolchain with the network open; the policy
-applies when `limabean new` or `rebuild` finishes. Later boots apply it as the
+applies when `limabean up` or `rebuild` finishes. Later boots apply it as the
 VM starts. If the policy can't be read, nothing is changed: a missing file is
 never taken to mean "open".
 
