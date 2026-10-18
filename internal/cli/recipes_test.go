@@ -71,10 +71,10 @@ func TestRecipesCmd(t *testing.T) {
 	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), "# A Rust crate") {
 		t.Errorf("written: %q", b)
 	}
-	if _, err := h.run("", "recipes", "go-service"); err == nil || !strings.Contains(err.Error(), "--force") {
-		t.Errorf("overwrite without --force: %v", err)
+	if _, err := h.run("", "recipes", "go-service"); err == nil || !strings.Contains(err.Error(), "--overwrite") {
+		t.Errorf("overwrite without --overwrite: %v", err)
 	}
-	h.must("", "recipes", "go-service", "--force")
+	h.must("", "recipes", "go-service", "--overwrite")
 	if b, _ := os.ReadFile(project.FileName); !strings.HasPrefix(string(b), "# A Go service") {
 		t.Errorf("forced: %q", b)
 	}

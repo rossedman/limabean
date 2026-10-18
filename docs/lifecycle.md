@@ -59,7 +59,7 @@ deletes the disk with the VM.
 
 `rm` checks every git repository under `~/code` first. If any has
 uncommitted changes, stashes or commits not pushed to a remote, it stops and
-lists them; in a terminal it then asks before deleting. `--force` skips both.
+lists them; in a terminal it then asks before deleting. `--yes` skips the question, `--force` both.
 
 `rebuild` runs the same check for a VM without a code disk: one created with
 `CODE_DISK` empty, or before limabean had code disks, whose `~/code` a
@@ -77,7 +77,7 @@ limabean snapshot rm dev before-refactor
 A snapshot saves the VM's system disk and its `~/code` disk. Restoring puts
 both back exactly as they were, which makes it safe to let Claude try
 something drastic. Leave out the name to save under the date and time, or to
-restore the latest. In a terminal, restore asks first; `--force` doesn't.
+restore the latest. In a terminal, restore asks first; `--yes` doesn't.
 Claude can save snapshots [through MCP](mcp.md), and restore them if you
 allow it.
 
@@ -164,5 +164,5 @@ back. A VM counts as in use while:
 
 Quiet background work, such as idle containers or a long command run over
 `ssh` without a terminal, doesn't keep a VM running. Run
-`limabean down --idle 2h --dry-run` to see what would stop and why the rest
+`limabean down --idle 2h --preview` to see what would stop and why the rest
 are kept. The agent's output is in `~/Library/Logs/limabean-autostop.log`.

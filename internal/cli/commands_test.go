@@ -709,7 +709,7 @@ func TestSnapshots(t *testing.T) {
 	if out, err := h.runTTY([]string{"n"}, "snapshot", "restore", "dev"); err != nil || !strings.Contains(out, "Kept dev as it is") {
 		t.Fatalf("restore, answered no: %v\n%s", err, out)
 	}
-	if out, err := h.runTTY(nil, "snapshot", "restore", "dev", "--force"); err != nil || !strings.Contains(out, "Restored dev to "+latest) {
+	if out, err := h.runTTY(nil, "snapshot", "restore", "dev", "--yes"); err != nil || !strings.Contains(out, "Restored dev to "+latest) {
 		t.Fatalf("restore the latest: %v\n%s", err, out)
 	}
 

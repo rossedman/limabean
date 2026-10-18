@@ -83,34 +83,34 @@ func TestUpDryRun(t *testing.T) {
 	file := projectFile(t, "dry", "cpus: 2\n")
 
 	// No VM: the plan, and nothing made.
-	if out := h.must("", "up", "--file", file, "--dry-run"); !strings.Contains(out, "Nothing created (--dry-run)") || len(h.world.vms) != 0 {
+	if out := h.must("", "up", "--file", file, "--preview"); !strings.Contains(out, "Nothing created (--preview)") || len(h.world.vms) != 0 {
 		t.Fatalf("create:\n%s", out)
 	}
 	h.must("", "up", "--file", file, "--yes")
 	h.world.vms["dry"] = "Stopped"
-	if out := h.must("", "up", "--file", file, "--dry-run"); !strings.Contains(out, "dry is up to date") || h.world.vms["dry"] != "Stopped" {
+	if out := h.must("", "up", "--file", file, "--preview"); !strings.Contains(out, "dry is up to date") || h.world.vms["dry"] != "Stopped" {
 		t.Errorf("up to date:\n%s", out)
 	}
 
 	// Changes and refusals are listed; nothing is applied or started.
 	rewrite(t, file, "cpus: 4\nnetwork:\n  allow: [github]\n")
 	h.world.calls = nil
-	out := h.must("", "up", "--file", file, "--dry-run")
-	if !strings.Contains(out, "cpus: 2 → 4") || !strings.Contains(out, "Nothing changed (--dry-run)") || h.world.called("limactl edit") || h.world.vms["dry"] != "Stopped" {
+	out := h.must("", "up", "--file", file, "--preview")
+	if !strings.Contains(out, "cpus: 2 → 4") || !strings.Contains(out, "Nothing changed (--preview)") || h.world.called("limactl edit") || h.world.vms["dry"] != "Stopped" {
 		t.Fatalf("changes:\n%s\n%v", out, h.world.calls)
 	}
 	h.must("", "up", "--file", file, "--yes")
 	rewrite(t, file, "cpus: 4\nnetwork:\n  allow: [github, npm]\n")
-	if out := h.must("", "up", "--file", file, "--dry-run"); !strings.Contains(out, "limabean network allow dry") {
+	if out := h.must("", "up", "--file", file, "--preview"); !strings.Contains(out, "limabean network allow dry") {
 		t.Errorf("widening:\n%s", out)
 	}
 
 	// A VM by name.
 	chdirTemp(t)
-	if out := h.must("", "up", "dry", "--dry-run"); !strings.Contains(out, "Would start dry") {
+	if out := h.must("", "up", "dry", "--preview"); !strings.Contains(out, "Would start dry") {
 		t.Errorf("named:\n%s", out)
 	}
-	if _, err := h.run("", "up", "newone", "--dry-run"); err == nil || !strings.Contains(err.Error(), "--dry-run") {
+	if _, err := h.run("", "up", "newone", "--preview"); err == nil || !strings.Contains(err.Error(), "--preview") {
 		t.Errorf("new VM: %v", err)
 	}
 }

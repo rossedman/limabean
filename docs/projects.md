@@ -86,7 +86,7 @@ limabean down                    # stop it; everything in it is kept
 
 Edit the file and run `limabean up` again. It compares the file with the VM
 as it is, lists what differs and asks before changing anything (`--yes`
-skips the question; `--dry-run` only lists it):
+skips the question; `--preview` only lists it):
 
 ```
 myapp (changes from ~/src/myapp/.limabean.yaml)

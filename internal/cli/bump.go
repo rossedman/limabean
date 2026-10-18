@@ -38,7 +38,7 @@ VMs pick up new pins when they're rebuilt.`,
   limabean bump
 
   # See what would change
-  limabean bump --dry-run
+  limabean bump --preview
 
   # Without mise on the Mac
   limabean bump --vm dev
@@ -76,7 +76,8 @@ VMs pick up new pins when they're rebuilt.`,
 	}
 	cmd.Flags().StringVar(&vm, "vm", "", "look versions up with mise in this running VM")
 	cmd.Flags().BoolVar(&major, "major", false, "also move pins to new major versions")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would change without writing")
+	cmd.Flags().BoolVar(&dryRun, "preview", false, "show what would change without writing")
+	hiddenAlias(cmd.Flags(), &dryRun, "dry-run", "", "preview")
 	return cmd
 }
 

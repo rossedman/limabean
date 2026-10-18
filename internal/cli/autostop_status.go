@@ -15,7 +15,7 @@ func newAutostopStatusCmd(a *App) *cobra.Command {
 		Short: "Show whether idle VMs are stopped automatically",
 		Long: `Show whether the autostop agent is installed and loaded, and after how
 long an unused VM is stopped. To see what it would do right now, run
-"limabean down --idle <after> --dry-run".`,
+"limabean down --idle <after> --preview".`,
 		Example: `  limabean autostop status`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -43,7 +43,7 @@ long an unused VM is stopped. To see what it would do right now, run
 				a.UI.Warn("This agent was installed before new --ttl, so it doesn't delete expired VMs")
 				a.UI.Hint("Update it with: limabean autostop on --after " + after)
 			}
-			a.UI.Hint("Log: "+shortPath(autostopLog()), "Preview: limabean down --idle "+after+" --dry-run")
+			a.UI.Hint("Log: "+shortPath(autostopLog()), "Preview: limabean down --idle "+after+" --preview")
 			return nil
 		},
 	}

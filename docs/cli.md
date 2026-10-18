@@ -9,8 +9,8 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor` |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
-| `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--force` to replace a project file) |
-| `limabean up [name] [env]` | Brings a VM up. In a project, without a name (or with the project's): creates the VM its [`.limabean.yaml`](projects.md) describes (clones the repository, turns on its Claude plugins, runs its setup), or starts it and [applies the file's changes](projects.md#changing-the-file), then runs its [`start`](projects.md#start) in the background; `--setup` runs the setup again, and `--dry-run` shows what `up` would create or change without changing anything. With another name: starts that VM, adding it back to Claude Desktop, or creates it; in a terminal a form asks which [packs](packs.md) and secrets it gets, `--with`/`--without` choose packs instead, `--allow`, `--locked` and `--learn` set its [network policy](network.md), and `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
+| `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--overwrite` to replace a project file) |
+| `limabean up [name] [env]` | Brings a VM up. In a project, without a name (or with the project's): creates the VM its [`.limabean.yaml`](projects.md) describes (clones the repository, turns on its Claude plugins, runs its setup), or starts it and [applies the file's changes](projects.md#changing-the-file), then runs its [`start`](projects.md#start) in the background; `--setup` runs the setup again, and `--preview` shows what `up` would create or change without changing anything. With another name: starts that VM, adding it back to Claude Desktop, or creates it; in a terminal a form asks which [packs](packs.md) and secrets it gets, `--with`/`--without` choose packs instead, `--allow`, `--locked` and `--learn` set its [network policy](network.md), and `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
 | `limabean ps` | Shows the project's VM: running or not, whether its `start` runs, the ports in it and whether each reaches your Mac, and what `up` would change; `--json` for scripts |
 | `limabean logs [name]` | Shows the end of the VM's provisioning log, or with `--setup` / `--start` its project's setup or start output, or with `--lima` Lima's own log on the Mac; `-n` lines, `-f` to follow |
 | `limabean down [name]` | Stops the project's VM, or the one named, and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](lifecycle.md#idle-vms-stop-by-themselves) |
@@ -48,6 +48,8 @@ In a terminal, limabean shows its interface:
 - **Pickers and forms** for anything you didn't pass on the command line.
 - **Confirmations** before `rm`, `rebuild` and `snapshot restore`; `rm` and
   `rebuild` also [check for unsaved work](lifecycle.md#unsaved-work-is-protected).
+  `-y`/`--yes` answers the question; on `rm` and `rebuild`, only `--force`
+  skips the unsaved-work check as well.
 - **Tables** for `ls` and `secrets ls`.
 
 When output isn't a terminal (pipes, scripts, CI), or with `--plain`,
@@ -71,6 +73,19 @@ missing names are errors, and questions take their defaults.
   with both, `--verbose` wins.
 - `limabean help --json` describes every command and flag, and
   `limabean version --json` the version, Go version and platform.
+
+## Flag names
+
+Flags are named for what happens:
+- `--preview` (on `up`, `down --idle` and `bump`) shows what would change
+  and changes nothing.
+- `-y`/`--yes` skips a confirmation, `--force` a safety check, and
+  `--overwrite` lets `recipes` replace a file.
+- `ls` commands also answer to `list`, and `rm` commands to `delete` (or
+  `remove`).
+
+The earlier names `--dry-run`, `recipes --force` and
+`snapshot restore --force` still work, but aren't shown in help.
 
 ## Exit codes
 

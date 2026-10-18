@@ -201,7 +201,7 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 		if c.empty() {
 			a.UI.OK("%s is up to date", a.UI.Code(f.Name))
 		} else {
-			a.UI.Info("Nothing changed (--dry-run)")
+			a.UI.Info("Nothing changed (--preview)")
 		}
 		return nil
 	}

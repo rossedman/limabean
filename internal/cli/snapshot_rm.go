@@ -10,8 +10,9 @@ import (
 
 func newSnapshotRmCmd(a *App) *cobra.Command {
 	return &cobra.Command{
-		Use:   "rm <name> <snapshot>",
-		Short: "Delete a snapshot",
+		Use:     "rm <name> <snapshot>",
+		Aliases: []string{"delete"},
+		Short:   "Delete a snapshot",
 		Long: `Delete one of a VM's snapshots, freeing the space it kept. The VM itself is
 left alone.`,
 		Example: `  limabean snapshot rm dev before-refactor`,

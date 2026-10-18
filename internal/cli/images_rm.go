@@ -10,8 +10,9 @@ import (
 func newImagesRmCmd(a *App) *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
-		Use:   "rm <image>... | --all",
-		Short: "Delete images",
+		Use:     "rm <image>... | --all",
+		Aliases: []string{"delete"},
+		Short:   "Delete images",
 		Long: `Delete images to free their disk space. VMs copied from them aren't
 affected; the next VM of that kind is made the slow way, and builds a new
 image in the background.`,

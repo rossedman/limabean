@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,5 +68,36 @@ func TestQuietAndVerboseFlags(t *testing.T) {
 	}
 	if out := h.must("", "down", "dev", "-q", "-v", "--no-color"); !strings.Contains(out, "Stopped dev") || !strings.Contains(out, "$ limactl stop dev") {
 		t.Errorf("--verbose wins over --quiet:\n%s", out)
+	}
+}
+
+// --yes skips the confirmation only; the unsaved-work check still runs.
+// --force skips both. Old flag names keep working, hidden.
+func TestYesSkipsOnlyTheQuestion(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	h.must("", "new", "a")
+	h.world.unsaved = "~/code/x: stashes\n"
+	if _, err := h.runTTY(nil, "rm", "a", "--yes"); !errors.Is(err, errUnsaved) {
+		t.Fatalf("rm --yes with unsaved work: %v", err)
+	}
+	if _, err := h.runTTY(nil, "rebuild", "a", "-y"); !errors.Is(err, errUnsaved) {
+		t.Fatalf("rebuild -y with unsaved work: %v", err)
+	}
+	h.world.unsaved = ""
+	if out, err := h.runTTY(nil, "rebuild", "a", "-y"); err != nil || !strings.Contains(out, "a was rebuilt") {
+		t.Fatalf("rebuild -y: %v\n%s", err, out)
+	}
+	if out, err := h.runTTY(nil, "rm", "a", "--yes"); err != nil || !strings.Contains(out, "Deleted a") {
+		t.Fatalf("rm --yes: %v\n%s", err, out)
+	}
+
+	for _, c := range []struct{ cmd, hidden string }{
+		{"up", "dry-run"}, {"down", "dry-run"}, {"bump", "dry-run"}, {"recipes", "force"}, {"snapshot restore", "force"},
+	} {
+		out := h.must("", append(strings.Fields(c.cmd), "--help")...)
+		if strings.Contains(out, "--"+c.hidden) {
+			t.Errorf("%s --help shows --%s", c.cmd, c.hidden)
+		}
 	}
 }

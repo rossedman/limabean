@@ -11,7 +11,7 @@ import (
 )
 
 func newRebuildCmd(a *App) *cobra.Command {
-	var force bool
+	var force, yes bool
 	var withPacks, withoutPacks []string
 	cmd := &cobra.Command{
 		Use:   "rebuild [name]",
@@ -26,8 +26,8 @@ repositories are lost and need cloning again with "limabean get". Its
 secrets, Claude Desktop entry and settings are kept and reinstalled.
 
 Without a code disk, rebuild first checks for uncommitted, stashed or
-unpushed work, like rm. In a terminal it asks you to confirm. --force skips
-both.`,
+unpushed work, like rm. In a terminal it asks you to confirm. --yes skips
+the question; --force skips both.`,
 		Example: `  limabean rebuild dev
 
   # Pick the VM from a list
@@ -76,12 +76,12 @@ both.`,
 					}
 					question = fmt.Sprintf("Rebuild %s from the current %s template? Its disk is erased.", name, env)
 				}
-				if a.UI.Prompting {
-					yes, err := a.UI.Confirm(question, false)
+				if a.UI.Prompting && !yes {
+					ok, err := a.UI.Confirm(question, false)
 					if err != nil {
 						return err
 					}
-					if !yes {
+					if !ok {
 						a.UI.Info("Kept %s", name)
 						return nil
 					}
@@ -101,6 +101,7 @@ both.`,
 		},
 	}
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "skip the unsaved-work check and the confirmation")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "skip the confirmation; the unsaved-work check still runs")
 	cmd.Flags().StringSliceVar(&withPacks, "with", nil, "add these packs, e.g. rust")
 	cmd.Flags().StringSliceVar(&withoutPacks, "without", nil, "remove these packs")
 	return cmd

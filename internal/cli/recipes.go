@@ -25,7 +25,7 @@ and more. Each is a .limabean.yaml with comments, ready to edit.
 
 Without a name, recipes lists them. With one, it writes that recipe to
 .limabean.yaml in the current directory, so "limabean up" can use it; it
-won't replace a project file that's already there unless you pass --force.
+won't replace a project file that's already there unless you pass --overwrite.
 --print writes it to standard output instead.
 
 See what a recipe asks for before you use it: the file's keys are described
@@ -55,7 +55,8 @@ in "limabean up --help".`,
 		},
 	}
 	cmd.Flags().BoolVar(&toStdout, "print", false, "write the recipe to standard output")
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "replace a project file that's already here")
+	cmd.Flags().BoolVar(&force, "overwrite", false, "replace a project file that's already here")
+	hiddenAlias(cmd.Flags(), &force, "force", "f", "overwrite")
 	return cmd
 }
 
@@ -103,7 +104,7 @@ func (a *App) writeRecipe(name string, body []byte, force bool) error {
 	for _, f := range project.FileNames {
 		if _, err := os.Stat(f); err == nil {
 			if !force {
-				return conflictErr("%s is already here; --force replaces it, or --print shows the recipe", f)
+				return conflictErr("%s is already here; --overwrite replaces it, or --print shows the recipe", f)
 			}
 			target = f
 		} else if !errors.Is(err, fs.ErrNotExist) {
