@@ -68,30 +68,47 @@ project gets the same VM.
 
 ## Every day
 
-`limabean up` is safe to run any time. If the VM exists, it only starts it
-(if it's stopped) and prints the same summary; nothing is created, cloned or
-set up again.
+Like `docker compose`, `up` and `down` work from the checkout, wherever you
+are in it:
 
 ```bash
-limabean up                      # start it, wherever you are in the checkout
+limabean up                      # create the VM, or start it and apply the file's changes
 limabean ssh myapp               # a shell
 limabean code myapp              # VS Code, Cursor or another editor, over SSH
-limabean stop myapp              # or let autostop do it
+limabean down                    # stop it; everything in it is kept
 ```
+
+`down` only stops the VM. `limabean rm myapp` deletes it.
 
 ## Changing the file
 
-The file is read when `up` creates the VM. A VM made before a change keeps
-what it had; to apply the change, make the VM again:
+Edit the file and run `limabean up` again. It compares the file with the VM
+as it is, lists what differs and asks before changing anything (`--yes`
+skips the question):
 
-```bash
-limabean rm myapp && limabean up
+```
+myapp (changes from ~/src/myapp/.limabean.yaml)
+    packs: core, node → core, node, rust (rebuild, keeping ~/code)
+    cpus: 2 → 4
+    network: stop allowing yarnpkg.com
+Apply these changes to myapp? Yes
 ```
 
-`rm` stops if a repository in the VM has unpushed work, so push first. The
-new VM clones the repository again and runs `setup` from scratch. To try
-other tools on the existing VM before changing the file, rebuild it with
-them: `limabean rebuild myapp --with rust` keeps `~/code`.
+| Change | What `up` does |
+|---|---|
+| `packs`, `env` | Rebuilds the VM, as [`limabean rebuild`](lifecycle.md) does: `~/code` and its repositories are kept on their own disk, the rest of the system is fresh |
+| `cpus`, `memory` | Stops the VM, resizes it and starts it again |
+| `disk` | Grows the disk the same way; Lima can't shrink one, so a smaller number is only a warning |
+| `secrets` | Gives the VM the secrets it doesn't have yet |
+| `claude` | Adds the plugins to the VM's Claude settings |
+| `network`: fewer domains, `locked: true` | Applied straight away |
+| `network`: more domains, no allowlist, no `locked` | **Not applied.** A file from a repository can't widen what a VM reaches; `up` prints the `limabean network …` command for you to run if you agree |
+| `setup` | Runs only when the VM is created; `limabean up --setup` runs it again in the clone |
+| `name` | Makes a different VM; the old one stays until you `limabean rm` it |
+
+A VM without its own `~/code` disk (made with `CODE_DISK=""`) loses its
+repositories in a rebuild, so `up` refuses one while any of them has
+unpushed work.
 
 ## Reference
 
@@ -178,8 +195,8 @@ with `limabean network lock myapp`.
 `setup` runs with `bash -e`, so it stops at the first failing command. It
 runs in the clone (in your home directory if nothing was cloned), as the
 VM's user, with your secrets in the environment. If it fails, `up` stops and
-keeps the VM so you can look: `limabean ssh myapp`. Fix the setup and start
-over with `limabean rm myapp && limabean up`.
+keeps the VM so you can look: `limabean ssh myapp`. Fix the setup, then run
+it again with `limabean up --setup`.
 
 ### Claude plugins
 
@@ -208,9 +225,9 @@ claude:
   credentials (a private repository works if
   [`limabean github login`](github.md) gave VMs access). A VM with a
   network allowlist needs `github`, or the marketplace's host.
-- To change the list, edit the file, then
-  `limabean rm myapp && limabean up`. To turn a plugin off in one VM, set it
-  to `false` in that VM's `~/.claude/settings.json`.
+- To add plugins, edit the file and run `limabean up`. To turn one off in a
+  VM, set it to `false` in that VM's `~/.claude/settings.json`; removing it
+  from the file doesn't turn it off.
 
 A repository can also keep its own `.claude/settings.json` with
 `enabledPlugins` and `extraKnownMarketplaces`; Claude Code reads that in

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -209,6 +210,22 @@ func (c *Client) Start(ctx context.Context, name string) ([]byte, error) {
 // Stop shuts a VM down.
 func (c *Client) Stop(ctx context.Context, name string) ([]byte, error) {
 	return c.Runner.Output(ctx, nil, true, c.limactl(), "stop", name)
+}
+
+// Edit changes a stopped VM's size: CPUs, memory and disk in GiB, each
+// only when above 0. Lima grows a disk but can't shrink one.
+func (c *Client) Edit(ctx context.Context, name string, cpus, memory, disk int) ([]byte, error) {
+	args := []string{"edit", "--tty=false"}
+	if cpus > 0 {
+		args = append(args, "--cpus", strconv.Itoa(cpus))
+	}
+	if memory > 0 {
+		args = append(args, "--memory", strconv.Itoa(memory))
+	}
+	if disk > 0 {
+		args = append(args, "--disk", strconv.Itoa(disk))
+	}
+	return c.Runner.Output(ctx, nil, true, c.limactl(), append(args, name)...)
 }
 
 // Delete removes a VM, stopping it first if needed.

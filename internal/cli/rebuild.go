@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rossedman/limabean/internal/lima"
 	"github.com/rossedman/limabean/internal/templates"
 )
 
@@ -88,19 +89,7 @@ both.`,
 			}
 			// delete --force kills a running VM; shut it down first so
 			// everything written to the code disk reaches it.
-			if keepsCode && inst.Running() {
-				if err := a.limaStep(ctx, "Stopping "+name, func(ctx context.Context) ([]byte, error) {
-					return a.Lima.Stop(ctx, name)
-				}); err != nil {
-					return err
-				}
-			}
-			if err := a.limaStep(ctx, "Deleting "+name, func(ctx context.Context) ([]byte, error) {
-				return a.Lima.Delete(ctx, name)
-			}); err != nil {
-				return err
-			}
-			if err := a.create(ctx, createOptions{Name: name, Env: env, Packs: packs}); err != nil {
+			if err := a.recreate(ctx, inst, env, packs, keepsCode); err != nil {
 				return err
 			}
 			if keepsCode {
@@ -115,4 +104,23 @@ both.`,
 	cmd.Flags().StringSliceVar(&withPacks, "with", nil, "add these packs, e.g. rust")
 	cmd.Flags().StringSliceVar(&withoutPacks, "without", nil, "remove these packs")
 	return cmd
+}
+
+// recreate deletes a VM and creates it again with env and packs, keeping
+// the disk ~/code is on when keepsCode (stopping the VM first, so the disk
+// is detached cleanly). Callers check for unsaved work and ask first.
+func (a *App) recreate(ctx context.Context, inst lima.Instance, env string, packs []string, keepsCode bool) error {
+	if keepsCode && inst.Running() {
+		if err := a.limaStep(ctx, "Stopping "+inst.Name, func(ctx context.Context) ([]byte, error) {
+			return a.Lima.Stop(ctx, inst.Name)
+		}); err != nil {
+			return err
+		}
+	}
+	if err := a.limaStep(ctx, "Deleting "+inst.Name, func(ctx context.Context) ([]byte, error) {
+		return a.Lima.Delete(ctx, inst.Name)
+	}); err != nil {
+		return err
+	}
+	return a.create(ctx, createOptions{Name: inst.Name, Env: env, Packs: packs})
 }

@@ -18,15 +18,19 @@ import (
 
 func newUpCmd(a *App) *cobra.Command {
 	var file string
-	var yes bool
+	var yes, setup bool
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Create or start the VM a repository's .limabean.yaml describes",
+		Short: "Create the VM a repository's .limabean.yaml describes, or bring it up to date",
 		Long: `Bring up the VM for the project you're in. A repository describes the VM it
 needs in .limabean.yaml (or .limabean.yml), here or in a parent directory.
-up creates that VM, clones the repository into it and runs its setup, or
-starts it if it already exists. Changes to the file reach a VM made
-before them when it's made again: limabean rm <name> && limabean up.
+up creates that VM, clones the repository into it and runs its setup.
+If the VM exists, up starts it and applies whatever in the file changed:
+new packs or environment rebuild it (keeping ~/code), a new size resizes
+it, new secrets and Claude plugins are added, and a tighter network is
+applied. A file can't widen a VM's network: up prints the command for
+you to run instead. Setup runs once; --setup runs it again. limabean down
+stops the VM.
 
   # .limabean.yaml
   name: myapp                 # default: the directory's name
@@ -55,10 +59,16 @@ Claude plugins go into the VM's ~/.claude/settings.json, and Claude Code
 fetches them in the VM when a session starts, so a VM with a network
 allowlist needs github (or the marketplace's host).
 
-The file comes with the repository, so up shows what it asks for and
-waits for you to confirm before creating anything; --yes skips that, for
-files you trust.`,
+The file comes with the repository, so up shows what it asks for, or what
+it would change, and waits for you to confirm; --yes skips that, for files
+you trust.`,
 		Example: `  cd ~/src/myapp && limabean up
+
+  # After editing the file: see the changes, confirm, apply
+  limabean up
+
+  # Run the setup again
+  limabean up --setup
 
   # From a script, for a file you trust
   limabean up --yes`,
@@ -82,29 +92,20 @@ files you trust.`,
 			if inst, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
 				return err
 			} else if ok {
-				if _, err := a.ensureRunning(ctx, inst); err != nil {
-					return err
-				}
-				a.UI.OK("%s is up", a.UI.Code(f.Name))
-				a.upBox(f, "")
-				return nil
+				return a.upExisting(ctx, inst, f, filepath.Dir(path), yes, setup)
 			}
 			return a.upCreate(ctx, f, filepath.Dir(path), yes)
 		},
 	}
 	cmd.Flags().StringVarP(&file, "file", "f", "", "the project file (default: .limabean.yaml here or in a parent directory)")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "create the VM without asking")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "create the VM, or apply changes to it, without asking")
+	cmd.Flags().BoolVar(&setup, "setup", false, "run the file's setup again in an existing VM")
 	return cmd
 }
 
 // upCreate creates a project's VM, clones the project and runs its setup.
 func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes bool) error {
-	repo := f.Repo
-	if repo == "" {
-		if origin, err := gitOrigin(ctx, dir); err == nil {
-			repo = repoQuery(origin)
-		}
-	}
+	repo := a.projectRepo(ctx, f, dir)
 	own, missing := a.projectSecrets(f.Secrets)
 	a.UI.Section(f.Name, "from "+shortPath(filepath.Join(dir, project.FileName)))
 	plan := []string{"environment: " + firstNonEmpty(f.Env, "scratch")}
@@ -194,6 +195,18 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, yes boo
 	return nil
 }
 
+// projectRepo is what a project clones: repo in the file, or the
+// checkout's origin; "" for neither.
+func (a *App) projectRepo(ctx context.Context, f *project.File, dir string) string {
+	if f.Repo != "" {
+		return f.Repo
+	}
+	if origin, err := gitOrigin(ctx, dir); err == nil {
+		return repoQuery(origin)
+	}
+	return ""
+}
+
 // upSetup runs the project's setup in its clone.
 func (a *App) upSetup(inst lima.Instance, f *project.File, dir string) error {
 	if f.Setup == "" {
@@ -201,7 +214,7 @@ func (a *App) upSetup(inst lima.Instance, f *project.File, dir string) error {
 	}
 	a.UI.Info("Running setup in %s", a.UI.Code(inst.Name))
 	if err := a.attachSSH(inst, runScript(dir, []string{"bash", "-ec", f.Setup})); err != nil {
-		a.UI.Hint("Fix it in the VM (limabean ssh "+inst.Name+"), or change the setup and start over:", "limabean rm "+inst.Name+" && limabean up")
+		a.UI.Hint("Look in the VM (limabean ssh "+inst.Name+"), fix the setup, then run it again:", "limabean up --setup")
 		return fmt.Errorf("setup failed: %w", err)
 	}
 	a.UI.OK("Setup done")

@@ -402,6 +402,20 @@ An opt-in `--mount` of a host directory (B) is still open.
   written by `init` before keep the old list in `PACKS`, so existing users
   see no change until they clear it. Smaller default images build faster
   too.
+- **D21 up and down. Decided: up makes an existing VM match its file;
+  down stops it.** Like `docker compose`, the file is the source of truth:
+  `up` on an existing VM compares the file with the VM as it is (saved
+  packs and environment, Lima's size, the saved network policy, the VM's
+  secrets file), not with a stored copy, so it also works for VMs made
+  before it. It lists the differences and asks (`--yes` for scripts), then
+  rebuilds for packs or environment (keeping the `~/code` disk; refused
+  without one while work is unpushed), stops, edits and starts for size,
+  adds secrets and Claude plugins, and applies a tighter network. It never
+  widens a network or lifts a lock: those stay with the user's own
+  `limabean network` commands, which `up` prints. Setup runs once, or
+  again with `--setup`. `down` only stops the VM, keeping everything,
+  rather than deleting it as Compose does: a VM holds more than a
+  container, and `rm` already deletes with its checks.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
