@@ -29,6 +29,7 @@ nav:
       - Inside a VM: inside-a-vm.md
       - Packs: packs.md
       - Projects: projects.md
+      - Recipes: recipes.md
       - Secrets: secrets.md
       - GitHub access: github.md
       - Customizing: customizing.md
@@ -74,6 +75,9 @@ markdown_extensions:
       permalink: true
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
   - pymdownx.inlinehilite
   - pymdownx.highlight:
       anchor_linenums: true

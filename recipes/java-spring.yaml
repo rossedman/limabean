@@ -1,0 +1,10 @@
+# A Java service: Spring Boot, Quarkus or plain Gradle or Maven.
+# Start from it: limabean recipes java-spring && limabean up
+packs: [java]
+without: [go, node, kubernetes, infra]
+memory: 6                         # the JVM and Gradle's daemon
+ports: [8080]
+setup: |
+  if [ -x ./gradlew ]; then ./gradlew --quiet dependencies
+  elif [ -x ./mvnw ]; then ./mvnw --quiet dependency:go-offline
+  fi

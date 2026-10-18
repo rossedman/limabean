@@ -13,7 +13,16 @@ limabean up
 
 ## Your first project file
 
-Start small. This is enough for a Node app that serves on port 3000:
+The quickest start is a [recipe](recipes.md), a commented starter file for
+a kind of project (a Go service, a web frontend, a Rails app, a Claude
+sandbox and more):
+
+```bash
+limabean recipes                 # list them
+limabean recipes node-web        # write one to .limabean.yaml, then edit it
+```
+
+Or write one by hand. This is enough for a Node app that serves on port 3000:
 
 ```yaml
 # .limabean.yaml
@@ -101,6 +110,7 @@ Every key is optional.
 | `secrets` | list | none | Names of secrets the VM needs, besides the shared ones |
 | `ports` | list | none | Ports the project serves, shown as `http://localhost:<port>` |
 | `setup` | string | none | Shell commands run once in the clone, as you, with `bash -e` |
+| `claude.marketplaces` | list | none | [Claude plugins](#claude-plugins) for the VM: each entry a `marketplace` (GitHub `owner/repo` or an https git URL) and the `plugins` to turn on from it, as `plugin@marketplace` |
 
 Unknown keys, malformed names and out-of-range values are errors, so a typo
 doesn't go unnoticed. A complete file:
@@ -122,6 +132,10 @@ ports: [3000, 5173]
 setup: |
   npm ci
   cargo fetch
+claude:
+  marketplaces:
+    - marketplace: rossedman/guardrails
+      plugins: [guardrails@guardrails]
 ```
 
 ### Secrets
@@ -167,47 +181,50 @@ VM's user, with your secrets in the environment. If it fails, `up` stops and
 keeps the VM so you can look: `limabean ssh myapp`. Fix the setup and start
 over with `limabean rm myapp && limabean up`.
 
+### Claude plugins
+
+`claude` turns on plugins for Claude Code in the VM, whether it runs from
+the [`claude` pack](packs.md#claude-code-in-a-vm) or from
+[Claude Desktop](claude-desktop.md) over SSH. Skills, agents, hooks and
+MCP servers all come inside plugins:
+
+```yaml
+claude:
+  marketplaces:
+    - marketplace: rossedman/guardrails                    # GitHub owner/repo
+      plugins: [guardrails@guardrails]
+    - marketplace: https://git.example.com/platform/plugins.git   # any git host, over https
+      plugins: [review@platform, deploy@platform]
+```
+
+- Plugins are `plugin@marketplace`, where the marketplace is the name in
+  its `marketplace.json` (often the repository's name). The plugins in one
+  entry share it; another marketplace is another entry.
+- `up` adds each marketplace to the VM's `~/.claude/settings.json` under
+  `extraKnownMarketplaces`, and each plugin under `enabledPlugins`. Settings
+  already there are kept. Claude Code adds the marketplace and installs the
+  plugins when a session starts.
+- Claude Code fetches them **inside the VM**, with the VM's own git
+  credentials (a private repository works if
+  [`limabean github login`](github.md) gave VMs access). A VM with a
+  network allowlist needs `github`, or the marketplace's host.
+- To change the list, edit the file, then
+  `limabean rm myapp && limabean up`. To turn a plugin off in one VM, set it
+  to `false` in that VM's `~/.claude/settings.json`.
+
+A repository can also keep its own `.claude/settings.json` with
+`enabledPlugins` and `extraKnownMarketplaces`; Claude Code reads that in
+the clone after you trust the folder. Use `claude:` in `.limabean.yaml` for
+what the VM should have whichever folder Claude opens, and for VMs that
+Claude only uses headless.
+
 ## Examples
 
-**A web app with a dev server**
-
-```yaml
-ports: [5173]
-setup: |
-  pnpm install
-```
-
-**A Go service with Postgres, run in Docker**
-
-```yaml
-disk: 30
-ports: [8080]
-setup: |
-  docker compose up -d db
-  go mod download
-  make migrate
-```
-
-**A sandbox for Claude Code**
-
-The [`claude` pack](packs.md#claude-code-in-a-vm), a network that only
-reaches GitHub, npm and Anthropic, and no sudo or Docker for anything inside:
-
-```yaml
-name: myapp-agent
-packs: [claude]
-network:
-  allow: [github, npm, claude]
-  locked: true
-secrets: [CLAUDE_CODE_OAUTH_TOKEN]
-setup: |
-  npm ci
-```
-
-```bash
-limabean up
-limabean ssh myapp-agent 'cd ~/code/github.com/acme/myapp && claude -p "fix the failing test"'
-```
+The [recipes](recipes.md) are complete examples, one per kind of VM: a Go
+service with Postgres, a web frontend, Python APIs and notebooks, Rust,
+Java, Rails, gRPC, Kubernetes, Terraform, a locked-down Claude Code
+sandbox, a VM for reviewing untrusted code, and a minimal one. Start from
+one with `limabean recipes <name>`.
 
 ## Trust
 
@@ -217,6 +234,8 @@ your shared secrets. So `up` never acts on it blindly:
 - In a terminal, it shows what the file asks for, setup commands included,
   and asks before creating anything.
 - Without a terminal it shows the same and stops, unless you pass `--yes`.
+- Claude plugins are fetched and run inside the VM, never on your Mac,
+  and the plan lists every one of them.
 - The file can only **name** secrets. It can't say where a value comes from,
   so it can't run a command on your Mac (as a `cmd:` reference would) or
   read a Keychain item you didn't already give VMs.

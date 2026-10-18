@@ -17,6 +17,8 @@ internal/templates/  the templates directory, packs and environments
 internal/pins/       pinned versions in mise TOML, for `limabean bump`
 templates/           Lima templates, embedded in the binary: layer-os, layer-base,
                      environments, features/*.sh, files/, packs/
+recipes/             starter .limabean.yaml files for `limabean recipes`, embedded;
+                     TestRecipesBringVMsUp runs `up` on every one
 docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 

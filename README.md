@@ -19,7 +19,9 @@ Claude Desktop as an SSH connection.
 
 - **One command per VM, ready as fast as it boots.** New VMs are APFS
   copies of a provisioned image, so `limabean new dev` only has to boot,
-  and `limabean up` builds the VM a repository's `.limabean.yaml` describes.
+  and `limabean up` builds the VM a repository's `.limabean.yaml` describes;
+  `limabean recipes` starts one for a Go service, a web app, a Claude
+  sandbox and more.
 - **Batteries included, in packs.** Docker, Go, Python, Node, Kubernetes,
   Terraform and 30+ CLI tools by default, every version pinned; add Rust,
   Java, Ruby and more with `--with`.
@@ -55,6 +57,7 @@ limabean new dev    # create a VM; a form asks which secrets it gets
 limabean ssh dev    # or: ssh lima-dev
 
 cd ~/src/myapp && limabean up   # the VM a repository's .limabean.yaml describes
+limabean recipes                # starter .limabean.yaml files: go-service, node-web, claude-agent, …
 ```
 
 Upgrade with `brew upgrade limabean`. To install without the tap, get Lima
@@ -80,6 +83,12 @@ snapshot it before risky changes. For an agent that should only reach certain
 hosts, ask for a locked sandbox: *"create a locked VM that can only reach
 github and python"*. Nothing runs on your Mac, Claude never sees secret values,
 and deleting or restoring VMs needs `--allow-destructive`.
+
+Claude Code in a VM is held to your standards:
+[guardrails](https://github.com/rossedman/guardrails) is on in every VM, so
+edits are formatted and linted and a turn can't end until the tests pass. A
+project's `.limabean.yaml` can turn on more plugins, and the `claude-agent`
+recipe is a locked-down sandbox to start from.
 
 [Claude and MCP](docs/mcp.md) covers Claude Desktop, example prompts, every
 tool and the safety model.
@@ -113,6 +122,7 @@ Leave out a VM name and you pick one from a list. Every command has
 |---|---|
 | `limabean new [name] [env]` | Create a VM, choosing its secrets; `--with rust` adds a pack |
 | `limabean up` | Create or start the VM a repository's `.limabean.yaml` describes |
+| `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
 | `limabean run --rm -- <cmd>` | Run one command in a new VM, then delete it |
 | `limabean packs` | List the tool packs and which VMs get by default |
 | `limabean ls` | List VMs, or print them as JSON with `--json` |
@@ -166,6 +176,7 @@ built from the [`docs/`](docs) folder:
 - [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
 - [Sandboxes](docs/network.md): network allowlists, learn mode and locked VMs
 - [Projects](docs/projects.md): `.limabean.yaml` and `limabean up`
+- [Recipes](docs/recipes.md): starter project files for common kinds of VMs
 - [Rebuilds, clones and snapshots](docs/lifecycle.md): throwaway VMs and autostop too
 - [Inside a VM](docs/inside-a-vm.md): tools, Docker, shell, ports, paths
 - [Secrets](docs/secrets.md): API keys and settings from the Keychain, 1Password and more

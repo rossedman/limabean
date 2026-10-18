@@ -147,12 +147,20 @@ setup: |
   make deps
 ```
 
+To start from a [recipe](recipes.md) instead of a blank file:
+
+```bash
+limabean recipes                 # go-service, node-web, python-api, rails, claude-agent, …
+limabean recipes go-service      # writes .limabean.yaml here; edit it, then limabean up
+```
+
 See [Projects](projects.md).
 
 ## Next
 
 - [Claude and MCP](mcp.md): let Claude create and drive VMs
 - [Projects](projects.md): `.limabean.yaml` and `limabean up`
+- [Recipes](recipes.md): starter project files for common kinds of VMs
 - [Packs](packs.md): Go, Node, Rust, Java, Ruby, Claude Code and more
 - [Sandboxes](network.md): limit what a VM can reach, and learn what it needs
 - [Rebuilds, clones and snapshots](lifecycle.md): fast images, throwaway VMs, autostop

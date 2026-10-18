@@ -72,7 +72,22 @@ func TestLoadRejects(t *testing.T) {
 			t.Errorf("%q: %v", body, err)
 		}
 	}
-	p := filepath.Join(dir, "empty", FileName)
+	p := filepath.Join(dir, "claude", FileName)
+	write(t, p, `claude:
+  marketplaces:
+    - marketplace: rossedman/guardrails
+      plugins: [guardrails@guardrails]
+    - marketplace: https://git.example.com/team/plugins.git
+      plugins: [review@team, deploy@team]
+`)
+	f, err := Load(p)
+	if err != nil || f.Claude.Empty() || f.Claude.Marketplaces[1].Name() != "team" || len(f.Claude.Plugins()) != 3 {
+		t.Fatalf("claude: %+v %v", f, err)
+	}
+	if (Marketplace{}).Name() != "" || !(Claude{}).Empty() {
+		t.Error("Name or Empty")
+	}
+	p = filepath.Join(dir, "empty", FileName)
 	write(t, p, "")
 	if f, err := Load(p); err != nil || f.Name != "empty" {
 		t.Errorf("an empty file: %+v %v", f, err)

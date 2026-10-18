@@ -1,0 +1,3 @@
+# The smallest VM: core shell tools, plus the Python and Docker every VM has.
+# Start from it: limabean recipes minimal && limabean up
+without: [go, python, node, kubernetes, infra, containers, db]
