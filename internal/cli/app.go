@@ -72,6 +72,8 @@ type App struct {
 	git func(ctx context.Context, dir string, args ...string) ([]byte, error)
 	// How a step's progress line learns an image's size; tests replace it.
 	contentLength func(ctx context.Context, url string) (int64, error)
+	// How VMs learn the Mac's trusted root certificates; tests replace it.
+	security func(ctx context.Context, args ...string) ([]byte, error)
 
 	// Persistent flags.
 	configPath   string
@@ -112,6 +114,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		git:          runGit,
 
 		contentLength: contentLength,
+		security:      runSecurity,
 	}
 }
 

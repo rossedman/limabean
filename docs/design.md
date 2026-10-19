@@ -593,6 +593,18 @@ An opt-in `--mount` of a host directory (B) is still open.
   packs on a slow link, while the VM was still installing. On a failure
   only the last lines of limactl's log are shown, without the lines it
   always prints.
+- **D36 A company proxy's root. Decided: copy the Mac's admin-trusted
+  roots into VMs, with `CA_CERTS=no` to opt out.** Proxies such as Zscaler
+  re-sign HTTPS for some hosts with their own root; the Mac trusts it, a VM
+  didn't, and mise spent an hour retrying `mise-versions.jdx.dev` before
+  failing. When a VM or image is created, limabean reads the admin trust
+  settings (`security trust-settings-export -d`) and passes the System
+  keychain's certificates trusted there without conditions to Lima's
+  `caCerts`, which installs them before provisioning. Roots trusted only
+  for some uses, distrusted, expired or not CAs are left out, so a VM
+  trusts nothing the Mac doesn't. A setting listing certificate files was
+  the alternative: it works, but only for people who know they're behind
+  a proxy, and they find out from a failed boot.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
