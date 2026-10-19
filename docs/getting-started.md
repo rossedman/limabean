@@ -117,6 +117,13 @@ from scratch, and builds an
 [image](lifecycle.md#fast-vms-images) of itself in the background. Every
 later VM like it is a copy of that image, so it only has to boot.
 
+The very first VM also downloads the Ubuntu cloud image, about 900 MiB.
+Lima keeps it in `~/Library/Caches/lima`, so it's only downloaded once,
+but an interrupted download starts over from the beginning. While it
+downloads, `up` shows how far it has got, how fast it's going and roughly
+how long is left. Without a terminal, or with `--plain`, the same line
+is printed every 30 seconds.
+
 For `gh` and the GitHub API inside VMs, add a scoped token once with
 `limabean github login`; see [GitHub access](github.md).
 

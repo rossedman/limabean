@@ -579,6 +579,15 @@ An opt-in `--mount` of a host directory (B) is still open.
   user hasn't set, and turns off nonessential traffic a locked network
   would block. Permissions are left as Claude Code's defaults: skipping
   them is the user's call.
+- **D35 Download progress. Decided: watch Lima's cache, not its output.**
+  With `--tty=false` limactl prints "Downloading the image" and nothing
+  more, and an interrupted download starts over, so a quiet spinner for
+  15 minutes on a slow link got killed and retried. While a Lima step
+  runs, limabean finds the newest `data.tmp.*` in Lima's download cache
+  and reports its size, speed and time left. The total comes from one
+  HEAD request for the `url` file beside it (https only): the URL is the
+  templates' own image, and nothing from it runs. Parsing limactl's
+  output was the alternative: it has no progress to parse.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

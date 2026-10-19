@@ -160,7 +160,7 @@ func (a *App) claudeRemove(name string) {
 // if it fails.
 func (a *App) limaStep(ctx context.Context, title string, fn func(context.Context) ([]byte, error)) error {
 	var out []byte
-	err := a.UI.Spin(ctx, title, func(ctx context.Context) error {
+	err := a.UI.SpinProgress(ctx, title, a.newDownloadWatch().progress, func(ctx context.Context) error {
 		var err error
 		out, err = fn(ctx)
 		return err

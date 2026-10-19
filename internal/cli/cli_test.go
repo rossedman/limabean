@@ -445,6 +445,10 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 func (h *harness) app(u *ui.UI) *App {
 	a := NewApp(firstNonEmpty(h.version, "test"), os.DirFS(repoRoot))
 	a.UI = u
+	a.limaCache = filepath.Join(h.world.limaHome, "cache")
+	a.contentLength = func(_ context.Context, url string) (int64, error) {
+		return 0, errors.New("no network in tests")
+	}
 	a.execSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))
 		return nil
