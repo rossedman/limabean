@@ -69,6 +69,7 @@ type fakeWorld struct {
 	spawnErr       error             // starting a background build fails
 	latestRelease  string            // GitHub's latest limabean release tag
 	claudeErr      bool              // up's Claude plugins fail
+	claudeOut      string            // what up's Claude plugin script prints
 	logText        string            // what tail prints in a VM
 	logErr         bool              // tail fails, as without sudo or a log
 	startRunning   bool              // a project's start is still running
@@ -244,6 +245,9 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 		case remote == "python3 -" && w.claudeErr: // up's Claude plugins
 			w.sshStdin[vm] = in
 			return []byte("settings.json isn't valid JSON\n"), errors.New("exit status 1")
+		case remote == "python3 -":
+			w.sshStdin[vm] = in
+			return []byte(w.claudeOut), nil
 		case strings.Contains(remote, "tail -n "):
 			if w.logErr {
 				return []byte("no such file"), errors.New("exit status 1")

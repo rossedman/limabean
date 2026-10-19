@@ -373,8 +373,14 @@ claude:
   entry share it; another marketplace is another entry.
 - `up` adds each marketplace to the VM's `~/.claude/settings.json` under
   `extraKnownMarketplaces`, and each plugin under `enabledPlugins`. Settings
-  already there are kept. Claude Code adds the marketplace and installs the
-  plugins when a session starts.
+  already there are kept. Then, when the VM has the `claude` pack, it runs
+  `claude plugin marketplace add` and `claude plugin install` in the VM, and
+  warns about any plugin that didn't install. Without the pack, there's
+  no `claude` CLI for it to run: the plugins are only turned on, and
+  `/plugin` in a Claude session installs them.
+- A plugin that installs by running a command of the marketplace's needs
+  you to accept that command, so `up` doesn't install it: run
+  `claude plugin install <plugin>` in the VM.
 - Claude Code fetches them **inside the VM**, with the VM's own git
   credentials (a private repository works if
   [`limabean github login`](github.md) gave VMs access). A VM with a

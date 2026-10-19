@@ -157,6 +157,25 @@ func TestUpClaude(t *testing.T) {
 		t.Errorf("the list reached a command line: %v", h.world.calls)
 	}
 
+	// Without the claude CLI in the VM, they are only turned on.
+	h.world.vms = map[string]string{}
+	h.world.claudeOut = `{"no_cli": true}`
+	if out := h.must("", "up", "--file", file, "--yes"); !strings.Contains(out, "/plugin in a Claude session installs them") {
+		t.Errorf("no claude CLI:\n%s", out)
+	}
+	// A plugin that didn't install is a warning of its own.
+	h.world.vms = map[string]string{}
+	h.world.claudeOut = "some progress\n" + `{"failed": ["deploy@team: Plugin \"deploy\" not found in marketplace \"team\""]}`
+	out = h.must("", "up", "--file", file, "--yes")
+	if !strings.Contains(out, `Claude plugin not installed: deploy@team: Plugin "deploy" not found`) || !strings.Contains(out, "Claude plugins for agent") {
+		t.Errorf("one failed:\n%s", out)
+	}
+	h.world.vms = map[string]string{}
+	h.world.claudeOut = `{"failed": ["guardrails@guardrails: x", "review@team: x", "deploy@team: x"]}`
+	if out := h.must("", "up", "--file", file, "--yes"); strings.Contains(out, "Claude plugins for agent") {
+		t.Errorf("all failed, but reported as added:\n%s", out)
+	}
+
 	// A failure is a warning: the VM is still there and usable.
 	h.world.vms = map[string]string{}
 	h.world.claudeErr = true
