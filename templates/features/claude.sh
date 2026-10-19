@@ -27,7 +27,10 @@ fi
 # CLAUDE.md: limabean's block, replaced on every boot so it stays current.
 begin='<!-- limabean: this block is rewritten at boot (templates/features/claude.sh); write your own notes outside it -->'
 end='<!-- /limabean -->'
-block=$(cat <<EOF
+# A function, not $(cat <<EOF): bash 3.2, as on macOS where the tests run,
+# can't parse a here-document with apostrophes inside $( ).
+block() {
+  cat <<EOF
 $begin
 ## This machine is a limabean VM
 
@@ -38,11 +41,11 @@ $begin
 - Secrets are environment variables. Never print their values.
 $end
 EOF
-)
+}
 touch "$memory"
 others=$(awk -v b="$begin" -v e="$end" '$0 == b { skip = 1; next } $0 == e { skip = 0; next } !skip' "$memory")
 {
-  printf '%s\n' "$block"
+  block
   [ -n "$others" ] && printf '\n%s\n' "$others"
   true
 } > "$memory.new"
