@@ -158,6 +158,8 @@ back. A VM counts as in use while:
   within the limit. A detached tmux pane that is printing counts; one that
   sits silent doesn't.
 - Claude Desktop or an editor is connected to it.
+- Claude Code is running in it, such as an agent's headless `claude -p`
+  that works for a long time without printing.
 - its 5-minute load average is 1 or more, as during a build or with busy
   containers.
 - it started less than the limit ago.
