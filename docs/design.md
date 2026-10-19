@@ -524,6 +524,14 @@ An opt-in `--mount` of a host directory (B) is still open.
   `run_in_vm`, it runs anything in the VM, so it carries the destructive
   hint. The Mac's checkout and the VM's clone stay separate copies, and
   the docs say so where it matters.
+- **D30 Workflows as MCP prompts. Decided: a few whole tasks, written out
+  as prompts.** `test_in_sandbox`, `triage_repo`, `try_a_change`,
+  `run_untrusted` and `tidy_vms` show up as slash commands in Claude Code
+  and in Claude Desktop's menu. A prompt is only text, so it adds no
+  power: the tools' guards decide what happens. Each prompt also ends with
+  the same rules (plans first, never widen a network, deleting and
+  restoring left to the user), and a test checks that every tool a prompt
+  names exists, so the prompts can't drift from the tools.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

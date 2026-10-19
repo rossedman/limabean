@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -262,5 +263,53 @@ func TestMCPHelpers(t *testing.T) {
 	}
 	if tail([]byte("short")) != "short" {
 		t.Error("short output is kept")
+	}
+}
+
+// The workflows the server offers as prompts: each needs its arguments,
+// names only tools that exist, and keeps the guards.
+func TestMCPPrompts(t *testing.T) {
+	h := newHarness(t)
+	cs, _ := h.mcpClient(false)
+	ctx := context.Background()
+	tools := toolNames(t, cs)
+	var names []string
+	for p, err := range cs.Prompts(ctx, nil) {
+		if err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, p.Name)
+	}
+	if !slices.Equal(names, []string{"run_untrusted", "test_in_sandbox", "tidy_vms", "triage_repo", "try_a_change"}) {
+		t.Fatalf("prompts: %v", names)
+	}
+	args := map[string]string{"dir": "/Users/me/src/app", "repo": "acme/scraper", "change": "upgrade to Go 1.27", "what": "acme/tool"}
+	toolRE := regexp.MustCompile(`\b(project_[a-z]+|[a-z]+_vms?|snapshot_[a-z]+|clone_repo|run_in_vm|network_log)\b`)
+	for _, p := range mcpPrompts {
+		res, err := cs.GetPrompt(ctx, &mcp.GetPromptParams{Name: p.name, Arguments: args})
+		if err != nil {
+			t.Fatalf("%s: %v", p.name, err)
+		}
+		text := res.Messages[0].Content.(*mcp.TextContent).Text
+		if !strings.Contains(text, "Never try to widen a VM's network") {
+			t.Errorf("%s doesn't keep the guards", p.name)
+		}
+		for _, used := range toolRE.FindAllString(text, -1) {
+			if !slices.Contains(tools, used) {
+				t.Errorf("%s names %s, which isn't a tool", p.name, used)
+			}
+		}
+		for _, a := range p.args {
+			if a.Required && !strings.Contains(text, args[a.Name]) {
+				t.Errorf("%s doesn't use its %s", p.name, a.Name)
+			}
+		}
+	}
+	if _, err := cs.GetPrompt(ctx, &mcp.GetPromptParams{Name: "try_a_change", Arguments: map[string]string{"dir": "/x"}}); err == nil || !strings.Contains(err.Error(), "needs change") {
+		t.Errorf("missing argument: %v", err)
+	}
+	res, _ := cs.GetPrompt(ctx, &mcp.GetPromptParams{Name: "triage_repo", Arguments: map[string]string{"repo": "a/b", "allow": "github, python"}})
+	if !strings.Contains(res.Messages[0].Content.(*mcp.TextContent).Text, "allowing only: github, python") {
+		t.Errorf("allow not used")
 	}
 }
