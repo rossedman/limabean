@@ -52,3 +52,44 @@ func TestProjectVMIsTheDefault(t *testing.T) {
 		t.Fatal("proj was deleted")
 	}
 }
+
+// In a project's checkout, ssh works in the VM's clone: a shell starts
+// there, and a command after -- runs there without naming the VM.
+func TestSSHInTheProjectClone(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("LIMABEAN_CODE_DISK", "")
+	file := projectFile(t, "proj", "repo: me/proj\n")
+	wd, _ := os.Getwd()
+	t.Cleanup(func() { _ = os.Chdir(wd) })
+	if err := os.Chdir(filepath.Dir(file)); err != nil {
+		t.Fatal(err)
+	}
+	h.world.ghq = "/home/me.linux/code/github.com/me/proj\n"
+	h.must("", "up", "--yes")
+	h.world.vms["other"] = "Running"
+
+	h.world.calls = nil
+	h.must("", "ssh")
+	h.must("", "ssh", "--", "make", "test")
+	h.must("", "ssh", "proj", "go", "test", "./...")
+	h.must("", "ssh", "other", "ls")
+	calls := strings.Join(h.world.calls, "\n")
+	for _, want := range []string{
+		"exec ssh proj in /home/me.linux/code/github.com/me/proj: \n",
+		"exec ssh proj in /home/me.linux/code/github.com/me/proj: make test\n",
+		"exec ssh proj in /home/me.linux/code/github.com/me/proj: go test ./...\n",
+		"exec ssh other ls",
+	} {
+		if !strings.Contains(calls+"\n", want) {
+			t.Errorf("missing %q:\n%s", want, calls)
+		}
+	}
+
+	// No clone in the VM: a warning, and the home directory as before.
+	h.world.ghq = ""
+	h.world.calls = nil
+	out := h.must("", "ssh", "--", "ls")
+	if !strings.Contains(out, "using the home directory") || !h.world.called("exec ssh proj ls") {
+		t.Errorf("no clone:\n%s\n%v", out, h.world.calls)
+	}
+}

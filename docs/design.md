@@ -514,6 +514,16 @@ An opt-in `--mount` of a host directory (B) is still open.
   reply is data: a tag that isn't a version is refused before it's stored
   or shown. `project_init` gives Claude `init --project --print` for a git
   checkout only, so it can't read around the Mac.
+- **D29 Working in the project's clone. Decided: in a checkout, `ssh` and
+  Claude's `project_run` work in the VM's clone.** The clone is where the
+  project's code is in the VM, so `limabean ssh -- make test` runs there,
+  and a plain `limabean ssh` starts the shell there; a `--` before anything
+  means "no VM name, this is the command". `project_run` finds the clone
+  as `up` does (the origin read from `.git/config` as a file, the clone
+  located with ghq in the VM) and runs the command there; like
+  `run_in_vm`, it runs anything in the VM, so it carries the destructive
+  hint. The Mac's checkout and the VM's clone stay separate copies, and
+  the docs say so where it matters.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

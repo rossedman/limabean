@@ -313,6 +313,31 @@ func Exec(inst Instance, command ...string) error {
 	return execve(path, append([]string{"ssh"}, SSHArgs(inst, false, command...)...), os.Environ())
 }
 
+// ExecInArgs is ssh's arguments for running command in dir in a VM, or,
+// with no command, a login shell there, with a terminal.
+func ExecInArgs(inst Instance, dir string, command ...string) []string {
+	remote := "cd '" + strings.ReplaceAll(dir, "'", `'\''`) + "' && "
+	args := []string{"-F", inst.SSHConfigFile}
+	if len(command) == 0 {
+		args = append(args, "-t")
+		remote += `exec "$SHELL" -l`
+	} else {
+		// As ssh does with a command: the words, joined, for the VM's shell.
+		remote += strings.Join(command, " ")
+	}
+	return append(args, "lima-"+inst.Name, remote)
+}
+
+// ExecIn replaces limabean with an ssh session in dir in the VM: command,
+// or an interactive shell.
+func ExecIn(inst Instance, dir string, command ...string) error {
+	path, err := exec.LookPath("ssh")
+	if err != nil {
+		return err
+	}
+	return execve(path, append([]string{"ssh"}, ExecInArgs(inst, dir, command...)...), os.Environ())
+}
+
 func sortedKeys(m map[string]string) []string {
 	return slices.Sorted(maps.Keys(m))
 }

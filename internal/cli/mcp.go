@@ -102,6 +102,11 @@ type (
 	mcpProject struct {
 		Dir string `json:"dir" jsonschema:"absolute path of the project's checkout on the Mac: the directory that holds its .limabean.yaml"`
 	}
+	mcpProjectRun struct {
+		Dir     string `json:"dir" jsonschema:"absolute path of the project's checkout on the Mac: the directory that holds its .limabean.yaml"`
+		Command string `json:"command" jsonschema:"shell command, run in the VM's clone of the repository"`
+		Timeout int    `json:"timeout_seconds,omitempty" jsonschema:"give up after this many seconds; default 600, at most 3600"`
+	}
 	mcpProjectLogs struct {
 		Dir   string `json:"dir" jsonschema:"absolute path of the project's checkout on the Mac: the directory that holds its .limabean.yaml"`
 		Log   string `json:"log,omitempty" jsonschema:"which log: provision (default; creating the VM), setup, or start"`
@@ -187,6 +192,36 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 				return nil, nil, err
 			}
 			return cli(ctx, "down", "--file="+file)
+		})
+	mcp.AddTool(s, tool("project_run", "Run a command in a project's clone", "For a checkout with a .limabean.yaml: run a shell command inside its VM (never on the Mac), in the VM's clone of the repository, and return its exit code and output. The VM must be running (project_up starts it). The VM's clone is separate from the checkout on the Mac: changes made here stay in the VM until they're pushed. Not interactive: commands that wait for input will time out.", false, &yes),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProjectRun) (*mcp.CallToolResult, any, error) {
+			file, err := projectFileIn(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			f, err := project.Load(file)
+			if err != nil {
+				return nil, nil, err
+			}
+			inst, err := a.vm(ctx, f.Name)
+			if err != nil {
+				return nil, nil, err
+			}
+			if !inst.Running() {
+				return nil, nil, fmt.Errorf("%s is stopped; start it with project_up", f.Name)
+			}
+			clone, err := a.projectClone(ctx, inst, f, filepath.Dir(file))
+			if err != nil {
+				return nil, nil, err
+			}
+			timeout := mcpDefaultTimeout
+			if in.Timeout > 0 {
+				timeout = min(time.Duration(in.Timeout)*time.Second, mcpMaxTimeout)
+			}
+			if strings.TrimSpace(in.Command) == "" {
+				return nil, nil, errors.New("command is empty")
+			}
+			return a.mcpRun(ctx, f.Name, "cd "+secrets.ShellQuote(clone)+" && "+in.Command, timeout)
 		})
 	mcp.AddTool(s, tool("project_logs", "Read a project's logs", "For a checkout with a .limabean.yaml: the end of its VM's provisioning log, or of its setup or start output. Read it when project_up fails, or to see what a dev server started by start printed.", true, nil),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProjectLogs) (*mcp.CallToolResult, any, error) {
@@ -438,6 +473,7 @@ func (a *App) runCLI(ctx context.Context, args ...string) (string, error) {
 	sub.UI = ui.NewPlain(&out)
 	// Nothing may take over the terminal: stdio carries the protocol.
 	sub.execSSH = func(lima.Instance, ...string) error { return errors.New("not available over MCP") }
+	sub.execSSHIn = func(lima.Instance, string, ...string) error { return errors.New("not available over MCP") }
 	// What would attach to a terminal (a project's setup) runs without one,
 	// its output going into the reply.
 	sub.attachSSH = func(inst lima.Instance, command ...string) error {

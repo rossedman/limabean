@@ -86,6 +86,36 @@ func (a *App) projectDir(ctx context.Context, inst lima.Instance, f *project.Fil
 	return clone
 }
 
+// projectClone is the directory in a project's VM its repository was
+// cloned to.
+func (a *App) projectClone(ctx context.Context, inst lima.Instance, f *project.File, dir string) (string, error) {
+	repo := a.projectRepo(ctx, f, dir)
+	if repo == "" {
+		return "", errors.New("the checkout has no origin, and the project file names no repo, so there's no clone")
+	}
+	return a.codeDir(ctx, inst, repo)
+}
+
+// projectCloneHere is the clone to work in when a command reaches inst from
+// inside a checkout: the project's clone if inst is the project's VM, else
+// "".
+func (a *App) projectCloneHere(ctx context.Context, inst lima.Instance) string {
+	path, err := project.Find(".")
+	if err != nil {
+		return ""
+	}
+	f, err := project.Load(path)
+	if err != nil || f.Name != inst.Name {
+		return ""
+	}
+	clone, err := a.projectClone(ctx, inst, f, filepath.Dir(path))
+	if err != nil {
+		a.UI.Warn("%v; using the home directory", err)
+		return ""
+	}
+	return clone
+}
+
 // startFile holds the start commands last approved for a VM, on the Mac:
 // a project file can change with a git pull, and commands that run on
 // every up shouldn't change without the user seeing them.

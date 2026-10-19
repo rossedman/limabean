@@ -52,6 +52,7 @@ type App struct {
 
 	// How `ssh` and `get` reach a VM's terminal; tests replace them.
 	execSSH   func(inst lima.Instance, command ...string) error
+	execSSHIn func(inst lima.Instance, dir string, command ...string) error // ssh, in a project's clone
 	attachSSH func(inst lima.Instance, command ...string) error
 	// How `autostop` drives launchd; tests replace it.
 	launchctl func(ctx context.Context, args ...string) ([]byte, error)
@@ -93,6 +94,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		V:            config.New(),
 		TemplatesFS:  embedded,
 		execSSH:      lima.Exec,
+		execSSHIn:    lima.ExecIn,
 		attachSSH:    attach,
 		launchctl:    runLaunchctl,
 		openEditor:   openEditor,
