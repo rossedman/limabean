@@ -351,7 +351,8 @@ An opt-in `--mount` of a host directory (B) is still open.
     bounding how stale a copy's packages are.
   - flock guards: one build per key (`.build`), and copies hold `.use`
     shared while the builder takes it exclusively to delete the image it
-    replaced.
+    replaced. A build that had to wait for another uses the image that one
+    finished instead of building the same one again.
   - Considered: snapshotting the first real VM before its secrets were
     installed (saves one provision, but risks carrying VM-specific state
     into the image), and Lima's own image caching (only the download).

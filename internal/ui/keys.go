@@ -34,8 +34,9 @@ func Keys(keys ...string) io.Reader {
 }
 
 type keyReader struct {
-	mu   sync.Mutex
-	keys []string
+	mu    sync.Mutex
+	keys  []string
+	after time.Duration // the pause before the next key
 }
 
 func (k *keyReader) Read(p []byte) (int, error) {
@@ -44,8 +45,14 @@ func (k *keyReader) Read(p []byte) (int, error) {
 	if len(k.keys) == 0 {
 		return 0, io.EOF
 	}
-	time.Sleep(15 * time.Millisecond)
+	time.Sleep(15*time.Millisecond + k.after)
 	n := copy(p, k.keys[0])
+	// Enter can move a form to its next field, which takes a moment; a key
+	// sent sooner can be lost on the way.
+	k.after = 0
+	if k.keys[0] == Enter {
+		k.after = 100 * time.Millisecond
+	}
 	k.keys = k.keys[1:]
 	return n, nil
 }

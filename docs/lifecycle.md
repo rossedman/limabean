@@ -19,7 +19,8 @@ booted.
 - **The first VM of a kind** (an environment and a set of packs) is
   provisioned the slow way, and its image is built in the background, so
   the next one is fast. Build one ahead of time with
-  `limabean images build` (`--with rust` for other packs).
+  `limabean images build` (`--with rust` for other packs). If one is
+  already being built, it waits for that build and uses its image.
 - **Images are kept fresh.** One more than a week old is still used, and
   replaced in the background, so copies never miss more than a week of
   updates. Any change to the templates or packs, a `limabean bump` or a
