@@ -73,7 +73,7 @@ func TestMCPTools(t *testing.T) {
 	h := newHarness(t)
 	cs, stdout := h.mcpClient(false)
 
-	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "project_down", "project_init", "project_logs", "project_plan", "project_status", "project_up", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
+	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "project_down", "project_init", "project_logs", "project_plan", "project_run", "project_status", "project_up", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
 	if got := toolNames(t, cs); !slices.Equal(got, safe) {
 		t.Fatalf("tools without --allow-destructive: %v", got)
 	}
@@ -219,7 +219,7 @@ func TestMCPDestructiveTools(t *testing.T) {
 	}
 	for tool := range cs.Tools(context.Background(), nil) {
 		destructive := tool.Annotations.DestructiveHint != nil && *tool.Annotations.DestructiveHint
-		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore", "run_in_vm"}, tool.Name) != destructive {
+		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore", "run_in_vm", "project_run"}, tool.Name) != destructive {
 			t.Errorf("%s: destructiveHint = %v", tool.Name, destructive)
 		}
 		// Claude Code asks before every call to these.

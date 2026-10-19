@@ -109,3 +109,13 @@ func TestCloneAndCopyArgs(t *testing.T) {
 		t.Fatalf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+func TestExecInArgs(t *testing.T) {
+	inst := Instance{Name: "dev", SSHConfigFile: "/lima/dev/ssh.config"}
+	if got := strings.Join(ExecInArgs(inst, "/home/me/code/it's", "make", "test"), " "); got != `-F /lima/dev/ssh.config lima-dev cd '/home/me/code/it'\''s' && make test` {
+		t.Errorf("command: %s", got)
+	}
+	if got := strings.Join(ExecInArgs(inst, "/home/me/code/x"), " "); got != `-F /lima/dev/ssh.config -t lima-dev cd '/home/me/code/x' && exec "$SHELL" -l` {
+		t.Errorf("shell: %s", got)
+	}
+}

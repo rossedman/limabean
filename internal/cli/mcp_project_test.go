@@ -35,6 +35,19 @@ func TestMCPProjectTools(t *testing.T) {
 		t.Fatalf("up: %v\n%s\n%s", isErr, out, calls)
 	}
 
+	// run: in the VM's clone, found from .git/config as up found it.
+	h.world.calls = nil
+	out, isErr = call(t, cs, "project_run", map[string]any{"dir": dir, "command": "make test"})
+	if isErr || !strings.Contains(out, "exit code 0") || !h.world.called("ssh -F /lima/proj/ssh.config -o BatchMode=yes lima-proj cd '/home/me.linux/code/github.com/me/proj' && make test") {
+		t.Fatalf("run: %v\n%s\n%v", isErr, out, h.world.calls)
+	}
+	if out, isErr := call(t, cs, "project_run", map[string]any{"dir": dir, "command": "  "}); !isErr {
+		t.Errorf("empty command accepted:\n%s", out)
+	}
+	if out, isErr := call(t, cs, "project_run", map[string]any{"dir": "relative", "command": "ls"}); !isErr {
+		t.Errorf("relative dir accepted:\n%s", out)
+	}
+
 	out, isErr = call(t, cs, "project_status", map[string]any{"dir": dir})
 	var e psEntry
 	if isErr || json.Unmarshal([]byte(out), &e) != nil || e.Status != "Running" || e.Name != "proj" {

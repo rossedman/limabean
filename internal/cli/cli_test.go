@@ -436,6 +436,10 @@ func (h *harness) app(u *ui.UI) *App {
 		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))
 		return nil
 	}
+	a.execSSHIn = func(inst lima.Instance, dir string, command ...string) error {
+		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" in "+dir+": "+strings.Join(command, " "))
+		return nil
+	}
 	a.attachSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "attach ssh "+inst.Name+" "+strings.Join(command, " "))
 		return h.world.attachErr
