@@ -833,7 +833,7 @@ func TestVersionAndCompletion(t *testing.T) {
 func TestHelpCommand(t *testing.T) {
 	h := newHarness(t)
 	// The footer is on limabean's own help only.
-	if out := h.must("", "help"); !strings.Contains(out, "Docs:   https://rossedman.github.io/limabean/") || !strings.Contains(out, "Issues: https://github.com/rossedman/limabean/issues") {
+	if out := h.must("", "help"); !strings.Contains(out, "Docs:   https://rossedman.io/limabean/") || !strings.Contains(out, "Issues: https://github.com/rossedman/limabean/issues") {
 		t.Errorf("help has no docs and issues links:\n%s", out)
 	}
 	if out := h.must("", "help", "ps"); !strings.Contains(out, "limabean ps [flags]") || strings.Contains(out, "Issues:") {

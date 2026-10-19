@@ -48,7 +48,7 @@ const usageTemplate = `{{heading "Usage:"}}{{if .Runnable}}
 
 {{dim (printf "Run \"%s [command] --help\" for more about a command." .CommandPath)}}{{end}}{{if not .HasParent}}
 
-{{dim "Docs:   https://rossedman.github.io/limabean/"}}
+{{dim "Docs:   https://rossedman.io/limabean/"}}
 {{dim "Issues: https://github.com/rossedman/limabean/issues"}}{{end}}
 `
 

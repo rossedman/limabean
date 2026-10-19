@@ -386,7 +386,7 @@ file. `limabean recipes` writes it for you; add it to a file you wrote by
 hand:
 
 ```yaml
-# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
+# yaml-language-server: $schema=https://rossedman.io/limabean/limabean.schema.json
 packs: [node]
 ```
 
@@ -407,7 +407,7 @@ then add to your `settings.json`:
 
 ```json
 "yaml.schemas": {
-  "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+  "https://rossedman.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
 }
 ```
 
@@ -419,7 +419,7 @@ then add to your `settings.json`:
     "settings": {
       "yaml": {
         "schemas": {
-          "https://rossedman.github.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
+          "https://rossedman.io/limabean/limabean.schema.json": ["**/.limabean.yaml", "**/.limabean.yml"]
         }
       }
     }
@@ -435,7 +435,7 @@ require("lspconfig").yamlls.setup({
   settings = {
     yaml = {
       schemas = {
-        ["https://rossedman.github.io/limabean/limabean.schema.json"] = { "**/.limabean.yaml", "**/.limabean.yml" },
+        ["https://rossedman.io/limabean/limabean.schema.json"] = { "**/.limabean.yaml", "**/.limabean.yml" },
       },
     },
   },
@@ -446,7 +446,7 @@ require("lspconfig").yamlls.setup({
 
 ```toml
 [language-server.yaml-language-server.config.yaml.schemas]
-"https://rossedman.github.io/limabean/limabean.schema.json" = ["**/.limabean.yaml", "**/.limabean.yml"]
+"https://rossedman.io/limabean/limabean.schema.json" = ["**/.limabean.yaml", "**/.limabean.yml"]
 ```
 
 **JetBrains IDEs** (GoLand, IntelliJ, PyCharm and the rest): open

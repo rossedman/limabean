@@ -15,7 +15,7 @@ copying them in. Claude can drive it: through limabean's MCP server it
 creates VMs, runs code in them and snapshots them, and every VM appears in
 Claude Desktop as an SSH connection.
 
-**Docs: [rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**
+**Docs: [rossedman.io/limabean](https://rossedman.io/limabean/)**
 
 - **One command per VM, ready as fast as it boots.** New VMs are APFS
   copies of a provisioned image, so `limabean up dev` only has to boot,
@@ -64,7 +64,7 @@ Upgrade with `brew upgrade limabean`. To install without the tap, get Lima
 2.0 or newer first, then a binary from the
 [releases page](https://github.com/rossedman/limabean/releases) or
 `go install github.com/rossedman/limabean/cmd/limabean@latest`
-([getting started](https://rossedman.github.io/limabean/getting-started/)).
+([getting started](https://rossedman.io/limabean/getting-started/)).
 
 ## Use it with Claude
 
@@ -170,7 +170,7 @@ Leave out a VM name and you pick one from a list. Every command has
 
 ## Documentation
 
-The full docs are at **[rossedman.github.io/limabean](https://rossedman.github.io/limabean/)**,
+The full docs are at **[rossedman.io/limabean](https://rossedman.io/limabean/)**,
 built from the [`docs/`](docs) folder:
 
 - [Getting started](docs/getting-started.md): install, requirements, first VM
