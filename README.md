@@ -174,7 +174,7 @@ The full docs are at **[rossedman.github.io/limabean](https://rossedman.github.i
 built from the [`docs/`](docs) folder:
 
 - [Getting started](docs/getting-started.md): install, requirements, first VM
-- [Walkthrough](docs/walkthrough.md): Claude fixes a bug in a locked sandbox, start to finish
+- [Walkthrough](docs/walkthrough.md): Claude makes a real change to limabean in a locked sandbox, start to finish
 - [Claude and MCP](docs/mcp.md): let Claude create and drive VMs
 - [Claude Desktop](docs/claude-desktop.md): how VMs become SSH connections
 - [Sandboxes](docs/network.md): network allowlists, learn mode and locked VMs
