@@ -1,0 +1,74 @@
+#!/bin/sh
+# What this VM is, for you and for agents working in it. Installed as
+# /usr/local/bin/limabean-info by layer-base.yaml.
+#
+# limabean writes ~/.config/limabean/vm.json on new, rebuild and every up:
+# the VM's name, packs, tools and project. The network policy and the
+# secrets' names are read live, the policy from the read-only mount the
+# VM's firewall uses. No secret values are read or printed.
+set -eu
+
+info="$HOME/.config/limabean/vm.json"
+policy=${LIMABEAN_NETWORK_CONF:-/mnt/host/limabean/network.conf}
+secrets="$HOME/.config/limabean/secrets.env"
+
+case "${1:-}" in
+  --json) json=1 ;;
+  "") json= ;;
+  -h|--help)
+    echo "usage: limabean-info [--json]"
+    echo "Prints what this VM is: its packs, project, network and secrets' names."
+    exit 0 ;;
+  *) echo "limabean-info: unknown option $1 (try --help)" >&2; exit 2 ;;
+esac
+
+base='{}'
+[ -r "$info" ] && base=$(cat "$info")
+
+allow=$(sed -n 's/^allow  *\([^ ]*\).*/\1/p' "$policy" 2>/dev/null || true)
+locked=false learn=false
+grep -qx locked "$policy" 2>/dev/null && locked=true
+grep -qx learn "$policy" 2>/dev/null && learn=true
+names=$(sed -n 's/^export \([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$secrets" 2>/dev/null | sort -u || true)
+
+all=$(printf '%s' "$base" | jq \
+  --arg allow "$allow" --arg names "$names" \
+  --argjson locked "$locked" --argjson learn "$learn" '
+  def lines: split("\n") | map(select(. != ""));
+  . + {
+    network: {allow: ($allow | lines), locked: $locked, learn: $learn,
+              open: (($allow | lines | length) == 0 and ($learn | not))},
+    secrets: ($names | lines)
+  }')
+
+if [ -n "$json" ]; then
+  printf '%s\n' "$all"
+  exit 0
+fi
+
+printf '%s' "$all" | jq -r '
+  def list: if length == 0 then "none" else join(", ") end;
+  def item($k; $v): "  \($k):" + (" " * (10 - ($k | length))) + $v;
+  (if .name then "\(.name) (\(.env // "scratch")), a limabean VM"
+   else "A limabean VM (no vm.json yet: limabean up or rebuild writes it)" end),
+  (if .packs then item("packs"; .packs | list) else empty end),
+  (if .tools then item("tools"; .tools | to_entries | map("\(.key) \(.value)") | list) else empty end),
+  (if .apt then item("apt"; .apt | list) else empty end),
+  item("network"; .network |
+    if .open then "open"
+    elif .learn then "learning (everything allowed, lookups logged)"
+    else "only " + (.allow | list) end
+    + (if .locked then ", locked (no sudo)" else "" end)),
+  item("secrets"; .secrets | list),
+  (if .project then
+    "", "Project",
+    (if .project.repo then item("repo"; .project.repo) else empty end),
+    (if .project.clone then item("clone"; .project.clone) else empty end),
+    (if .project.ports then item("ports"; .project.ports | map("http://localhost:\(.)") | list) else empty end),
+    (if .project.vars then item("vars"; .project.vars | list) else empty end),
+    (if .project.setup then item("setup"; .project.setup | split("\n") | map(select(. != "")) | join("; ")) else empty end),
+    (if .project.start then item("start"; .project.start | split("\n") | map(select(. != "")) | join("; ")) else empty end)
+   else empty end),
+  (if .ports then "", .ports else empty end),
+  (if .logs then "", "Logs", (.logs | to_entries[] | item(.key; .value)) else empty end),
+  (if .written_by then "", "Written by \(.written_by), \(.written)" else empty end)'

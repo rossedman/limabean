@@ -126,6 +126,9 @@ rather than the home directory, so `limabean ssh -- go test ./...` runs the
 tests there. The clone is separate from your checkout on the Mac: changes
 made in one stay there until they're pushed.
 
+In the VM, [`limabean-info`](inside-a-vm.md#what-this-vm-is) shows the
+project's repository, clone, ports and logs, which `up` writes there.
+
 `down` only stops the VM. `limabean rm myapp` deletes it.
 
 ## Changing the file

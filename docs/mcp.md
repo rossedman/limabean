@@ -149,6 +149,10 @@ network, never your Mac's. Combine it with a [project file](projects.md)
 (`packs: [claude]`) or with
 [`limabean run --rm`](lifecycle.md#throwaway-vms) for a VM that's gone when
 the task is done.
+An agent in a VM can run
+[`limabean-info`](inside-a-vm.md#what-this-vm-is) to see what it has to
+work with: its tools, the clone, which hosts it can reach and which
+secrets it has, by name.
 
 ## Projects
 

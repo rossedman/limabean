@@ -38,6 +38,50 @@ remote.
   If creating a VM stops at `Installing rosetta...`, run
   `softwareupdate --install-rosetta` on the Mac.
 
+## What this VM is
+
+`limabean-info` prints what limabean knows about the VM it runs in: its
+packs and tools, its network policy, the names of its secrets, and, for a
+[project's](projects.md) VM, the repository, the clone, the ports and the
+logs. It's there for you, and for an agent working in the VM, such as
+Claude Code over [SSH from Claude Desktop](claude-desktop.md) or with the
+[`claude` pack](packs.md#claude-code-in-a-vm), to find its bearings without
+guessing.
+
+```
+$ limabean-info
+web (scratch), a limabean VM
+  packs:     core, node
+  network:   only github.com, registry.npmjs.org, locked (no sudo)
+  secrets:   GITHUB_TOKEN, NPM_TOKEN
+
+Project
+  repo:      acme/web
+  clone:     /home/me.linux/code/github.com/acme/web
+  ports:     http://localhost:3000
+  setup:     npm ci
+
+A port listening in this VM is http://localhost:<port> on the Mac.
+
+Logs
+  provision: /var/log/cloud-init-output.log
+  network:   journalctl -u limabean-network
+  setup:     ~/.local/state/limabean/setup.log
+```
+
+`limabean-info --json` prints the same as JSON, for scripts and agents.
+
+- limabean writes most of it to `~/.config/limabean/vm.json` when it
+  creates or rebuilds the VM, and on every `limabean up` of a project. A
+  VM made before this has no file until then; `limabean-info` still shows
+  its network and secrets.
+- The network policy is read live, from the read-only
+  [policy](network.md) the VM's firewall uses, so it's always current and
+  nothing in the VM can change what it says.
+- Secrets are listed by name only, from `~/.config/limabean/secrets.env`.
+  No value is in `vm.json` or in what `limabean-info` prints.
+- It's a file and a script: no service runs, and no port is opened.
+
 ## Ports
 
 Lima forwards every TCP port a program opens on localhost or on all

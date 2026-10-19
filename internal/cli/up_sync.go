@@ -275,6 +275,11 @@ func (a *App) upExisting(ctx context.Context, inst lima.Instance, f *project.Fil
 			}
 		}
 	}
+	repo := a.projectRepo(ctx, f, dir)
+	if clone == "" && repo != "" {
+		clone, _ = a.codeDir(ctx, inst, repo)
+	}
+	a.writeVMInfo(ctx, inst, f, repo, clone)
 	if c.empty() {
 		a.UI.OK("%s is up to date", a.UI.Code(f.Name))
 	}

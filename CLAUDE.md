@@ -24,7 +24,7 @@ docs/, overrides/    the MkDocs site; mkdocs.yml is its nav
 ```
 
 `docs/go-cli.md` and `docs/design.md` explain the architecture and the
-decisions (D1–D30); read the relevant note before changing a design.
+decisions (D1–D31); read the relevant note before changing a design.
 
 ## Checks
 
@@ -36,7 +36,7 @@ go vet ./...
 go test ./...                    # CI also fails below 90% total coverage:
 go test -coverprofile=/tmp/c.out ./... && go tool cover -func=/tmp/c.out | tail -1
 shellcheck templates/features/*.sh templates/files/limabean-network
-shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git
+shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info
 actionlint                       # when .github/ changes
 mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
                                  # (pip install -r docs/requirements.txt)

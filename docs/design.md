@@ -532,6 +532,20 @@ An opt-in `--mount` of a host directory (B) is still open.
   the same rules (plans first, never widen a network, deleting and
   restoring left to the user), and a test checks that every tool a prompt
   names exists, so the prompts can't drift from the tools.
+- **D31 What a VM knows about itself. Decided: a file and a script, no
+  service.** limabean writes `~/.config/limabean/vm.json` in the VM (its
+  name, environment, packs, tools and, for a project, the repository,
+  clone, ports, var names, setup and start) when it creates or rebuilds a
+  VM and on every project `up`, and `limabean-info` prints it. A service
+  answering queries was the alternative; a file needs no daemon, no port
+  and nothing to secure, and an agent reads it with `cat` or `jq`. It's in
+  the user's home rather than `/etc` because a locked VM has no sudo for
+  later writes. The network policy and the secrets' names aren't stored:
+  `limabean-info` reads them live, the policy from the read-only mount
+  (so a process in the VM can't make the file lie about its own limits)
+  and the names from `secrets.env`. No secret value or reference goes in
+  the file. It's only a description, so failing to write it warns and
+  carries on.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima
