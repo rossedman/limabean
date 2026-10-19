@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/muesli/termenv"
@@ -228,26 +227,7 @@ func (u *UI) Table(headers []string, rows [][]string) {
 // Spin runs fn behind a spinner titled title. In plain mode it prints the
 // title and runs fn.
 func (u *UI) Spin(ctx context.Context, title string, fn func(context.Context) error) error {
-	if u.Quiet {
-		return fn(ctx)
-	}
-	if !u.Interactive {
-		u.Info("%s", title)
-		return fn(ctx)
-	}
-	var fnErr error
-	err := spinner.New().
-		Context(ctx).
-		Type(spinner.Dots).
-		Style(u.style().Foreground(Leaf)).
-		Title(" " + title).
-		Output(u.Err).
-		ActionWithErr(func(ctx context.Context) error { fnErr = fn(ctx); return nil }).
-		Run()
-	if err != nil {
-		return err
-	}
-	return fnErr
+	return u.SpinProgress(ctx, title, nil, fn)
 }
 
 // Theme is the huh theme in the README palette.

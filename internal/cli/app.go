@@ -70,6 +70,8 @@ type App struct {
 	spawn func(args ...string) error
 	// How `remote` runs git in a checkout on the Mac; tests replace it.
 	git func(ctx context.Context, dir string, args ...string) ([]byte, error)
+	// How a step's progress line learns an image's size; tests replace it.
+	contentLength func(ctx context.Context, url string) (int64, error)
 
 	// Persistent flags.
 	configPath   string
@@ -86,6 +88,7 @@ type App struct {
 
 	// Overridable for tests.
 	stateDir       string
+	limaCache      string // Lima's cache directory; "" for its default
 	keychainPrefix string
 }
 
@@ -107,6 +110,8 @@ func NewApp(version string, embedded fs.FS) *App {
 		openURL:      openURL,
 		spawn:        spawn,
 		git:          runGit,
+
+		contentLength: contentLength,
 	}
 }
 
