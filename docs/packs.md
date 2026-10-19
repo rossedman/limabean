@@ -72,6 +72,33 @@ limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing te
 With [`limabean run --rm`](lifecycle.md#throwaway-vms), the VM is gone when
 the task is done.
 
+### What Claude Code gets in a VM
+
+Every VM sets up Claude Code for working there, at each boot:
+
+- **A status line** at the bottom of Claude Code in the terminal, showing
+  the VM, what its network allows, the branch (with `*` for changes), the
+  ports reaching your Mac and the model:
+
+    ```
+    app · only github.com +2, locked · agent/fix* · :3000 · Opus 5.5
+    ```
+
+    The network part is read live from the policy the VM's firewall uses,
+    so it's always what the VM can really reach.
+- **A note in `~/.claude/CLAUDE.md`** telling Claude it's in a limabean
+  VM: to run `limabean-info` before guessing what's installed; that a
+  host it can't reach is probably blocked, and to name it rather than
+  retry; that ports reach the Mac's `localhost`; to commit on a branch in
+  the clone; and never to print a secret's value.
+- **No nonessential traffic**: `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`,
+  so Claude Code doesn't try update checks and error reports that a locked
+  network would only block.
+
+Your own choices win. A `statusLine` or `env` value you set in the VM's
+`~/.claude/settings.json` is kept, and `CLAUDE.md` is yours outside
+limabean's block, which is rewritten at each boot.
+
 ## Packs for every new VM
 
 The `PACKS` setting in `~/.config/limabean/config` (or `LIMABEAN_PACKS`)

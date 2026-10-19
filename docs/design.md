@@ -566,6 +566,19 @@ An opt-in `--mount` of a host directory (B) is still open.
   out the clone's path and tools by running commands. The VM's output is
   data: `--json` passes it on only if it's JSON. A VM made before
   limabean-info says it needs a rebuild.
+- **D34 Claude Code in a VM. Decided: a status line and a note, through
+  Claude Code's own settings, not a plugin.** A Claude Code mod (#37)
+  showed the same kind of thing and was taken out (#40): its settings
+  depended on Claude Code's version and on running in a terminal.
+  `statusLine` is a plain setting that runs a script, so
+  `limabean-statusline` works across versions; it reads the policy from
+  the read-only mount, `vm.json`, git and `ss`, and sends nothing. A
+  managed block in `~/.claude/CLAUDE.md` tells Claude how a limabean VM
+  works (limabean-info, blocked hosts, ports, the clone, secrets).
+  `features/claude.sh` sets both at each boot, only filling in what the
+  user hasn't set, and turns off nonessential traffic a locked network
+  would block. Permissions are left as Claude Code's defaults: skipping
+  them is the user's call.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

@@ -1,0 +1,68 @@
+#!/bin/sh
+# Claude Code's status line in a limabean VM. Installed as
+# /usr/local/bin/limabean-statusline by layer-base.yaml, and named in
+# ~/.claude/settings.json by features/claude.sh unless you set your own.
+#
+# Claude Code runs it after each message, with the session as JSON on stdin,
+# and shows the line it prints:
+#
+#   app · only github.com +2, locked · agent/fix* · :3000 · Opus 5.5
+#
+# the VM, what its network allows (read live from the read-only policy the
+# firewall uses), the branch in the session's directory (* when it has
+# changes), the ports listening for the Mac's localhost, and the model. It
+# reads files and asks git and ss, so it stays fast; nothing is sent anywhere.
+set -u
+
+policy=${LIMABEAN_NETWORK_CONF:-/mnt/host/limabean/network.conf}
+info="$HOME/.config/limabean/vm.json"
+
+session=$(cat)
+field() { printf '%s' "$session" | jq -r "$1 // empty" 2>/dev/null; }
+model=$(field .model.display_name)
+dir=$(field '.workspace.current_dir // .cwd')
+[ -d "${dir:-}" ] || dir=$PWD
+
+# Colors only where they help: green for a locked network, yellow for one
+# that's open or learning.
+if [ -n "${NO_COLOR:-}" ]; then
+  dim='' green='' yellow='' reset=''
+else
+  dim=$(printf '\033[2m') green=$(printf '\033[32m') yellow=$(printf '\033[33m') reset=$(printf '\033[0m')
+fi
+sep=" ${dim}·${reset} "
+
+name=$(jq -r '.name // empty' "$info" 2>/dev/null)
+line=${name:-limabean}
+
+allow=$(sed -n 's/^allow  *\([^ ]*\).*/\1/p' "$policy" 2>/dev/null)
+count=$(printf '%s' "$allow" | grep -c . || true)
+if grep -qx learn "$policy" 2>/dev/null; then
+  net="${yellow}learning${reset}"
+elif [ "$count" -eq 0 ]; then
+  net="${yellow}network open${reset}"
+elif [ "$count" -eq 1 ]; then
+  net="only $allow"
+else
+  net="only $(printf '%s\n' "$allow" | head -1) +$((count - 1))"
+fi
+if grep -qx locked "$policy" 2>/dev/null; then
+  net="$net, ${green}locked${reset}"
+fi
+line="$line$sep$net"
+
+if branch=$(git -C "$dir" branch --show-current 2>/dev/null) && [ -n "$branch" ]; then
+  [ -n "$(git -C "$dir" status --porcelain --untracked-files=no 2>/dev/null | head -1)" ] && branch="$branch*"
+  line="$line$sep$branch"
+fi
+
+# Ports Lima forwards to the Mac: listening on localhost or every address.
+if command -v ss >/dev/null; then
+  ports=$(ss -ltnH 2>/dev/null | awk '{ n = split($4, a, ":"); p = a[n]; h = substr($4, 1, length($4) - length(p) - 1)
+    if (p != 22 && (h == "127.0.0.1" || h == "0.0.0.0" || h == "*" || h == "[::]" || h == "[::1]")) print p }' |
+    sort -un | head -4 | sed 's/^/:/' | tr '\n' ' ' | sed 's/ $//')
+  [ -n "$ports" ] && line="$line$sep$ports"
+fi
+
+[ -n "$model" ] && line="$line$sep${dim}$model${reset}"
+printf '%s\n' "$line"

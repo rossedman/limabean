@@ -72,6 +72,10 @@ provision:
   file: ./files/limabean-info
   permissions: 755
 - mode: data
+  path: /usr/local/bin/limabean-statusline
+  file: ./files/limabean-statusline
+  permissions: 755
+- mode: data
   path: "{{.Home}}/.zshenv"
   content: |
     . "$HOME/.config/limabean/env.sh"
@@ -82,6 +86,8 @@ provision:
   file: ./features/completions.sh
 - mode: user
   file: ./features/git.sh
+- mode: user
+  file: ./features/claude.sh
 - mode: user
   file: ./features/shell.sh
 
