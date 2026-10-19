@@ -217,7 +217,39 @@ func TestImageBuildFailuresAndLocks(t *testing.T) {
 	if out := h.must("", "images", "build", "--if-needed"); !strings.Contains(out, "already being built") {
 		t.Errorf("a second build:\n%s", out)
 	}
-	unlock()
+
+	// Without --if-needed it waits, and uses the image the other build
+	// finished rather than building it again.
+	starts := func() (n int) {
+		for _, c := range h.world.calls {
+			if strings.HasPrefix(c, "limactl start --name="+imagePrefix) {
+				n++
+			}
+		}
+		return n
+	}
+	before := starts()
+	fresh := im
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		fresh.Built = time.Now()
+		b, _ := json.Marshal(fresh)
+		_ = os.WriteFile(files[0], b, 0o644)
+		unlock()
+	}()
+	if out := h.must("", "images", "build"); !strings.Contains(out, "waiting for it to finish") || !strings.Contains(out, "up to date") || starts() != before {
+		t.Errorf("a build that waited should use the other's image:\n%s", out)
+	}
+
+	// If the other build left no new image, it builds one.
+	unlock2, err := lockFile(filepath.Join(dir, im.Key[:8]+".build"), true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() { time.Sleep(100 * time.Millisecond); unlock2() }()
+	if out := h.must("", "images", "build"); !strings.Contains(out, "Built image") || starts() != before+1 {
+		t.Errorf("a build whose wait brought no image should build:\n%s", out)
+	}
 	h.must("", "images", "rm", "--all")
 
 	h.world.spawnErr = errors.New("no exec")

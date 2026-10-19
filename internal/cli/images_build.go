@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -55,17 +56,25 @@ before the week is up.`,
 				return err
 			}
 			key := imageKey(hash, env, packs)
-			// One build per image at a time; a second waits, or with
-			// --if-needed leaves it to the first.
-			unlock, err := lockFile(a.imageLock(key, "build"), true, !ifNeeded)
+			// One build per image at a time. A second, with --if-needed,
+			// leaves it to the first; without, waits for it and uses what
+			// it built rather than building the same image again.
+			lock := a.imageLock(key, "build")
+			waited := time.Now()
+			unlock, err := lockFile(lock, true, false)
 			if errors.Is(err, errLocked) {
-				a.UI.Info("That image is already being built")
-				return nil
-			} else if err != nil {
+				if ifNeeded {
+					a.UI.Info("That image is already being built")
+					return nil
+				}
+				a.UI.Info("That image is already being built; waiting for it to finish (log: %s)", shortPath(imagesLog()))
+				unlock, err = lockFile(lock, true, true)
+			}
+			if err != nil {
 				return err
 			}
 			defer unlock()
-			if im, ok := a.imageFor(ctx, key); ok && ifNeeded && !im.stale() {
+			if im, ok := a.imageFor(ctx, key); ok && (im.Built.After(waited) || ifNeeded && !im.stale()) {
 				a.UI.Info("Image %s is up to date", im.Name)
 				return nil
 			}
