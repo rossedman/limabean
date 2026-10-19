@@ -370,6 +370,8 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			return cli(ctx, "snapshot", "ls", "--json", "--", in.Name)
 		})
 
+	addPrompts(s)
+
 	if !allowDestructive {
 		return s
 	}

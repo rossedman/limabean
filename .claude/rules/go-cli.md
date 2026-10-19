@@ -58,3 +58,6 @@ paths:
   `_meta["anthropic/requiresUserInteraction"]`.
 - Add new tools to the expectations in `mcp_test.go` and to `docs/mcp.md`'s
   tools table.
+- Workflows offered as MCP prompts live in `mcp_prompts.go`; `TestMCPPrompts`
+  checks that every tool a prompt names exists. List new ones in
+  `docs/mcp.md`'s workflows table.

@@ -243,6 +243,11 @@ Claude Code asks you each time.
 
 ## Next
 
+- The [ready-made workflows](mcp.md#ready-made-workflows) run tasks like
+  this one from a slash command: `/mcp__limabean__test_in_sandbox` and
+  `/mcp__limabean__try_a_change` start tasks like this one for a checkout of
+  yours.
+
 - [Claude and MCP](mcp.md): setting up Claude Desktop, every tool, and the
   destructive ones.
 - [Projects](projects.md): every key of `.limabean.yaml`, and editor

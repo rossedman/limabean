@@ -91,6 +91,33 @@ Repositories go to `~/code/<host>/<owner>/<repo>` in the VM, so after
 `clone_repo` Claude runs commands with `cd ~/code/github.com/acme/api && …`.
 For a checkout with a `.limabean.yaml`, `project_run` does that for it.
 
+## Ready-made workflows
+
+limabean also offers a few workflows as MCP prompts: a whole task, written
+out for Claude, that you start with its arguments. In Claude Code they're
+slash commands; type `/mcp__limabean__` to see them:
+
+```
+/mcp__limabean__test_in_sandbox /Users/me/src/shop
+/mcp__limabean__triage_repo acme/scraper
+/mcp__limabean__try_a_change /Users/me/src/shop "upgrade to Go 1.27"
+```
+
+In Claude Desktop, they're under the **+** button, in limabean's menu.
+
+| Prompt | Arguments | What Claude does |
+|---|---|---|
+| `test_in_sandbox` | a checkout's path | Drafts a `.limabean.yaml` if there's none and writes it once you agree, shows you the plan, brings the VM up, runs the tests in its clone and reports |
+| `triage_repo` | a repository, and optionally what it may reach | Creates a locked VM for an unfamiliar repository, snapshots it, clones, installs and tests, and reports what works |
+| `try_a_change` | a checkout's path and the change | Snapshots the project's VM, makes the change in its clone, runs the tests and shows you the diff; if it didn't work, gives you the restore command |
+| `run_untrusted` | what to run | Runs a script, tool or repository in a throwaway locked VM that deletes itself in two hours, reads it first, and reports what it did and which hosts it tried to reach |
+| `tidy_vms` | none | Lists your VMs, suggests which to stop or delete, stops the ones you agree to, and gives you the `rm` commands for the rest |
+
+A prompt is only instructions: it runs nothing itself, so every tool's
+guards still apply. Each one also tells Claude to show you plans first,
+never to try to widen a network, and to leave deleting VMs and restoring
+snapshots to you.
+
 ## Sandboxes for a task
 
 `create_vm` takes `allow` and `locked`, so Claude can make itself a VM that
