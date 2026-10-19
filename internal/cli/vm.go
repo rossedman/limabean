@@ -21,6 +21,7 @@ import (
 	"github.com/rossedman/limabean/internal/claude"
 	"github.com/rossedman/limabean/internal/config"
 	"github.com/rossedman/limabean/internal/lima"
+	"github.com/rossedman/limabean/internal/project"
 	"github.com/rossedman/limabean/internal/secrets"
 	"github.com/rossedman/limabean/internal/templates"
 )
@@ -81,6 +82,27 @@ func (a *App) vmArg(ctx context.Context, args []string, verb string) (string, er
 		names[i] = inst.Name
 	}
 	return a.UI.Select("VM to "+verb, names)
+}
+
+// projectVMArg is vmArg for commands that connect to or read from a VM:
+// with no name, inside a project, it's the project's VM. Commands that
+// delete or roll back (rm, rebuild, snapshot restore) keep vmArg, so a
+// script never acts on a VM it didn't name.
+func (a *App) projectVMArg(ctx context.Context, args []string, verb string) (string, error) {
+	if len(args) > 0 && args[0] != "" {
+		return args[0], nil
+	}
+	if path, err := project.Find("."); err == nil {
+		if f, err := project.Load(path); err == nil {
+			if _, ok, err := a.Lima.Get(ctx, f.Name); err != nil {
+				return "", err
+			} else if !ok {
+				return "", notFoundErr("%s has no VM yet: limabean up (or name another VM)", f.Name)
+			}
+			return f.Name, nil
+		}
+	}
+	return a.vmArg(ctx, args, verb)
 }
 
 // ensureRunning starts a stopped VM and returns its current state.

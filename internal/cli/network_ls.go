@@ -23,7 +23,7 @@ allowed alongside an allowlist, for the clock.`,
 			defer func(u *ui.UI) { a.UI = u }(a.UI)
 			a.UI = a.UI.Report()
 			ctx := cmd.Context()
-			name, err := a.vmArg(ctx, args, "show the network of")
+			name, err := a.projectVMArg(ctx, args, "show the network of")
 			if err != nil {
 				return err
 			}

@@ -36,7 +36,7 @@ repositories need unless a GitHub token is installed (limabean github login).`,
 			case len(args) >= 2:
 				name, ghqArgs = args[0], args[1:]
 			case len(args) == 1:
-				picked, err := a.vmArg(ctx, nil, "clone "+args[0]+" into")
+				picked, err := a.projectVMArg(ctx, nil, "clone "+args[0]+" into")
 				if err != nil {
 					return err
 				}

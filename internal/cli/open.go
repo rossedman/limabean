@@ -46,7 +46,7 @@ taken as the port when it isn't a VM's name.`,
 				}
 			}
 			if name == "" {
-				picked, err := a.vmArg(ctx, nil, "open a port of")
+				picked, err := a.projectVMArg(ctx, nil, "open a port of")
 				if err != nil {
 					return err
 				}

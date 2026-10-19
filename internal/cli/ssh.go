@@ -30,7 +30,7 @@ doesn't include Lima's host entries.`,
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			name, err := a.vmArg(ctx, args, "open")
+			name, err := a.projectVMArg(ctx, args, "open")
 			if err != nil {
 				return err
 			}
