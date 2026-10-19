@@ -120,20 +120,18 @@ limabean network log app --blocked     # anything it needed and couldn't reach
 still working; `git log` in the clone shows its commits as it goes. Its
 session ends when Claude does, which is how you know it's done.
 
-!!! warning "Idle VMs stop by themselves"
+!!! note "Idle VMs stop by themselves"
     If you turned on [`limabean autostop`](lifecycle.md#idle-vms-stop-by-themselves),
-    a VM counts as in use while a terminal in it has output, an editor or
-    Claude Desktop is connected, or its load is high. A headless run that
-    prints nothing for longer than the idle limit, while Claude is only
-    thinking, can look idle. For runs that long, raise the limit
-    (`limabean autostop on --after 6h`) or turn it off while they run.
+    a VM with Claude Code running in it counts as in use, however quiet
+    the run, so autostop leaves it alone until Claude exits.
 
 ## 4. A throwaway VM for one task
 
 [`limabean run`](lifecycle.md#throwaway-vms) creates a VM, runs one
 command in a fresh clone and, with `--rm`, deletes the VM afterwards. The
 VM gets your shared secrets, so set `CLAUDE_CODE_OAUTH_TOKEN` without
-`--vm` first:
+`--vm` first, or pass it to this VM alone with
+`--secret CLAUDE_CODE_OAUTH_TOKEN=<reference>`:
 
 ```bash
 limabean run --rm --with claude --allow github --allow claude --locked \
@@ -209,6 +207,9 @@ To undo what an agent did to the VM, restore the snapshot from your Mac:
 
 ## Next
 
+- [Agent patterns](agent-patterns.md): worktrees, version matrices,
+  learn-then-lock, a secret per role, writer and reviewer, checkpoints,
+  Claude as the manager, scheduled agents and untrusted code.
 - [Recipes](recipes.md): `claude-agent` and the others, as starting points.
 - [Sandboxes](network.md): allowlists, learning what a VM needs, and the lock.
 - [Rebuilds, clones and snapshots](lifecycle.md): the rest of what keeps work undoable.
