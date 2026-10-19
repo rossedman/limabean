@@ -156,6 +156,14 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			return cli(ctx, "ps", "--json", "--file="+file)
 		})
+	mcp.AddTool(s, tool("project_init", "Draft a project file", "For a git checkout: a .limabean.yaml worked out from its files (manifests, lockfiles, compose files, .tool-versions, .env.example): packs, setup and start commands, ports, tools, and secrets to set up. It only reads the checkout and writes nothing. Show the draft to the user; once they agree, write it as .limabean.yaml in the checkout, then use project_plan.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
+			dir, err := checkoutDir(in.Dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "init", "--project", "--print", "--dir="+dir)
+		})
 	mcp.AddTool(s, tool("project_plan", "Plan a project's VM", "For a checkout with a .limabean.yaml: what project_up would do, changing nothing. For a new VM, its packs, size, network, secrets, variables, setup and start commands; for an existing one, what differs from the file. Show this to the user before calling project_up. Network changes that would widen what the VM reaches are listed as commands only the user can run.", true, nil),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpProject) (*mcp.CallToolResult, any, error) {
 			file, err := projectFileIn(in.Dir)
@@ -385,6 +393,25 @@ func projectFileIn(dir string) (string, error) {
 		return "", fmt.Errorf("%s has both .limabean.yaml and .limabean.yml", dir)
 	}
 	return found[0], nil
+}
+
+// checkoutDir is project_init's dir: the absolute path of a git checkout,
+// so a tool call can point it at a repository but not at the rest of the
+// Mac. What it reads there only shapes the draft (pack names, commands from
+// a fixed list, names that pass the project file's checks); no file's
+// contents come back.
+func checkoutDir(dir string) (string, error) {
+	if !filepath.IsAbs(dir) {
+		return "", fmt.Errorf("dir %q: give the checkout's absolute path", dir)
+	}
+	dir = filepath.Clean(dir)
+	if fi, err := os.Lstat(dir); err != nil || !fi.IsDir() {
+		return "", fmt.Errorf("%s isn't a directory", dir)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, ".git")); err != nil {
+		return "", fmt.Errorf("%s isn't a git checkout (no .git)", dir)
+	}
+	return dir, nil
 }
 
 // checkNames validates VM and environment names before they reach the

@@ -126,3 +126,37 @@ func TestOriginFromConfig(t *testing.T) {
 		}
 	}
 }
+
+// project_init drafts a file for a git checkout and writes nothing; any
+// other directory is refused, so it can't read around the Mac.
+func TestMCPProjectInit(t *testing.T) {
+	h := newHarness(t)
+	dir := t.TempDir()
+	for name, body := range map[string]string{"go.mod": "module x\n", ".git/config": ""} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cs, _ := h.mcpClient(false)
+	out, isErr := call(t, cs, "project_init", map[string]any{"dir": dir})
+	if isErr || !strings.Contains(out, "packs: [go]") || !strings.Contains(out, "go mod download") {
+		t.Fatalf("init: %v\n%s", isErr, out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".limabean.yaml")); err == nil {
+		t.Error("project_init wrote a file")
+	}
+
+	notGit := t.TempDir()
+	link := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(dir, link); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"relative/path", notGit, filepath.Join(dir, "missing"), link} {
+		if out, isErr := call(t, cs, "project_init", map[string]any{"dir": d}); !isErr {
+			t.Errorf("%s accepted:\n%s", d, out)
+		}
+	}
+}

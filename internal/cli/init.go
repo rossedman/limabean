@@ -14,6 +14,7 @@ import (
 
 func newInitCmd(a *App) *cobra.Command {
 	var forProject, toStdout, overwrite bool
+	var dir string
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Set up limabean, or write a repository's .limabean.yaml",
@@ -38,7 +39,8 @@ picks the packs, the setup commands, likely ports, and tools no pack has,
 and lists credentials named in .env.example as secrets to set up. It only
 reads files; nothing in the repository runs. In a terminal it shows what it
 found and asks before writing. --print writes the file to standard output
-instead, and --overwrite replaces a project file that's already there.`,
+instead, --overwrite replaces a project file that's already there, and
+--dir looks at another directory than the current one.`,
 		Example: `  limabean init
 
   # Accept every suggestion, e.g. in a provisioning script
@@ -47,15 +49,15 @@ instead, and --overwrite replaces a project file that's already there.`,
   # A project file for this repository, then its VM
   cd ~/src/myapp && limabean init --project && limabean up
 
-  # See what it would write
-  limabean init --project --print`,
+  # See what it would write, for another checkout
+  limabean init --project --print --dir ~/src/api`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if forProject {
-				return a.initProject(toStdout, overwrite)
+				return a.initProject(dir, toStdout, overwrite)
 			}
-			if toStdout || overwrite {
-				return usageErr("--print and --overwrite go with --project")
+			if toStdout || overwrite || dir != "" {
+				return usageErr("--print, --overwrite and --dir go with --project")
 			}
 			home, _ := os.UserHomeDir()
 			cfg := *a.Cfg
@@ -130,6 +132,7 @@ instead, and --overwrite replaces a project file that's already there.`,
 	cmd.Flags().BoolVar(&forProject, "project", false, "write a .limabean.yaml for the repository here instead")
 	cmd.Flags().BoolVar(&toStdout, "print", false, "with --project, write it to standard output")
 	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "with --project, replace a project file that's already here")
+	cmd.Flags().StringVar(&dir, "dir", "", "with --project, the repository to look at, instead of the current directory")
 	return cmd
 }
 
