@@ -70,6 +70,9 @@ Logs
 ```
 
 `limabean-info --json` prints the same as JSON, for scripts and agents.
+From the Mac, `limabean info web` (or `limabean info` in the project's
+checkout) shows it for a running VM, and Claude reads it over
+[MCP](mcp.md#tools) with `vm_info`.
 
 - limabean writes most of it to `~/.config/limabean/vm.json` when it
   creates or rebuilds the VM, and on every `limabean up` of a project. A

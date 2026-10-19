@@ -113,23 +113,52 @@ limabean ssh -- make test        # a command, run there
 limabean code                    # VS Code, Cursor or another editor, over SSH
 limabean ps                      # is it running, is start, which ports, what changed
 limabean logs --start -f         # follow what start is running
+limabean remote                  # the VM's clone as a git remote, for git fetch
 limabean down                    # stop it; everything in it is kept
 ```
 
-`ssh`, `code`, `get`, `open`, `ports`, `network ls`, `snapshot save` and
-`snapshot ls` use the project's VM when you don't name one; name another
+`ssh`, `code`, `get`, `info`, `remote`, `open`, `ports`, `network ls`,
+`snapshot save` and `snapshot ls` use the project's VM when you don't name one; name another
 VM to use it instead. `rm`, `rebuild` and `snapshot restore` always need
 the name, so nothing is deleted or rolled back by accident.
 
 In the checkout, `ssh` works in the VM's clone (`~/code/<host>/<owner>/<repo>`)
 rather than the home directory, so `limabean ssh -- go test ./...` runs the
 tests there. The clone is separate from your checkout on the Mac: changes
-made in one stay there until they're pushed.
+made in one stay there until they're fetched or pushed
+([Review on your Mac](#review-on-your-mac)).
 
 In the VM, [`limabean-info`](inside-a-vm.md#what-this-vm-is) shows the
 project's repository, clone, ports and logs, which `up` writes there.
 
 `down` only stops the VM. `limabean rm myapp` deletes it.
+
+## Review on your Mac
+
+Work done in the VM's clone, by you or by Claude, can come to your Mac's
+checkout without going through GitHub. `limabean remote` adds the clone as
+a git remote named `limabean`, and git fetches from it over SSH:
+
+```bash
+limabean remote                          # once per checkout (again after a rebuild)
+git fetch limabean                       # the VM's branches, as limabean/<branch>
+git log --oneline main..limabean/zig-pack
+git diff main...limabean/zig-pack        # review, in your own tools
+git switch -c zig-pack limabean/zig-pack # take it over on the Mac
+```
+
+It goes the other way too: `git push limabean my-branch` hands a branch to
+the VM (any branch but the one checked out there).
+
+- It reaches the VM the way `limabean ssh` does, so it works whatever the
+  VM's network allows: a locked VM that can't reach GitHub can still hand
+  you its work.
+- Fetching copies git objects into your checkout and runs nothing from the
+  VM. The remote fetches branches only, never tags, so nothing in the VM
+  can add a tag to your repository.
+- `limabean remote other --name other` adds another VM's clone;
+  `limabean remote --rm` removes the remote. A remote of that name that
+  points anywhere but a VM is left alone.
 
 ## Changing the file
 

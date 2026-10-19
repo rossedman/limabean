@@ -123,6 +123,7 @@ Leave out a VM name and you pick one from a list. Every command has
 |---|---|
 | `limabean up [name]` | In a project: create its VM, or start it and apply the file's changes. With a name: start that VM, or create it, choosing packs and secrets (`--with go`) |
 | `limabean ps` | Show the project's VM: status, `start`, ports and pending changes |
+| `limabean info [name]` | Show what a VM knows about itself: packs, network, secrets' names, project |
 | `limabean logs [name]` | Show a VM's provisioning log, or its project's setup and start output (`-f` to follow) |
 | `limabean down [name]` | Stop the project's VM, or the one named; `--idle 2h` stops every VM nobody is using |
 | `limabean recipes [name]` | List starter `.limabean.yaml` files, or write one into a repository |
@@ -133,6 +134,7 @@ Leave out a VM name and you pick one from a list. Every command has
 | `limabean get [name] <repo>` | Clone a repository into the VM with ghq |
 | `limabean cp <src> <dst>` | Copy files between your Mac and a VM (`dev:path`) |
 | `limabean code [name] [repo]` | Open the VM, or a repository in it, in VS Code, Cursor, Windsurf or VSCodium |
+| `limabean remote [name]` | Add the VM's clone as a git remote of your Mac checkout, to fetch its branches |
 | `limabean ports [name]` | List the ports a VM forwards to your Mac |
 | `limabean open [name] [port]` | Open a forwarded port in your browser |
 | `limabean rebuild [name]` | Recreate a VM from the current templates, keeping `~/code` |

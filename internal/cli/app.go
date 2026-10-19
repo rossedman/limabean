@@ -68,6 +68,8 @@ type App struct {
 	openURL    func(ctx context.Context, url string) error
 	// How image builds start in the background; tests replace it.
 	spawn func(args ...string) error
+	// How `remote` runs git in a checkout on the Mac; tests replace it.
+	git func(ctx context.Context, dir string, args ...string) ([]byte, error)
 
 	// Persistent flags.
 	configPath   string
@@ -104,6 +106,7 @@ func NewApp(version string, embedded fs.FS) *App {
 		macListens:   macListens,
 		openURL:      openURL,
 		spawn:        spawn,
+		git:          runGit,
 	}
 }
 
