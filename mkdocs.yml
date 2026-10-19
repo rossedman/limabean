@@ -3,7 +3,7 @@
 # Preview locally: pip install mkdocs-material && mkdocs serve
 site_name: limabean
 site_description: Disposable Linux dev VMs for macOS, ready for SSH and Claude.
-site_url: https://rossedman.github.io/limabean/
+site_url: https://rossedman.io/limabean/
 repo_url: https://github.com/rossedman/limabean
 repo_name: rossedman/limabean
 edit_uri: edit/main/docs/

@@ -6,7 +6,7 @@ import (
 )
 
 // SchemaURL is where the docs site publishes Schema, for editors.
-const SchemaURL = "https://rossedman.github.io/limabean/limabean.schema.json"
+const SchemaURL = "https://rossedman.io/limabean/limabean.schema.json"
 
 // SchemaComment is the first line limabean writes into a project file, so
 // editors with the YAML language server (VS Code, Cursor, Zed, Neovim)
@@ -40,7 +40,7 @@ func Schema(packs, presets []string, domain string) map[string]any {
 		"$schema":              "http://json-schema.org/draft-07/schema#",
 		"$id":                  SchemaURL,
 		"title":                ".limabean.yaml",
-		"description":          "The VM a repository needs, for limabean up. Every key is optional. https://rossedman.github.io/limabean/projects/",
+		"description":          "The VM a repository needs, for limabean up. Every key is optional. https://rossedman.io/limabean/projects/",
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
