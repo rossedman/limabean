@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Runner runs external programs; tests replace it.
@@ -164,6 +165,12 @@ func (c *Client) Get(ctx context.Context, name string) (inst Instance, ok bool, 
 	return Instance{}, false, nil
 }
 
+// BootTimeout is how long limactl start waits for a VM to finish
+// provisioning. Lima's own default, 10 minutes, isn't enough for a first
+// boot with several packs on a slow connection: limactl gives up while the
+// VM is still installing.
+const BootTimeout = 30 * time.Minute
+
 // StartOptions configure a new VM.
 type StartOptions struct {
 	Name     string
@@ -177,7 +184,7 @@ type StartOptions struct {
 
 // Args returns the limactl arguments for creating the VM.
 func (o StartOptions) Args() []string {
-	args := []string{"start", "--name=" + o.Name, "--tty=false"}
+	args := []string{"start", "--name=" + o.Name, "--tty=false", "--timeout=" + BootTimeout.String()}
 	for _, k := range sortedKeys(o.Params) {
 		args = append(args, "--param", k+"="+o.Params[k])
 	}
@@ -204,7 +211,7 @@ func (c *Client) Create(ctx context.Context, o StartOptions) ([]byte, error) {
 
 // Start boots an existing VM.
 func (c *Client) Start(ctx context.Context, name string) ([]byte, error) {
-	return c.Runner.Output(ctx, nil, true, c.limactl(), "start", "--tty=false", name)
+	return c.Runner.Output(ctx, nil, true, c.limactl(), "start", "--tty=false", "--timeout="+BootTimeout.String(), name)
 }
 
 // Stop shuts a VM down.

@@ -21,6 +21,8 @@ Start with `limabean doctor`. It checks every prerequisite and prints the fix.
 | A VM doesn't appear in Claude Desktop | Only running VMs are listed: `limabean up <name>`. Otherwise restart Claude Desktop, or run `limabean claude sync`. |
 | A project's `start` doesn't seem to run | `limabean logs --start` shows its output. `up` doesn't run changed start commands until you approve them, and leaves one that's still running alone. |
 | `limabean up` hangs on "mise tools are installed" | Read the provisioning log: `limabean logs <name>` (`-f` to follow it). |
+| `limabean up` sits on "Downloading …img" | The first VM downloads Ubuntu's cloud image, about 900 MiB; the line under the spinner shows how long is left. Let it finish: Lima starts an interrupted download over. |
+| `Lima stopped waiting after 30m0s, but the VM is still provisioning` | A first boot with several packs took longer than limabean waits, often on a slow connection. The VM carries on: follow it with `limabean logs <name> -f`. |
 | `limabean up` finishes but the VM is stopped | limabean starts it again, and says so if it still won't run. Lima's log for it: `limabean logs <name> --lima`. |
 | A new VM wasn't fast | It was the first of its kind (environment and packs), or the templates changed since its image was built: an image is being built in the background (`~/Library/Logs/limabean-images.log`). `limabean images ls` shows what there is. |
 | A VM runs out of disk (`no space left on device`) | Docker images live on the 10 GiB system disk; `~/code` has its own. `docker system prune` frees space; for more, set `DISK="30"` (or `up --disk 30`) and `limabean rebuild <name>`. |

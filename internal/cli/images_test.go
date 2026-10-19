@@ -249,7 +249,7 @@ func TestNewChecksTheVMRuns(t *testing.T) {
 	h.world.bootless = true
 	h.world.calls = nil
 	out := h.must("", "new", "dev")
-	if !h.world.called("limactl clone --tty=false --start") || !h.world.called("limactl start --tty=false dev") || h.world.vms["dev"] != "Running" || !strings.Contains(out, "dev is ready") {
+	if !h.world.called("limactl clone --tty=false --start") || !h.world.called("limactl start --tty=false --timeout=30m0s dev") || h.world.vms["dev"] != "Running" || !strings.Contains(out, "dev is ready") {
 		t.Fatalf("a clone that didn't boot should be started:\n%s\n%v", out, h.world.calls)
 	}
 

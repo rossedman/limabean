@@ -6,7 +6,7 @@
 # Runs as root on every boot, before the user scripts (git.sh) use codeDir.
 set -eux -o pipefail
 
-# shellcheck disable=SC2154  # PARAM_* and LIMA_CIDATA_* are set by Lima
+# shellcheck disable=SC2154  # PARAM_* are set by Lima
 disk=${PARAM_codeDisk:-}
 [ -n "$disk" ] || exit 0
 
@@ -15,10 +15,12 @@ if ! mountpoint -q "$src"; then
   echo "limabean: $src isn't mounted; ~/code stays on the VM's disk" >&2
   exit 1
 fi
+# Lima fills in {{.User}} and {{.Home}}; Lima 2 warns about scripts that
+# read its cidata variables instead.
+user="{{.User}}"
+home="{{.Home}}"
 # shellcheck disable=SC2154
-user=$LIMA_CIDATA_USER
-# shellcheck disable=SC2154
-code_dir="${PARAM_codeDir/#\~/$LIMA_CIDATA_HOME}"
+code_dir="${PARAM_codeDir/#\~/$home}"
 group=$(id -gn "$user")
 
 chown "$user:$group" "$src"

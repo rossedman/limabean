@@ -10,7 +10,7 @@ func TestCp(t *testing.T) {
 	h.world.vms["dev"] = "Stopped"
 	h.world.vms["agent"] = "Running"
 	out := h.must("", "cp", "-r", "./dist", "dev:code/")
-	if !h.world.called("limactl start --tty=false dev") || !h.world.called("limactl copy -r -- ./dist dev:code/") {
+	if !h.world.called("limactl start --tty=false --timeout=30m0s dev") || !h.world.called("limactl copy -r -- ./dist dev:code/") {
 		t.Fatalf("calls: %v", h.world.calls)
 	}
 	if !strings.Contains(out, "Copied to dev:code/") {

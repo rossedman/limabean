@@ -294,7 +294,7 @@ func TestSSHAndGet(t *testing.T) {
 	h := newHarness(t)
 	h.world.vms["dev"] = "Stopped"
 	h.must("", "ssh", "dev", "ls", "-la")
-	if !h.world.called("limactl start --tty=false dev") || !h.world.called("exec ssh dev ls -la") {
+	if !h.world.called("limactl start --tty=false --timeout=30m0s dev") || !h.world.called("exec ssh dev ls -la") {
 		t.Fatalf("ssh should start the VM, then exec: %v", h.world.calls)
 	}
 	h.must("", "ssh", "dev", "--", "ls", "--all")
@@ -334,7 +334,7 @@ func TestCode(t *testing.T) {
 		"/home/me.linux/code/github.com/acme/limabean\n"
 
 	out := h.must("", "code", "dev")
-	if !h.world.called("limactl start --tty=false dev") || !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code") {
+	if !h.world.called("limactl start --tty=false --timeout=30m0s dev") || !h.world.called("editor code --remote ssh-remote+lima-dev /home/me.linux/code") {
 		t.Fatalf("code should start the VM, then open ~/code: %v", h.world.calls)
 	}
 	if !strings.Contains(out, "doesn't include Lima's host entries") {
@@ -669,7 +669,7 @@ func TestSnapshots(t *testing.T) {
 		t.Fatalf("save:\n%s", out)
 	}
 	calls := strings.Join(h.world.calls, "\n")
-	if stop, clone, start := strings.Index(calls, "limactl stop dev"), strings.Index(calls, "clone "), strings.LastIndex(calls, "limactl start --tty=false dev"); stop < 0 || clone < stop || start < clone {
+	if stop, clone, start := strings.Index(calls, "limactl stop dev"), strings.Index(calls, "clone "), strings.LastIndex(calls, "limactl start --tty=false --timeout=30m0s dev"); stop < 0 || clone < stop || start < clone {
 		t.Fatalf("save should stop, clone, then start: %v", h.world.calls)
 	}
 	// A stopped VM isn't started by a save.
@@ -923,7 +923,7 @@ func TestNewRestartsForUpdatesAndMountsAWS(t *testing.T) {
 			t.Errorf("missing %q:\n%s", want, out)
 		}
 	}
-	if !h.world.called("limactl stop dev") || !h.world.called(`limactl start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --param networkDir=`) || !strings.Contains(strings.Join(h.world.calls, "\n"), "--set .mounts += [{\"location\": \""+aws) {
+	if !h.world.called("limactl stop dev") || !h.world.called(`limactl start --name=dev --tty=false --timeout=30m0s --param codeDir=~/code --param gitConfigDir=~/.config/git --param networkDir=`) || !strings.Contains(strings.Join(h.world.calls, "\n"), "--set .mounts += [{\"location\": \""+aws) {
 		t.Errorf("calls: %v", h.world.calls)
 	}
 	if names, _ := (claude.Settings{Path: h.claude}).VMs(); len(names) != 0 {
@@ -1518,5 +1518,39 @@ func TestClaudeFollowsRunningVMs(t *testing.T) {
 	h.must("", "stop", "dev")
 	if entries() != "" {
 		t.Fatalf("stopping a stopped VM kept the entry: %q", entries())
+	}
+}
+
+func TestStartTimeoutIsExplained(t *testing.T) {
+	h := newHarness(t)
+	h.world.failStart = true
+	var log strings.Builder
+	for range 30 {
+		log.WriteString("time=x level=warning msg=\"provisioning scripts should not reference the LIMA_CIDATA variables\"\n")
+		log.WriteString("time=x level=info msg=\"[hostagent] Not forwarding TCP 0.0.0.0:22\"\n")
+	}
+	for i := range 20 {
+		fmt.Fprintf(&log, "time=x level=info msg=\"step %d\"\n", i)
+	}
+	log.WriteString("time=x level=fatal msg=\"did not receive an event with the `running` status\"\n")
+	h.world.startOut = log.String()
+	out, err := h.run("", "new", "dev")
+	if err == nil || !strings.Contains(err.Error(), "Lima stopped waiting after 30m0s") || !strings.Contains(err.Error(), "limabean logs <name> -f") {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Contains(out, "LIMA_CIDATA") || strings.Contains(out, "Not forwarding") || strings.Contains(out, "step 5\"") {
+		t.Errorf("noise or too much log shown:\n%s", out)
+	}
+	if !strings.Contains(out, "step 19") || !strings.Contains(out, "…") {
+		t.Errorf("the end of the log isn't shown:\n%s", out)
+	}
+}
+
+func TestLimaFailure(t *testing.T) {
+	if got := limaFailure([]byte("\nNot forwarding TCP x\nreal error\r\n")); got != "real error" {
+		t.Errorf("limaFailure = %q", got)
+	}
+	if got := limaFailure(nil); got != "" {
+		t.Errorf("limaFailure(nil) = %q", got)
 	}
 }

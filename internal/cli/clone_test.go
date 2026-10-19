@@ -23,8 +23,8 @@ func TestClone(t *testing.T) {
 		`.param.networkDir = "` + filepath.Join(h.dir, "network", "dev-2") + `"`,
 		`select(.name == "` + codeDiskName("dev") + `") | .name) = "` + codeDiskName("dev-2") + `"`,
 		"dev dev-2",
-		"limactl start --tty=false dev-2",
-		"limactl start --tty=false dev\n",
+		"limactl start --tty=false --timeout=30m0s dev-2",
+		"limactl start --tty=false --timeout=30m0s dev\n",
 		"lima-dev-2 sudo -n systemctl start limabean-network.service",
 	} {
 		if !strings.Contains(calls+"\n", want) {
@@ -94,7 +94,7 @@ func TestCloneWithoutCodeDisk(t *testing.T) {
 	if h.world.called("limactl disk create") || strings.Contains(strings.Join(h.world.calls, "\n"), "codeDisk") {
 		t.Errorf("no code disk to copy: %v", h.world.calls)
 	}
-	if h.world.called("limactl start --tty=false old") || !strings.Contains(out, "new is ready") {
+	if h.world.called("limactl start --tty=false --timeout=30m0s old") || !strings.Contains(out, "new is ready") {
 		t.Errorf("a stopped source stays stopped:\n%s", out)
 	}
 }
