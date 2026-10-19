@@ -268,6 +268,8 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 	}
 	// A project's own tools aren't in images; each VM installs its own.
 	own = append(own, o.Tools.provision()...)
+	// A company proxy's root, so HTTPS through it works from the first boot.
+	own = append(own, a.caCertSets(ctx)...)
 	im, fromImage := image{}, false
 	key := ""
 	if a.Cfg.Images {

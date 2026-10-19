@@ -32,6 +32,7 @@ const (
 	KeyCodeDisk      = "code_disk"
 	KeyPacks         = "packs"
 	KeyImages        = "images"
+	KeyCACerts       = "ca_certs"
 	KeyUpdateCheck   = "update_check"
 	KeyPlain         = "plain"
 	KeyTemplates     = "templates"
@@ -55,6 +56,7 @@ type Config struct {
 	CodeDisk      int    // GiB of the disk holding CodeDir in new VMs; 0: none
 	Packs         string // packs new VMs get besides core, comma-separated
 	Images        bool   // create VMs by cloning a cached, provisioned image
+	CACerts       bool   // VMs trust the root CAs an admin added to the Mac
 	UpdateCheck   bool   // say when a newer limabean is released
 }
 
@@ -81,6 +83,7 @@ func New() *viper.Viper {
 	v.SetDefault(KeyCodeDisk, "50")
 	v.SetDefault(KeyPacks, DefaultPacks)
 	v.SetDefault(KeyImages, "yes")
+	v.SetDefault(KeyCACerts, "yes")
 	v.SetDefault(KeyUpdateCheck, "yes")
 	v.SetEnvPrefix("LIMABEAN")
 	// An empty variable is a value: LIMABEAN_AWS_DIR="" turns the mount off.
@@ -141,6 +144,7 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 		CodeDisk:      codeDisk,
 		Packs:         strings.TrimSpace(v.GetString(KeyPacks)),
 		Images:        yes(v.GetString(KeyImages)),
+		CACerts:       yes(v.GetString(KeyCACerts)),
 		UpdateCheck:   yes(v.GetString(KeyUpdateCheck)),
 	}, nil
 }
@@ -214,10 +218,15 @@ PACKS=%q
 # background and kept fresh (limabean images). no: provision every VM.
 IMAGES=%q
 
+# VMs trust the root certificates an admin added to the Mac, such as a
+# company proxy's (Zscaler and the like), so HTTPS through it works.
+# no: VMs trust only Ubuntu's own list.
+CA_CERTS=%q
+
 # Once a day, check GitHub for a newer limabean and say so in a terminal.
 # no: never check.
 UPDATE_CHECK=%q
-`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, disk, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images), yesNo(c.UpdateCheck))
+`, c.GitConfigDir, c.CodeDir, codeDisk, cpus, c.Memory, disk, yesNo(c.ClaudeDesktop), c.AWSDir, c.IDE, c.Packs, yesNo(c.Images), yesNo(c.CACerts), yesNo(c.UpdateCheck))
 	return atomic.WriteFile(c.Path, []byte(body), 0o600)
 }
 
@@ -241,7 +250,7 @@ func (c *Config) Dir() string { return filepath.Dir(c.Path) }
 // by a flag or the environment.
 var Keys = []string{
 	KeyGitConfigDir, KeyCodeDir, KeyCodeDisk, KeyCPUs, KeyMemory, KeyDisk, KeyClaudeDesktop,
-	KeyAWSDir, KeyIDE, KeyPacks, KeyImages, KeyUpdateCheck, KeyPlain, KeyTemplates,
+	KeyAWSDir, KeyIDE, KeyPacks, KeyImages, KeyCACerts, KeyUpdateCheck, KeyPlain, KeyTemplates,
 }
 
 // Source says where key's value comes from, short of a flag: "env" for a

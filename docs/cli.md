@@ -149,6 +149,8 @@ AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exis
 PACKS=""                         # packs every new VM gets besides core; empty: none (new asks);
                                  # flag: up --with/--without; project files ignore it
 IMAGES="yes"                     # copy new VMs from a provisioned image; no: provision each one
+CA_CERTS="yes"                   # VMs trust root CAs an admin added to the Mac (a company proxy's);
+                                 # no: only Ubuntu's own list
 UPDATE_CHECK="yes"               # say in a terminal when a newer limabean is out; no: never check
 IDE=""                           # editor limabean code opens: code, code-insiders, cursor, windsurf, codium, …;
                                  # empty: the first installed; flag: code --ide

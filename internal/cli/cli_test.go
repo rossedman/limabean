@@ -46,7 +46,11 @@ type fakeWorld struct {
 
 	failStart bool   // limactl start fails, with output
 	startOut  string // with failStart, limactl's output instead of a single line
-	failStop  bool   // limactl stop fails
+	// The Mac's admin trust settings and System keychain, for CA_CERTS;
+	// no trust plist: the Mac has no admin trust settings.
+	trustPlist, keychainPEM string
+	keychainFails           bool
+	failStop                bool // limactl stop fails
 
 	limaHome       string          // where VM and disk directories live
 	disks          map[string]bool // Lima disks
@@ -452,6 +456,22 @@ func (h *harness) app(u *ui.UI) *App {
 	a.limaCache = filepath.Join(h.world.limaHome, "cache")
 	a.contentLength = func(_ context.Context, url string) (int64, error) {
 		return 0, errors.New("no network in tests")
+	}
+	a.security = func(_ context.Context, args ...string) ([]byte, error) {
+		h.world.calls = append(h.world.calls, "security "+args[0])
+		switch args[0] {
+		case "trust-settings-export":
+			if h.world.trustPlist == "" {
+				return nil, errors.New("SecTrustSettingsCreateExternalRepresentation: No Trust Settings were found.")
+			}
+			return nil, os.WriteFile(args[len(args)-1], []byte(h.world.trustPlist), 0o600)
+		case "find-certificate":
+			if h.world.keychainFails {
+				return nil, errors.New("keychain locked")
+			}
+			return []byte(h.world.keychainPEM), nil
+		}
+		return nil, errors.New("unexpected security " + args[0])
 	}
 	a.execSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))

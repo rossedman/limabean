@@ -190,6 +190,8 @@ func (a *App) buildImage(ctx context.Context, root, env string, packs []string) 
 	if err != nil {
 		return image{}, err
 	}
+	// Provisioning an image downloads as much as a VM does.
+	sets = append(sets, a.caCertSets(ctx)...)
 	key := imageKey(hash, env, packs)
 	now := time.Now()
 	im := image{Name: imagePrefix + key[:8] + "-" + strconv.FormatInt(now.UnixMilli(), 36), Key: key, Templates: hash, Env: env, Packs: packs, Built: now, Used: now}

@@ -51,6 +51,9 @@ func TestLoadBashConfig(t *testing.T) {
 	if !c.Images {
 		t.Error("IMAGES should default to yes (missing from older configs)")
 	}
+	if !c.CACerts {
+		t.Error("CA_CERTS should default to yes (missing from older configs)")
+	}
 }
 
 func TestDefaultsWhenMissing(t *testing.T) {
