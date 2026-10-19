@@ -48,7 +48,7 @@ repository's files and returns a draft, writing nothing. It found `go.mod`,
 and `docs/requirements.txt` for the docs site:
 
 ```yaml
-# yaml-language-server: $schema=https://rossedman.github.io/limabean/limabean.schema.json
+# yaml-language-server: $schema=https://rossedman.io/limabean/limabean.schema.json
 # Written by limabean init --project from what's in this repository.
 # Check it, then: limabean up   (every key: limabean up --help)
 packs: [go, python]

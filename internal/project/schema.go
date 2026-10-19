@@ -6,7 +6,7 @@ import (
 )
 
 // SchemaURL is where the docs site publishes Schema, for editors.
-const SchemaURL = "https://rossedman.github.io/limabean/limabean.schema.json"
+const SchemaURL = "https://rossedman.io/limabean/limabean.schema.json"
 
 // SchemaComment is the first line limabean writes into a project file, so
 // editors with the YAML language server (VS Code, Cursor, Zed, Neovim)
