@@ -85,6 +85,9 @@ checkout) shows it for a running VM, and Claude reads it over
   No value is in `vm.json` or in what `limabean-info` prints.
 - It's a file and a script: no service runs, and no port is opened.
 
+Claude Code in a VM shows much of the same in its status line, and is told
+to run `limabean-info` ([What Claude Code gets](packs.md#what-claude-code-gets-in-a-vm)).
+
 ## Ports
 
 Lima forwards every TCP port a program opens on localhost or on all

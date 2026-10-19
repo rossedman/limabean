@@ -48,7 +48,7 @@ go vet ./...
 go test ./...                    # and total coverage must stay at 90% or more:
 go test -coverprofile=/tmp/c.out ./... && go tool cover -func=/tmp/c.out | tail -1
 shellcheck templates/features/*.sh templates/files/limabean-network
-shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info
+shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info templates/files/limabean-statusline
 actionlint                       # when .github/ changes
 pip install -r docs/requirements.txt
 mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
