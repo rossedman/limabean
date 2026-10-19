@@ -137,7 +137,10 @@ claude:
       plugins: [gopls-lsp@claude-plugins-official, typescript-lsp@claude-plugins-official]
 ```
 
-The plugins for the others are `pyright-lsp` and `rust-analyzer-lsp`.
+The plugins for the others are `pyright-lsp` and `rust-analyzer-lsp`. Each
+brings its own `lspServers` setting, which starts the pack's server, so
+there's nothing more to configure. `claude plugin details gopls-lsp@claude-plugins-official`
+in the VM shows the server it starts.
 
 ## Cloud CLIs
 
