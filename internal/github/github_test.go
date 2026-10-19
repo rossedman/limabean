@@ -42,3 +42,30 @@ func TestFineGrained(t *testing.T) {
 		t.Fatal("FineGrained misclassified a token")
 	}
 }
+
+func TestLatestRelease(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/me/good/releases/latest":
+			_, _ = w.Write([]byte(`{"tag_name":"v1.2.3"}`))
+		case "/repos/me/garbled/releases/latest":
+			_, _ = w.Write([]byte(`not json`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	c := Client{BaseURL: srv.URL}
+	ctx := context.Background()
+	if tag, err := c.LatestRelease(ctx, "me/good"); err != nil || tag != "v1.2.3" {
+		t.Errorf("good: %q, %v", tag, err)
+	}
+	for _, repo := range []string{"me/garbled", "me/none"} {
+		if _, err := c.LatestRelease(ctx, repo); err == nil {
+			t.Errorf("%s: no error", repo)
+		}
+	}
+	if _, err := (Client{BaseURL: "http://127.0.0.1:1"}).LatestRelease(ctx, "me/good"); err == nil {
+		t.Error("unreachable: no error")
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -40,16 +41,48 @@ type Client struct {
 	HTTP    *http.Client
 }
 
+func (c Client) base() string {
+	if c.BaseURL == "" {
+		return "https://api.github.com"
+	}
+	return c.BaseURL
+}
+
+func (c Client) http() *http.Client {
+	if c.HTTP == nil {
+		return &http.Client{Timeout: 15 * time.Second}
+	}
+	return c.HTTP
+}
+
+// LatestRelease returns the tag of a repository's latest release, such as
+// v0.3.0. It needs no token.
+func (c Client) LatestRelease(ctx context.Context, repo string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base()+"/repos/"+repo+"/releases/latest", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := c.http().Do(req)
+	if err != nil {
+		return "", fmt.Errorf("couldn't reach GitHub: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub returned %s", resp.Status)
+	}
+	var rel struct {
+		Tag string `json:"tag_name"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rel); err != nil {
+		return "", fmt.Errorf("unexpected reply from GitHub: %w", err)
+	}
+	return rel.Tag, nil
+}
+
 // Check asks GitHub who the token belongs to, and when it expires.
 func (c Client) Check(ctx context.Context, token string) (TokenInfo, error) {
-	base := c.BaseURL
-	if base == "" {
-		base = "https://api.github.com"
-	}
-	hc := c.HTTP
-	if hc == nil {
-		hc = &http.Client{Timeout: 15 * time.Second}
-	}
+	base, hc := c.base(), c.http()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/user", nil)
 	if err != nil {
 		return TokenInfo{}, err

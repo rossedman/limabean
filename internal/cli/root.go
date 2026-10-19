@@ -48,6 +48,9 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			return a.setup()
 		},
+		PersistentPostRun: func(cmd *cobra.Command, _ []string) {
+			a.updateNotice(cmd)
+		},
 	}
 	root.SetVersionTemplate("limabean {{.Version}}\n")
 	setupHelp(root, a)
@@ -78,7 +81,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 	add("setup", newInitCmd(a), newConfigCmd(a), newDoctorCmd(a), newBumpCmd(a))
 	add("vms", newNewCmd(a), newUpCmd(a), newDownCmd(a), newLogsCmd(a), newPsCmd(a), newRecipesCmd(a), newRunCmd(a), newLsCmd(a), newSSHCmd(a), newGetCmd(a), newCpCmd(a), newCodeCmd(a), newPortsCmd(a), newOpenCmd(a), newPacksCmd(a), newStartCmd(a), newStopCmd(a), newRebuildCmd(a), newCloneCmd(a), newRmCmd(a), newSnapshotCmd(a), newImagesCmd(a), newAutostopCmd(a))
 	add("access", newSecretsCmd(a), newGitHubCmd(a), newNetworkCmd(a), newClaudeCmd(a), newMCPCmd(a))
-	root.AddCommand(newCompletionCmd(a), newVersionCmd(a))
+	root.AddCommand(newCompletionCmd(a), newVersionCmd(a), newUpdateCheckCmd(a))
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return &cliError{code: exitUsage, kind: "usage", err: err}
 	})
