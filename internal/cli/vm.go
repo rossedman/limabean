@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -166,12 +167,50 @@ func (a *App) limaStep(ctx context.Context, title string, fn func(context.Contex
 		return err
 	})
 	if err != nil {
-		if len(out) > 0 {
-			fmt.Fprintf(a.UI.Err, "%s\n", strings.TrimSpace(string(out)))
+		if tail := limaFailure(out); tail != "" {
+			fmt.Fprintf(a.UI.Err, "%s\n", tail)
 		}
-		return fmt.Errorf("%s: %w", strings.ToLower(title[:1])+title[1:], err)
+		step := strings.ToLower(title[:1]) + title[1:]
+		if bytes.Contains(out, []byte(limaTimedOut)) {
+			return fmt.Errorf("%s: Lima stopped waiting after %s, but the VM is still provisioning; "+
+				"follow it with: limabean logs <name> -f", step, lima.BootTimeout)
+		}
+		return fmt.Errorf("%s: %w", step, err)
 	}
 	return nil
+}
+
+// limaTimedOut is what limactl start prints when its --timeout runs out.
+const limaTimedOut = "did not receive an event with the `running` status"
+
+// limaNoise are lines of limactl's log that never explain a failure.
+var limaNoise = []string{
+	"provisioning scripts should not reference",
+	"Terminal is not available",
+	"Not forwarding ",
+	"Forwarding TCP ",
+	"Forwarding UDP ",
+}
+
+// limaFailureLines is how much of limactl's log a failure shows; the rest
+// is in the VM's ha.stderr.log.
+const limaFailureLines = 15
+
+// limaFailure is the end of limactl's output for a failed step, without
+// the lines that are always there.
+func limaFailure(out []byte) string {
+	var keep []string
+	for line := range strings.Lines(string(out)) {
+		line = strings.TrimRight(line, "\r\n")
+		if strings.TrimSpace(line) == "" || slices.ContainsFunc(limaNoise, func(n string) bool { return strings.Contains(line, n) }) {
+			continue
+		}
+		keep = append(keep, line)
+	}
+	if len(keep) > limaFailureLines {
+		keep = append([]string{"…"}, keep[len(keep)-limaFailureLines:]...)
+	}
+	return strings.Join(keep, "\n")
 }
 
 // createOptions are the choices for a new VM.

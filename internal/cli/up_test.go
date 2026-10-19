@@ -70,7 +70,7 @@ setup: |
 	// Again: the VM is there, so it's only started.
 	h.world.vms["myapp"] = "Stopped"
 	h.world.calls = nil
-	if out := h.must("", "up", "--file", file); !strings.Contains(out, "myapp is up") || h.world.called("limactl start --name=") || !h.world.called("limactl start --tty=false myapp") {
+	if out := h.must("", "up", "--file", file); !strings.Contains(out, "myapp is up") || h.world.called("limactl start --name=") || !h.world.called("limactl start --tty=false --timeout=30m0s myapp") {
 		t.Errorf("up again:\n%s\n%v", out, h.world.calls)
 	}
 }

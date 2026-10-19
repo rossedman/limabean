@@ -588,6 +588,11 @@ An opt-in `--mount` of a host directory (B) is still open.
   HEAD request for the `url` file beside it (https only): the URL is the
   templates' own image, and nothing from it runs. Parsing limactl's
   output was the alternative: it has no progress to parse.
+  For the same reason limabean passes `limactl start --timeout=30m`:
+  Lima's default of 10 minutes ran out during first boots with several
+  packs on a slow link, while the VM was still installing. On a failure
+  only the last lines of limactl's log are shown, without the lines it
+  always prints.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

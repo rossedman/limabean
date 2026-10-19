@@ -86,7 +86,7 @@ func TestMCPTools(t *testing.T) {
 	if isErr || !strings.Contains(out, "Created agent from scratch") {
 		t.Fatalf("create_vm: %v\n%s", isErr, out)
 	}
-	if !h.world.called("limactl start --name=agent --tty=false --cpus 6 --memory 12") && !strings.Contains(strings.Join(h.world.calls, "\n"), "--cpus 6 --memory 12") {
+	if !h.world.called("limactl start --name=agent --tty=false --timeout=30m0s --cpus 6 --memory 12") && !strings.Contains(strings.Join(h.world.calls, "\n"), "--cpus 6 --memory 12") {
 		t.Errorf("create_vm should pass cpus and memory: %v", h.world.calls)
 	}
 	// A sandbox: the agent can narrow a new VM's network, never widen it.

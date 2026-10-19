@@ -48,8 +48,8 @@ func TestLifecycleCommands(t *testing.T) {
 	}
 	want := []string{
 		"/opt/limactl --version",
-		"/opt/limactl start --name=dev --tty=false t.yaml",
-		"/opt/limactl start --tty=false dev",
+		"/opt/limactl start --name=dev --tty=false --timeout=30m0s t.yaml",
+		"/opt/limactl start --tty=false --timeout=30m0s dev",
 		"/opt/limactl stop dev",
 		"/opt/limactl delete --force dev",
 	}

@@ -44,8 +44,9 @@ type fakeWorld struct {
 	agentLoaded bool         // the autostop agent is loaded in launchd
 	macPorts    map[int]bool // ports that answer on the Mac's localhost
 
-	failStart bool // limactl start fails, with output
-	failStop  bool // limactl stop fails
+	failStart bool   // limactl start fails, with output
+	startOut  string // with failStart, limactl's output instead of a single line
+	failStop  bool   // limactl stop fails
 
 	limaHome       string          // where VM and disk directories live
 	disks          map[string]bool // Lima disks
@@ -117,6 +118,9 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			return []byte(b.String()), nil
 		case "start":
 			if w.failStart {
+				if w.startOut != "" {
+					return []byte(w.startOut), errors.New("exit status 1")
+				}
 				return []byte("level=fatal msg=\"boom from lima\""), errors.New("exit status 1")
 			}
 			for _, a := range args {

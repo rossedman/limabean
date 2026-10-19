@@ -96,7 +96,7 @@ probes:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 600s bash -c 'until test -f ~/.local/state/limabean/mise.done; do sleep 5; done'; then
+    if ! timeout 1800s bash -c 'until test -f ~/.local/state/limabean/mise.done; do sleep 5; done'; then
       echo >&2 "mise tools are not installed yet"
       exit 1
     fi

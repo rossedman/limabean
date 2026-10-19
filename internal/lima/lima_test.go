@@ -62,11 +62,11 @@ func TestStartArgs(t *testing.T) {
 		Sets: []string{`.mounts += [{"location":"~/.aws"}]`},
 	}
 	got := strings.Join(o.Args(), " ")
-	want := `start --name=dev --tty=false --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --disk 30 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
+	want := `start --name=dev --tty=false --timeout=30m0s --param codeDir=~/code --param gitConfigDir=~/.config/git --cpus 6 --memory 12 --disk 30 --set .mounts += [{"location":"~/.aws"}] /t/scratch.yaml`
 	if got != want {
 		t.Fatalf("got  %s\nwant %s", got, want)
 	}
-	if args := (StartOptions{Name: "x", Template: "t.yaml"}).Args(); strings.Join(args, " ") != "start --name=x --tty=false t.yaml" {
+	if args := (StartOptions{Name: "x", Template: "t.yaml"}).Args(); strings.Join(args, " ") != "start --name=x --tty=false --timeout=30m0s t.yaml" {
 		t.Fatalf("minimal args = %v", args)
 	}
 }
