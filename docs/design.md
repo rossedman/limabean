@@ -546,6 +546,26 @@ An opt-in `--mount` of a host directory (B) is still open.
   and the names from `secrets.env`. No secret value or reference goes in
   the file. It's only a description, so failing to write it warns and
   carries on.
+- **D32 Getting work out of a VM. Decided: the VM's clone as a git remote
+  of the Mac's checkout.** The VM's clone and the Mac's checkout are
+  separate copies, and pushing through GitHub just to review a change is
+  slow and needs the VM to reach GitHub. `limabean remote` adds
+  `lima-<vm>:<clone>` as a remote, so `git fetch` copies the VM's branches
+  over SSH, as `limabean ssh` reaches it, whatever the VM's network allows.
+  It runs git on the Mac, so it's a command only the user runs, never an
+  MCP tool. The clone's path comes from the VM and is data: it must be a
+  plain absolute path before it goes into the Mac's git config, the
+  remote's name can't be a flag, and the remote fetches no tags, so a VM
+  can add branches under `limabean/` and nothing else. Fetching copies
+  objects and runs nothing from the VM; checking a branch out is the
+  user's choice, as with any remote. A remote of the same name that isn't
+  a VM's is never changed or removed.
+- **D33 What a VM knows, from the Mac. Decided: `limabean info` and the
+  MCP `vm_info` tool print `limabean-info` (D31).** Claude on the Mac
+  reads the same description an agent in the VM does, instead of working
+  out the clone's path and tools by running commands. The VM's output is
+  data: `--json` passes it on only if it's JSON. A VM made before
+  limabean-info says it needs a rebuild.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

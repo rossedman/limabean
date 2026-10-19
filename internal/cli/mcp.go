@@ -341,6 +341,13 @@ func (a *App) mcpServer(allowDestructive bool) *mcp.Server {
 			}
 			return cli(ctx, "ports", "--json", "--", in.Name)
 		})
+	mcp.AddTool(s, tool("vm_info", "Show what a VM knows about itself", "As JSON, what limabean-info prints inside a running VM: its packs and tools, its network policy (what it can reach, whether it's locked), the names of its secrets (never their values) and, for a project's VM, the repository, the clone's path, the ports and where the logs are. Read it before working in a VM, instead of guessing what it has.", true, nil),
+		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
+			if err := checkNames(in.Name); err != nil {
+				return nil, nil, err
+			}
+			return cli(ctx, "info", "--json", "--", in.Name)
+		})
 	mcp.AddTool(s, tool("network_log", "Show a VM's DNS lookups", "List the names a running VM with an allowlist looked up since it started, as JSON, and whether each was allowed. When something fails to reach a host in a sandbox, the blocked name is here; the user can allow it with limabean network allow.", true, nil),
 		func(ctx context.Context, _ *mcp.CallToolRequest, in mcpVM) (*mcp.CallToolResult, any, error) {
 			if err := checkNames(in.Name); err != nil {

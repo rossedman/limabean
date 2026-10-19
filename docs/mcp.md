@@ -208,6 +208,7 @@ The same rules hold as in your terminal, plus a few for MCP:
 | `project_run` | Runs a shell command in the checkout's VM, in its clone of the repository, and returns the exit code and output |
 | `run_in_vm` | Runs a shell command in a running VM and returns the exit code and output |
 | `clone_repo` | Clones a repository into `~/code` with ghq |
+| `vm_info` | What a running VM knows about itself, as JSON: packs, tools, network, secrets' names, and the project's clone, ports and logs ([`limabean-info`](inside-a-vm.md#what-this-vm-is)) |
 | `list_ports` | Lists the ports programs in a VM listen on, and which reach `http://localhost:<port>` on the Mac |
 | `network_log` | Lists the names a sandboxed VM looked up, and which its allowlist [blocked](network.md#whats-allowed) |
 | `snapshot_save`, `snapshot_list` | Saves and lists [snapshots](lifecycle.md#snapshots) |

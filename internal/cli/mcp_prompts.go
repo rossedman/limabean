@@ -44,7 +44,7 @@ var mcpPrompts = []mcpPrompt{
 
 1. If it has no .limabean.yaml, draft one with project_init and show it to me. Suggest a network locked to what the project needs (github, plus its package registries), and write the file only once I agree.
 2. Show me project_plan's output, then bring the VM up with project_up.
-3. Work out the test command from the repository (its Makefile, package.json, go.mod, pyproject.toml and the like) and run it with project_run.
+3. Check what the VM has with vm_info, work out the test command from the repository (its Makefile, package.json, go.mod, pyproject.toml and the like) and run it with project_run.
 4. Report what passed and what failed, with the failures' output. If setup or a test failed because something was blocked, say what.`, a["dir"])
 		},
 	},
@@ -83,7 +83,7 @@ var mcpPrompts = []mcpPrompt{
 1. Make sure its VM is up (project_status; project_up if it isn't, showing me project_plan first).
 2. Save a snapshot with snapshot_save before changing anything.
 3. Make the change in the VM's clone with project_run, then run the tests there.
-4. Show me git diff from the clone, and the test results.
+4. Commit it on a new branch in the clone, and show me git diff and the test results. Tell me I can review it on my Mac with: limabean remote && git fetch limabean
 5. If it didn't work, explain why, and give me the limabean snapshot restore command to roll the VM back.`, a["dir"], a["change"])
 		},
 	},

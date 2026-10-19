@@ -13,6 +13,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean recipes [name]` | Lists the starter [recipes](recipes.md), or writes one to `.limabean.yaml` here (`--print` to show it, `--overwrite` to replace a project file) |
 | `limabean up [name] [env]` | Brings a VM up. In a project, without a name (or with the project's): creates the VM its [`.limabean.yaml`](projects.md) describes (clones the repository, turns on its Claude plugins, runs its setup), or starts it and [applies the file's changes](projects.md#changing-the-file), then runs its [`start`](projects.md#start) in the background; `--setup` runs the setup again, and `--preview` shows what `up` would create or change without changing anything. With another name: starts that VM, adding it back to Claude Desktop, or creates it; in a terminal a form asks which [packs](packs.md) and secrets it gets, `--with`/`--without` choose packs instead, `--allow`, `--locked` and `--learn` set its [network policy](network.md), and `--ttl` [deletes it later](lifecycle.md#throwaway-vms) |
 | `limabean ps` | Shows the project's VM: running or not, whether its `start` runs, the ports in it and whether each reaches your Mac, and what `up` would change; `--json` for scripts |
+| `limabean info [name]` | Shows what [`limabean-info`](inside-a-vm.md#what-this-vm-is) prints in a running VM: packs, tools, network, secrets' names, and the project's clone, ports and logs; `--json` for scripts |
 | `limabean logs [name]` | Shows the end of the VM's provisioning log, or with `--setup` / `--start` its project's setup or start output, or with `--lima` Lima's own log on the Mac; `-n` lines, `-f` to follow |
 | `limabean down [name]` | Stops the project's VM, or the one named, and removes it from Claude Desktop until it starts again; `--idle 2h` stops only VMs [nobody is using](lifecycle.md#idle-vms-stop-by-themselves) |
 | `limabean run [flags] -- <cmd>` | Creates a VM, runs one command in it (in a fresh clone with `--repo`), and with `--rm` deletes it after; exits with the command's status ([details](lifecycle.md#throwaway-vms)) |
@@ -22,6 +23,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
 | `limabean cp <src>… <dst>` | Copies files between the Mac and VMs; VM paths are `<vm>:<path>`, `-r` for directories |
 | `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code (or Insiders), Cursor, Windsurf, VSCodium or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor, and a missing Remote - SSH extension is offered for install |
+| `limabean remote [name]` | Adds the VM's clone of the repository you're in as a git remote of your Mac checkout (`limabean` by default, `--name` for another), so `git fetch limabean` brings its branches to the Mac without pushing them to GitHub; branches only, no tags; `--rm` removes it ([details](projects.md#review-on-your-mac)) |
 | `limabean ports [name]` | Lists the TCP ports programs in the VM listen on and whether each reaches your Mac's localhost; `--json` for scripts |
 | `limabean open [name] [port]` | Opens `http://localhost:<port>` in your browser; without a port, the VM's only forwarded one, or a picker |
 | `limabean rebuild [name]` | Recreates the VM from the current templates, keeping its environment, packs (`--with`/`--without` change them), secrets and, on its own disk, `~/code` |
@@ -41,7 +43,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean help [command]` | Shows help; `--json` prints the command tree, with every command's usage and flags, for scripts and agents |
 
 Leave out a VM name and you pick one from a list. Inside a project, `ssh`,
-`code`, `get`, `open`, `ports`, `network ls` and `snapshot save`/`ls` use
+`code`, `get`, `info`, `remote`, `open`, `ports`, `network ls` and `snapshot save`/`ls` use
 [the project's VM](projects.md#every-day) instead; `rm`, `rebuild` and
 `snapshot restore` always need a name.
 

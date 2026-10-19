@@ -39,6 +39,7 @@ type fakeWorld struct {
 	activity map[string]string // VM → what stop --idle's check prints
 	lookups  string            // what the DNS log count prints in every VM
 	infoErr  bool              // writing vm.json fails
+	info     string            // what limabean-info prints in every VM; "" for none
 
 	agentLoaded bool         // the autostop agent is loaded in launchd
 	macPorts    map[int]bool // ports that answer on the Mac's localhost
@@ -268,6 +269,11 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 				return []byte("running\n"), nil
 			}
 			return nil, nil
+		case strings.Contains(remote, "command -v limabean-info"):
+			if w.info == "" {
+				return []byte(noInfo + "\n"), nil
+			}
+			return []byte(w.info), nil
 		case remote == "ss -ltnpH":
 			return []byte(w.ss), nil
 		case strings.HasPrefix(remote, "ghq list -p "):

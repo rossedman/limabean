@@ -146,7 +146,8 @@ limabean up --setup              # runs the setup again, in the clone
     files there with commands, and runs the tests there too. For a long
     editing session inside the VM, open it as an
     [SSH connection in Claude Desktop](claude-desktop.md) instead, where
-    every tool works in the VM.
+    every tool works in the VM. Step 6 brings the VM's work to your Mac's
+    checkout with `limabean remote`.
 
 Claude calls `snapshot_save` first (the VM shuts down for a few seconds and
 starts again), so the change can be rolled back. Then, with `project_run`,
@@ -199,9 +200,20 @@ If anything had gone wrong, you'd roll back from your terminal:
 limabean snapshot restore limabean
 ```
 
-## 6. Review and push, from the VM
+## 6. Review it on your Mac, and push
 
-The change is in the VM's clone. Look at it and push a branch from there:
+The change is in the VM's clone. Ask Claude to commit it on a branch
+(`zig-pack`), then bring it to your Mac's checkout with
+[`limabean remote`](projects.md#review-on-your-mac), which adds the VM's
+clone as a git remote:
+
+```bash
+limabean remote                    # once: the remote "limabean"
+git fetch limabean
+git diff main...limabean/zig-pack  # review in your own tools
+```
+
+Or look at it where it is:
 
 ```bash
 limabean code rossedman/limabean   # opens the VM's clone in VS Code, Cursor or another editor
@@ -209,8 +221,9 @@ limabean ssh                       # or a shell in the VM's clone
 limabean ssh -- git diff           # or one command there
 ```
 
-Inside the checkout, both pick the project's VM without a name, and `ssh`
-works in its clone. In the VM,
+Inside the checkout, these pick the project's VM without a name, and `ssh`
+works in its clone. Push from the Mac, as you always do, or from the VM:
+there,
 `git push` goes through your forwarded SSH agent (or your
 [GitHub token](github.md)), so a branch can be pushed without your keys
 ever entering it; GitHub is on this VM's allowlist.
