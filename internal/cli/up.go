@@ -340,6 +340,7 @@ func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upO
 	} else {
 		a.UI.Warn("No repository to clone: the checkout has no origin, and the file names no repo")
 	}
+	a.writeVMInfo(ctx, inst, f, repo, clone)
 	a.upClaude(ctx, inst, f.Claude)
 	if err := a.upSetup(inst, f, clone); err != nil {
 		return err

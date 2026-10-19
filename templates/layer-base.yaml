@@ -68,6 +68,10 @@ provision:
   file: ./files/limabean-github-git
   permissions: 755
 - mode: data
+  path: /usr/local/bin/limabean-info
+  file: ./files/limabean-info
+  permissions: 755
+- mode: data
   path: "{{.Home}}/.zshenv"
   content: |
     . "$HOME/.config/limabean/env.sh"

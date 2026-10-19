@@ -38,6 +38,7 @@ type fakeWorld struct {
 	latest   map[string]string // mise latest <spec> answers, on the Mac or in a VM
 	activity map[string]string // VM → what stop --idle's check prints
 	lookups  string            // what the DNS log count prints in every VM
+	infoErr  bool              // writing vm.json fails
 
 	agentLoaded bool         // the autostop agent is loaded in launchd
 	macPorts    map[int]bool // ports that answer on the Mac's localhost
@@ -241,6 +242,12 @@ func (w *fakeWorld) Output(ctx context.Context, stdin io.Reader, _ bool, name st
 			return []byte(w.logText), nil
 		case strings.Contains(remote, "project.env.new"):
 			w.sshStdin[vm+".env"] = in
+			return nil, nil
+		case strings.Contains(remote, "vm.json"):
+			if w.infoErr {
+				return []byte("no space left"), errors.New("exit status 1")
+			}
+			w.sshStdin[vm+".json"] = in
 			return nil, nil
 		case strings.HasPrefix(remote, `rm -f "$HOME/.config/limabean/project.env"`):
 			delete(w.sshStdin, vm+".env")

@@ -332,6 +332,7 @@ func (a *App) create(ctx context.Context, o createOptions) error {
 		}
 		a.UI.OK("Network: %s", policy.summary())
 	}
+	a.writeVMInfo(ctx, inst, nil, "", "")
 	a.claudeAdd(o.Name)
 	return nil
 }

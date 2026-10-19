@@ -15,7 +15,7 @@ paths:
   nothing to do: check before installing (`dpkg -s`, `command -v`, a stamp
   file), never assume a first boot.
 - Scripts start with `set -eux -o pipefail` and must pass `shellcheck`
-  (`env.sh` and `limabean-github-git` as `sh`). Lima's `PARAM_*` and
+  (`env.sh`, `limabean-github-git` and `limabean-info` as `sh`). Lima's `PARAM_*` and
   `LIMA_CIDATA_*` variables need `# shellcheck disable=SC2154`.
 - `limabean-network` runs as root and changes the VM's firewall and DNS; its
   allowlist mode can't be exercised in a container (it would firewall the
