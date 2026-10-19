@@ -30,6 +30,7 @@ With --idle, only VMs nobody has used for that long are stopped, and
 without a name every running VM is checked. A VM is in use while:
   - a terminal in it (a shell, tmux, limabean ssh) had input or output
   - Claude Desktop or an editor is connected to it
+  - Claude Code is running in it, e.g. a headless claude -p
   - its 5-minute load average is 1 or more, e.g. a build or busy containers
   - it started less than that long ago
 "limabean autostop on" runs this every few minutes.`,

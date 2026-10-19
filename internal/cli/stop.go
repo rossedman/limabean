@@ -157,6 +157,10 @@ type vmActivity struct {
 // something is using it right now, why. Times come from the VM's own clock,
 // so the Mac's doesn't need to agree with it. A terminal's access and
 // modification times are when it last had input and output, as for w(1).
+// Claude Code running in the VM counts as use: a headless claude -p can work
+// for a long time without printing, and without much load while it thinks.
+// It's matched as a program called claude (claudeCodeRE), so ~/.claude
+// paths don't count.
 const idleScript = `now=$(date +%s)
 last=$((now - $(cut -d. -f1 /proc/uptime)))
 for t in /dev/pts/[0-9]*; do
@@ -168,9 +172,14 @@ done
 busy=
 if pgrep -u "$(id -u)" -f '[.]claude/remote' >/dev/null; then busy="Claude is connected"
 elif pgrep -u "$(id -u)" -f '[.](vscode|cursor|windsurf)(-insiders)?-server' >/dev/null; then busy="an editor is connected"
+elif pgrep -u "$(id -u)" -f '` + claudeCodeRE + `' >/dev/null; then busy="Claude Code is running"
 elif awk '{ exit !($2 >= 1) }' /proc/loadavg; then busy="load average $(cut -d' ' -f2 /proc/loadavg)"
 fi
 echo "$now $last $busy"`
+
+// claudeCodeRE matches the command line of a running Claude Code, however
+// it was installed: a program, or a script node runs, whose name is claude.
+const claudeCodeRE = `(^|/)claude( |$)`
 
 // idleState runs idleScript in a running VM.
 func (a *App) idleState(ctx context.Context, inst lima.Instance) (vmActivity, error) {
