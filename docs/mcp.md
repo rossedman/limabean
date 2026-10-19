@@ -89,6 +89,7 @@ Claude picks the tools; you describe the task.
 
 Repositories go to `~/code/<host>/<owner>/<repo>` in the VM, so after
 `clone_repo` Claude runs commands with `cd ~/code/github.com/acme/api && …`.
+For a checkout with a `.limabean.yaml`, `project_run` does that for it.
 
 ## Sandboxes for a task
 
@@ -138,7 +139,9 @@ tests passing"*. The project tools take the checkout's absolute path:
 3. `project_up` does it. Claude Code asks you before **every** call, so you
    approve with the plan in front of you. Changed `start` commands count as
    approved when you say yes.
-4. `project_status`, `project_logs` and `project_down` check on it, read its
+4. `project_run` runs a command in the VM's clone of the repository, such
+   as the tests, without Claude working out where the clone is.
+5. `project_status`, `project_logs` and `project_down` check on it, read its
    provisioning, setup or start output, and stop it.
 
 The same rules hold as in your terminal, plus a few for MCP:
@@ -171,6 +174,7 @@ The same rules hold as in your terminal, plus a few for MCP:
 | `create_vm` | Creates a VM: name, and optionally environment, CPUs, memory, `with` (the [packs](packs.md) the task needs; without it, only core and the `PACKS` setting's), `allow`, `locked`, and `ttl` to have it deleted later. It gets your shared secrets |
 | `clone_vm` | Copies a VM in seconds, `~/code` and all ([clones](lifecycle.md#clones)) |
 | `start_vm`, `stop_vm` | Starts or stops a VM |
+| `project_run` | Runs a shell command in the checkout's VM, in its clone of the repository, and returns the exit code and output |
 | `run_in_vm` | Runs a shell command in a running VM and returns the exit code and output |
 | `clone_repo` | Clones a repository into `~/code` with ghq |
 | `list_ports` | Lists the ports programs in a VM listen on, and which reach `http://localhost:<port>` on the Mac |

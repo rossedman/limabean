@@ -18,7 +18,7 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean run [flags] -- <cmd>` | Creates a VM, runs one command in it (in a fresh clone with `--repo`), and with `--rm` deletes it after; exits with the command's status ([details](lifecycle.md#throwaway-vms)) |
 | `limabean packs` | Lists the [packs](packs.md) of tools a VM can get; `--json` for scripts |
 | `limabean ls` | Lists VMs with status, environment, size, number of secrets, network and SSH host, and when throwaway ones expire; `--json` prints them for scripts |
-| `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first |
+| `limabean ssh [name] [cmd…]` | Opens a shell or runs a command, starting a stopped VM first; in a project's checkout, in the VM's clone of the repository (`limabean ssh -- make test`) |
 | `limabean get [name] <repo>` | Clones a repository into `~/code` with ghq; flags after the VM name (like `-p`) go to ghq |
 | `limabean cp <src>… <dst>` | Copies files between the Mac and VMs; VM paths are `<vm>:<path>`, `-r` for directories |
 | `limabean code [name] [repo]` | Opens the VM's `~/code`, or one clone in it, in VS Code (or Insiders), Cursor, Windsurf, VSCodium or another editor with VS Code's `--remote` flag, over SSH; `--ide` picks the editor, and a missing Remote - SSH extension is offered for install |

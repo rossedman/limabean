@@ -149,8 +149,9 @@ limabean up --setup              # runs the setup again, in the clone
     every tool works in the VM.
 
 Claude calls `snapshot_save` first (the VM shuts down for a few seconds and
-starts again), so the change can be rolled back. Then, with `run_in_vm`, it
-writes `templates/packs/zig.toml` in the clone:
+starts again), so the change can be rolled back. Then, with `project_run`,
+which runs commands in the VM's clone of the repository, it writes
+`templates/packs/zig.toml`:
 
 ```toml
 # Zig and its language server.
@@ -163,7 +164,7 @@ adds a row for it to `docs/packs.md`, as CONTRIBUTING.md asks, and runs the
 tests:
 
 ```
-cd ~/code/github.com/rossedman/limabean && go test ./...
+go test ./...
 ```
 
 One fails:
@@ -204,10 +205,12 @@ The change is in the VM's clone. Look at it and push a branch from there:
 
 ```bash
 limabean code rossedman/limabean   # opens the VM's clone in VS Code, Cursor or another editor
-limabean ssh                       # or a shell in the VM
+limabean ssh                       # or a shell in the VM's clone
+limabean ssh -- git diff           # or one command there
 ```
 
-Inside the checkout, both pick the project's VM without a name. In the VM,
+Inside the checkout, both pick the project's VM without a name, and `ssh`
+works in its clone. In the VM,
 `git push` goes through your forwarded SSH agent (or your
 [GitHub token](github.md)), so a branch can be pushed without your keys
 ever entering it; GitHub is on this VM's allowlist.

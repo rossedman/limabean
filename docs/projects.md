@@ -108,7 +108,8 @@ in it, without naming the VM:
 
 ```bash
 limabean up                      # create the VM, or start it and apply the file's changes
-limabean ssh                     # a shell
+limabean ssh                     # a shell, in the VM's clone of the repository
+limabean ssh -- make test        # a command, run there
 limabean code                    # VS Code, Cursor or another editor, over SSH
 limabean ps                      # is it running, is start, which ports, what changed
 limabean logs --start -f         # follow what start is running
@@ -119,6 +120,11 @@ limabean down                    # stop it; everything in it is kept
 `snapshot ls` use the project's VM when you don't name one; name another
 VM to use it instead. `rm`, `rebuild` and `snapshot restore` always need
 the name, so nothing is deleted or rolled back by accident.
+
+In the checkout, `ssh` works in the VM's clone (`~/code/<host>/<owner>/<repo>`)
+rather than the home directory, so `limabean ssh -- go test ./...` runs the
+tests there. The clone is separate from your checkout on the Mac: changes
+made in one stay there until they're pushed.
 
 `down` only stops the VM. `limabean rm myapp` deletes it.
 
