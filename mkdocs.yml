@@ -23,6 +23,8 @@ nav:
   - Get started: getting-started.md
   - Claude:
       - "Walkthrough: a change in a sandbox": walkthrough.md
+      - "Agents in a VM: tmux and headless runs": agents.md
+      - Agent patterns: agent-patterns.md
       - Claude and MCP: mcp.md
       - Claude Desktop SSH connections: claude-desktop.md
   - Guides:

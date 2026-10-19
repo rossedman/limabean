@@ -265,5 +265,5 @@ Claude Code asks you each time.
   destructive ones.
 - [Projects](projects.md): every key of `.limabean.yaml`, and editor
   support.
-- [The `claude-agent` recipe](recipes.md): a locked VM with Claude Code
-  inside it, for agents that work on their own.
+- [Agents in a VM](agents.md): Claude Code inside a locked VM, in tmux,
+  headless, in throwaway VMs and side by side.

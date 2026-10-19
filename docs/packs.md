@@ -70,7 +70,8 @@ limabean ssh agent 'cd ~/code/github.com/me/app && claude -p "fix the failing te
 ```
 
 With [`limabean run --rm`](lifecycle.md#throwaway-vms), the VM is gone when
-the task is done.
+the task is done. [Agents in a VM](agents.md) covers running Claude there
+interactively in tmux, in the background and side by side.
 
 ## Packs for every new VM
 
