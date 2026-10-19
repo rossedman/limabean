@@ -55,7 +55,7 @@ func (a *App) doctorProject(ctx context.Context) bool {
 		a.UI.OK("%s loads, and its packs, network and secrets are all here", shortPath(path))
 	}
 	if b, err := os.ReadFile(path); err == nil && !strings.Contains(string(b), "yaml-language-server") {
-		a.UI.Hint("Your editor can check it as you type: https://rossedman.github.io/limabean/projects/#editor-support")
+		a.UI.Hint("Your editor can check it as you type: https://rossedman.io/limabean/projects/#editor-support")
 	}
 
 	switch inst, exists, err := a.Lima.Get(ctx, f.Name); {
