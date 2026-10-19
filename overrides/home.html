@@ -126,7 +126,10 @@
           <li>{% include ".icons/material/key-chain-variant.svg" %} Claude never sees secret values</li>
           <li>{% include ".icons/material/shield-lock-outline.svg" %} Locked sandboxes it can't widen</li>
         </ul>
-        <a class="lb-btn lb-btn--primary" href="{{ 'mcp/' | url }}">Set up Claude {% include ".icons/material/arrow-right.svg" %}</a>
+        <div class="lb-cta">
+          <a class="lb-btn lb-btn--primary" href="{{ 'mcp/' | url }}">Set up Claude {% include ".icons/material/arrow-right.svg" %}</a>
+          <a class="lb-btn" href="{{ 'walkthrough/' | url }}">{% include ".icons/material/book-open-page-variant-outline.svg" %} Walkthrough</a>
+        </div>
       </div>
       <div class="lb-chat" aria-label="An example: Claude creating a sandbox VM through limabean's MCP tools">
         <div class="lb-chat__you">Make a locked VM that can only reach GitHub and PyPI, clone acme/scraper and get its tests passing.</div>

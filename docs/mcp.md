@@ -13,6 +13,9 @@ That's the whole setup for Claude Code. Then ask for something like:
 
 > Make a VM called scratch, clone rossedman/limabean into it, and run the tests.
 
+To see a whole task through, from drafting a project file to a fix you can
+push, follow the [walkthrough](walkthrough.md).
+
 !!! tip "MCP or an SSH connection?"
     They work together. **MCP** lets Claude, running on your Mac, manage VMs
     and run commands in them. An **SSH connection**, which `limabean up`
