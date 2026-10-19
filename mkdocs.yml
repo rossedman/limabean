@@ -22,6 +22,7 @@ nav:
   - Home: index.md
   - Get started: getting-started.md
   - Claude:
+      - "Walkthrough: a change in a sandbox": walkthrough.md
       - Claude and MCP: mcp.md
       - Claude Desktop SSH connections: claude-desktop.md
   - Guides:
