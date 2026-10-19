@@ -501,6 +501,19 @@ An opt-in `--mount` of a host directory (B) is still open.
   what `setup`'s `cd` means. `doctor` gains a Project section for what the
   schema can't know: whether the packs, presets and secrets exist on this
   Mac, and whether the VM matches the file.
+- **D28 The project's VM by default, and update notices. Decided: commands
+  that connect or read default to the project's VM; ones that destroy
+  don't.** Inside a checkout, `ssh`, `code`, `get`, `open`, `ports`,
+  `network ls` and `snapshot save`/`ls` use its VM when none is named,
+  while `rm`, `rebuild` and `snapshot restore` still need a name, so a
+  script run in a checkout never deletes or rolls back a VM it didn't
+  name. Once a day, a command in a terminal starts `update-check` in the
+  background, which asks GitHub for the latest release; the next command
+  says when it's newer. It never blocks a command, never prints in
+  scripts, `--json`, `-q` or MCP, and `UPDATE_CHECK=no` turns it off. The
+  reply is data: a tag that isn't a version is refused before it's stored
+  or shown. `project_init` gives Claude `init --project --print` for a git
+  checkout only, so it can't read around the Mac.
 - **D5 vmType. Decided: `vz`, with Rosetta.** `layer-os.yaml` sets
   `vmOpts.vz.rosetta` with `binfmt: true`, so x86_64 binaries and
   `linux/amd64` containers run on Apple Silicon without a prefix (Lima

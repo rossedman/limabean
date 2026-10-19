@@ -6,7 +6,7 @@ help: `limabean <command> --help` explains it and shows examples.
 
 | Command | What it does |
 |---|---|
-| `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor`. `--project` writes a [`.limabean.yaml`](projects.md#your-first-project-file) for the repository you're in instead, from what's in it (`--print` to show it, `--overwrite` to replace one) |
+| `limabean init` | Walks through first-time setup (git config directory, code directory, the SSH `Include`, an optional GitHub token), then runs `doctor`. `--project` writes a [`.limabean.yaml`](projects.md#your-first-project-file) for the repository you're in instead, from what's in it (`--print` to show it, `--overwrite` to replace one, `--dir` for another checkout) |
 | `limabean config` | Shows every setting, its value, and whether it came from a flag, a `LIMABEAN_*` variable, the config file or the default (`--json` for scripts) |
 | `limabean doctor` | Checks Lima, the SSH `Include` and its position, agent keys, git config, Claude Desktop, the GitHub token and every secret reference; in a project, that its file's packs, network presets and secrets exist on this Mac, and whether its VM matches it |
 | `limabean bump [file…]` | Updates the pinned versions in mise TOML files (default `templates/packs/*.toml`) within each major, with `mise latest` on the Mac or `--vm` |
@@ -40,7 +40,10 @@ help: `limabean <command> --help` explains it and shows examples.
 | `limabean version` | Prints the version (`--json` for scripts) |
 | `limabean help [command]` | Shows help; `--json` prints the command tree, with every command's usage and flags, for scripts and agents |
 
-Leave out a VM name and you pick one from a list.
+Leave out a VM name and you pick one from a list. Inside a project, `ssh`,
+`code`, `get`, `open`, `ports`, `network ls` and `snapshot save`/`ls` use
+[the project's VM](projects.md#every-day) instead; `rm`, `rebuild` and
+`snapshot restore` always need a name.
 
 ## Interactive and plain mode
 
@@ -72,6 +75,10 @@ missing names are errors, and questions take their defaults.
 - `-q`/`--quiet` prints only errors, and the data a command returns.
   `-v`/`--verbose` also prints each `limactl` and ssh command limabean runs;
   with both, `--verbose` wins.
+- **New releases**: once a day, in a terminal, limabean checks GitHub for a
+  newer release in the background and says so after a command:
+  `limabean 0.4.0 is out: brew upgrade limabean`. Never in scripts,
+  `--json`, `-q` or MCP; `UPDATE_CHECK=no` turns it off.
 - `limabean help --json` describes every command and flag, and
   `limabean version --json` the version, Go version and platform.
 
@@ -140,6 +147,7 @@ AWS_DIR="~/.aws"                 # mounted read-only at ~/.aws in VMs if it exis
 PACKS=""                         # packs every new VM gets besides core; empty: none (new asks);
                                  # flag: up --with/--without; project files ignore it
 IMAGES="yes"                     # copy new VMs from a provisioned image; no: provision each one
+UPDATE_CHECK="yes"               # say in a terminal when a newer limabean is out; no: never check
 IDE=""                           # editor limabean code opens: code, code-insiders, cursor, windsurf, codium, …;
                                  # empty: the first installed; flag: code --ide
 ```

@@ -60,6 +60,7 @@ type fakeWorld struct {
 	attachErr      error             // what commands run on the terminal return
 	failDelete     bool              // limactl delete fails
 	spawnErr       error             // starting a background build fails
+	latestRelease  string            // GitHub's latest limabean release tag
 	claudeErr      bool              // up's Claude plugins fail
 	logText        string            // what tail prints in a VM
 	logErr         bool              // tail fails, as without sudo or a log
@@ -328,12 +329,13 @@ func (w *fakeWorld) Delete(s string) error {
 var repoRoot, _ = filepath.Abs(filepath.Join("..", ".."))
 
 type harness struct {
-	t      *testing.T
-	world  *fakeWorld
-	dir    string // config dir
-	claude string // settings.json
-	bin    string // on PATH: stand-ins for programs
-	github *httptest.Server
+	t       *testing.T
+	world   *fakeWorld
+	dir     string // config dir
+	claude  string // settings.json
+	bin     string // on PATH: stand-ins for programs
+	github  *httptest.Server
+	version string // the App's version; "test" when empty
 }
 
 func newHarness(t *testing.T) *harness {
@@ -342,6 +344,10 @@ func newHarness(t *testing.T) *harness {
 	h := &harness{t: t, world: newFakeWorld(), dir: filepath.Join(dir, "config"), claude: filepath.Join(dir, "claude", "settings.json")}
 	h.world.limaHome = filepath.Join(dir, "lima")
 	h.github = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/repos/rossedman/limabean/releases/latest" && h.world.latestRelease != "" {
+			_, _ = w.Write([]byte(`{"tag_name":"` + h.world.latestRelease + `"}`))
+			return
+		}
 		if r.Header.Get("Authorization") == "Bearer github_pat_good" {
 			_, _ = w.Write([]byte(`{"login":"octocat"}`))
 			return
@@ -424,7 +430,7 @@ func (h *harness) runUI(u *ui.UI, out *bytes.Buffer, stdin string, args ...strin
 
 // app returns an App wired to the fake world.
 func (h *harness) app(u *ui.UI) *App {
-	a := NewApp("test", os.DirFS(repoRoot))
+	a := NewApp(firstNonEmpty(h.version, "test"), os.DirFS(repoRoot))
 	a.UI = u
 	a.execSSH = func(inst lima.Instance, command ...string) error {
 		h.world.calls = append(h.world.calls, "exec ssh "+inst.Name+" "+strings.Join(command, " "))

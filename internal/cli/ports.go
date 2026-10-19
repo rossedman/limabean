@@ -44,7 +44,7 @@ Leave out the name to pick a VM from a list.`,
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			name, err := a.vmArg(ctx, args, "list ports of")
+			name, err := a.projectVMArg(ctx, args, "list ports of")
 			if err != nil {
 				return err
 			}

@@ -103,17 +103,22 @@ already have the line that turns it on.
 
 ## Every day
 
-Like `docker compose`, `up` and `down` work from the checkout, wherever you
-are in it:
+Like `docker compose`, commands work from the checkout, wherever you are
+in it, without naming the VM:
 
 ```bash
 limabean up                      # create the VM, or start it and apply the file's changes
-limabean ssh myapp               # a shell
-limabean code myapp              # VS Code, Cursor or another editor, over SSH
+limabean ssh                     # a shell
+limabean code                    # VS Code, Cursor or another editor, over SSH
 limabean ps                      # is it running, is start, which ports, what changed
 limabean logs --start -f         # follow what start is running
 limabean down                    # stop it; everything in it is kept
 ```
+
+`ssh`, `code`, `get`, `open`, `ports`, `network ls`, `snapshot save` and
+`snapshot ls` use the project's VM when you don't name one; name another
+VM to use it instead. `rm`, `rebuild` and `snapshot restore` always need
+the name, so nothing is deleted or rolled back by accident.
 
 `down` only stops the VM. `limabean rm myapp` deletes it.
 

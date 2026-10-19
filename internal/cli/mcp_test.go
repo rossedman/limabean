@@ -73,7 +73,7 @@ func TestMCPTools(t *testing.T) {
 	h := newHarness(t)
 	cs, stdout := h.mcpClient(false)
 
-	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "project_down", "project_logs", "project_plan", "project_status", "project_up", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
+	safe := []string{"clone_repo", "clone_vm", "create_vm", "list_ports", "list_vms", "network_log", "project_down", "project_init", "project_logs", "project_plan", "project_status", "project_up", "run_in_vm", "snapshot_list", "snapshot_save", "start_vm", "stop_vm"}
 	if got := toolNames(t, cs); !slices.Equal(got, safe) {
 		t.Fatalf("tools without --allow-destructive: %v", got)
 	}

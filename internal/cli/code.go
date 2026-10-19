@@ -111,10 +111,10 @@ func (a *App) codeArgs(ctx context.Context, args []string) (name, repo string, e
 		if _, ok, err := a.Lima.Get(ctx, args[0]); err != nil || ok {
 			return args[0], "", err
 		}
-		name, err := a.vmArg(ctx, nil, "open "+args[0]+" from")
+		name, err := a.projectVMArg(ctx, nil, "open "+args[0]+" from")
 		return name, args[0], err
 	}
-	name, err = a.vmArg(ctx, nil, "open")
+	name, err = a.projectVMArg(ctx, nil, "open")
 	return name, "", err
 }
 

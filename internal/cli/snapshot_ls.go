@@ -22,7 +22,7 @@ it includes ~/code (VMs without a code disk only have their system saved).`,
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			name, err := a.vmArg(ctx, args, "list snapshots of")
+			name, err := a.projectVMArg(ctx, args, "list snapshots of")
 			if err != nil {
 				return err
 			}

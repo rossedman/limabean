@@ -13,18 +13,25 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
-// initProject writes a project file for the repository in the current
-// directory, from what Detect finds there.
-func (a *App) initProject(toStdout, overwrite bool) error {
-	wd, err := os.Getwd()
+// initProject writes a project file for the repository in dir (the
+// current directory when ""), from what Detect finds there.
+func (a *App) initProject(dir string, toStdout, overwrite bool) error {
+	if dir == "" {
+		dir = "."
+	}
+	wd, err := filepath.Abs(dir)
 	if err != nil {
 		return err
 	}
-	target := project.FileName
-	for _, f := range project.FileNames {
+	if fi, err := os.Stat(wd); err != nil || !fi.IsDir() {
+		return notFoundErr("%s isn't a directory", wd)
+	}
+	target := filepath.Join(wd, project.FileName)
+	for _, name := range project.FileNames {
+		f := filepath.Join(wd, name)
 		if _, err := os.Stat(f); err == nil {
 			if !overwrite && !toStdout {
-				return conflictErr("%s is already here; limabean up uses it, and --overwrite replaces it", f)
+				return conflictErr("%s is already there; limabean up uses it, and --overwrite replaces it", shortPath(f))
 			}
 			target = f
 		} else if !errors.Is(err, fs.ErrNotExist) {
@@ -53,7 +60,7 @@ func (a *App) initProject(toStdout, overwrite bool) error {
 	}
 	body := d.Render()
 	// The draft must be a file up accepts; anything else is limabean's bug.
-	if _, err := project.Parse([]byte(body), filepath.Join(wd, target)); err != nil {
+	if _, err := project.Parse([]byte(body), target); err != nil {
 		return fmt.Errorf("the project file worked out for this repository doesn't load (please report it): %w", err)
 	}
 	if toStdout {
@@ -69,9 +76,9 @@ func (a *App) initProject(toStdout, overwrite bool) error {
 		a.UI.Hint(d.Found()...)
 	}
 	if a.UI.Prompting {
-		a.UI.Section(target, "")
+		a.UI.Section(filepath.Base(target), "")
 		a.UI.Hint(strings.Split(strings.TrimRight(body, "\n"), "\n")...)
-		ok, err := a.UI.Confirm("Write "+target+"?", true)
+		ok, err := a.UI.Confirm("Write "+shortPath(target)+"?", true)
 		if err != nil {
 			return err
 		}
@@ -83,7 +90,7 @@ func (a *App) initProject(toStdout, overwrite bool) error {
 	if err := atomic.WriteFile(target, []byte(body), 0o644); err != nil {
 		return err
 	}
-	a.UI.OK("Wrote %s", a.UI.Code(filepath.Join(shortPath(wd), target)))
+	a.UI.OK("Wrote %s", a.UI.Code(shortPath(target)))
 	if len(d.Secrets) > 0 {
 		a.UI.Hint("Uncomment secrets: once they're set up: limabean secrets set NAME")
 	}

@@ -28,7 +28,7 @@ under a name that's taken replaces that snapshot.`,
 		ValidArgsFunction: a.completeVMs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			name, err := a.vmArg(ctx, args, "snapshot")
+			name, err := a.projectVMArg(ctx, args, "snapshot")
 			if err != nil {
 				return err
 			}

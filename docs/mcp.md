@@ -125,13 +125,17 @@ When a checkout has a [`.limabean.yaml`](projects.md), Claude can use it the
 way you use `limabean up`: *"bring up the VM for ~/src/shop and get its
 tests passing"*. The project tools take the checkout's absolute path:
 
-1. `project_plan` shows what `up` would do: a new VM's packs, size,
+1. Without a file yet, `project_init` drafts one from the checkout's files,
+   as [`limabean init --project`](projects.md#your-first-project-file)
+   does. It only reads and writes nothing: Claude shows you the draft, and
+   writes it as `.limabean.yaml` once you agree.
+2. `project_plan` shows what `up` would do: a new VM's packs, size,
    network, environment, setup and start commands, or what differs from an
    existing one. Claude should show you this first.
-2. `project_up` does it. Claude Code asks you before **every** call, so you
+3. `project_up` does it. Claude Code asks you before **every** call, so you
    approve with the plan in front of you. Changed `start` commands count as
    approved when you say yes.
-3. `project_status`, `project_logs` and `project_down` check on it, read its
+4. `project_status`, `project_logs` and `project_down` check on it, read its
    provisioning, setup or start output, and stop it.
 
 The same rules hold as in your terminal, plus a few for MCP:
@@ -143,6 +147,9 @@ The same rules hold as in your terminal, plus a few for MCP:
 - Only the directory's own `.limabean.yaml` is read: not a parent
   directory's, not a symlink, not any other path, so a tool call can't make
   limabean read something else on your Mac.
+- `project_init` takes only a git checkout's directory, and what it reads
+  there only shapes the draft (pack names, commands from a fixed list,
+  names that pass the file's checks); no file's contents come back.
 - The checkout's origin is read from `.git/config` as a file; git doesn't
   run on the Mac.
 - Setup runs without a terminal, and its output comes back to Claude.
@@ -151,6 +158,7 @@ The same rules hold as in your terminal, plus a few for MCP:
 
 | Tool | Does |
 |---|---|
+| `project_init` | Drafts a `.limabean.yaml` for a git checkout from its files, writing nothing |
 | `project_plan` | What `up` would create or change for a checkout's `.limabean.yaml`, changing nothing |
 | `project_up` | Creates or updates the checkout's VM and runs its start commands; Claude Code asks you first ([projects](#projects)) |
 | `project_status` | The checkout's VM as JSON: status, start, ports, pending changes |
