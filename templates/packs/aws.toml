@@ -1,0 +1,3 @@
+# AWS: the AWS CLI, which reads the ~/.aws every VM mounts from your Mac, read-only.
+[tools]
+aws-cli = "2.38.1"   # log in on your Mac (aws sso login); the VM reads its cache

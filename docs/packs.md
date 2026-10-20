@@ -33,6 +33,7 @@ project.
 | `infra` | terraform, tflint, aws-cli |
 | `containers` | act, dive, skopeo (Docker itself is in every VM) |
 | `db` | psql, sqlite3, redis-cli |
+| `data` | duckdb, jupyterlab, visidata, miller |
 | `api` | buf, grpcurl |
 | `supply-chain` | cosign, syft, grype |
 | `rust` | rust (stable, through rustup, with rust-analyzer), cargo-binstall |
@@ -41,6 +42,7 @@ project.
 | `elixir` | Erlang/OTP (precompiled), elixir |
 | `dotnet` | the .NET SDK (C#, F#) |
 | `security` | trivy, semgrep, gitleaks |
+| `aws` | aws-cli |
 | `gcp` | gcloud (with gsutil and bq) |
 | `azure` | az |
 | `claude` | Claude Code, to run agents inside the VM |
@@ -144,10 +146,22 @@ in the VM shows the server it starts.
 
 ## Cloud CLIs
 
-`infra` brings the AWS CLI, which uses your Mac's `~/.aws`, mounted
-read-only. `gcp` and `azure` log in inside the VM, with a device code you
+`aws` brings the AWS CLI (so does `infra`, with Terraform). It uses your
+Mac's `~/.aws`, which every VM mounts read-only, so log in on your Mac with
+`aws sso login` and the VM uses that session; `aws sso login` in the VM
+can't write the cache. A VM with a [network allowlist](network.md) needs
+the `aws` preset. `gcp` and `azure` log in inside the VM, with a device code you
 open on your Mac: `gcloud auth login --no-launch-browser` and
 `az login --use-device-code`. Their credentials stay in that VM.
+
+## Data
+
+`data` is for exploring data files: `duckdb` for SQL over CSV, Parquet and
+JSON, `vd` (VisiData) and `mlr` (Miller) in the terminal, and JupyterLab.
+Run `jupyter-lab --ip 0.0.0.0` and forward its port, as the
+[`python-data` recipe](recipes.md#python-data) does. The pack's JupyterLab
+runs in its own environment; to use a project's libraries, start it from
+the project with `uv run --with jupyter jupyter lab --ip 0.0.0.0`.
 
 ## Your own packs
 

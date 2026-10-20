@@ -74,7 +74,7 @@ For a FastAPI, Django or Flask app whose dependencies uv manages.
 
 ### python-data
 
-For notebooks and data libraries: more CPUs and memory, and Jupyter's port. Start Jupyter with `uv run jupyter lab --ip 0.0.0.0`, then `limabean open`.
+For notebooks and data libraries: more CPUs and memory, and Jupyter's port. The `data` pack brings DuckDB, JupyterLab, VisiData and Miller. Start Jupyter with the project's libraries with `uv run --with jupyter jupyter lab --ip 0.0.0.0`, then `limabean open`.
 
 ```yaml
 --8<-- "recipes/python-data.yaml"
