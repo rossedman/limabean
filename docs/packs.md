@@ -33,7 +33,7 @@ project.
 | `infra` | terraform, tflint, aws-cli |
 | `containers` | act, dive, skopeo (Docker itself is in every VM) |
 | `db` | psql, sqlite3, redis-cli |
-| `data` | duckdb, jupyterlab, visidata, miller |
+| `data` | duckdb, JupyterLab with numpy, pandas, polars, pyarrow, duckdb, matplotlib, seaborn, plotly and ipywidgets, visidata, miller |
 | `api` | buf, grpcurl |
 | `supply-chain` | cosign, syft, grype |
 | `rust` | rust (stable, through rustup, with rust-analyzer), cargo-binstall |
@@ -159,9 +159,17 @@ open on your Mac: `gcloud auth login --no-launch-browser` and
 `data` is for exploring data files: `duckdb` for SQL over CSV, Parquet and
 JSON, `vd` (VisiData) and `mlr` (Miller) in the terminal, and JupyterLab.
 Run `jupyter-lab --ip 0.0.0.0` and forward its port, as the
-[`python-data` recipe](recipes.md#python-data) does. The pack's JupyterLab
-runs in its own environment; to use a project's libraries, start it from
-the project with `uv run --with jupyter jupyter lab --ip 0.0.0.0`.
+[`python-data` recipe](recipes.md#python-data) does.
+
+Its notebooks have numpy, pandas, polars, pyarrow, duckdb, matplotlib,
+seaborn, plotly and ipywidgets already, installed into JupyterLab's own
+environment. That makes `data` slower to install the first time, though
+VMs copied from an [image](lifecycle.md#fast-vms-images) get it for free. For other
+libraries, copy `data.toml` into [your own packs](#your-own-packs) and add
+a `--with <library>==<version>` to its `uvx_args`; `limabean bump` updates
+JupyterLab's version but not those. To use a project's libraries instead,
+start Jupyter from the project with
+`uv run --with jupyter jupyter lab --ip 0.0.0.0`.
 
 ## Your own packs
 
