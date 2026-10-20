@@ -1,9 +1,9 @@
 # Data work in Python: notebooks and libraries that want memory.
 # Start from it: limabean recipes python-data && limabean up
-packs: [python]
+packs: [python, data]             # data: DuckDB, JupyterLab, VisiData, Miller
 cpus: 4
 memory: 8
 disk: 30
-ports: [8888]                     # Jupyter: uv run jupyter lab --ip 0.0.0.0
+ports: [8888]                     # Jupyter: uv run --with jupyter jupyter lab --ip 0.0.0.0
 setup: |
   uv sync

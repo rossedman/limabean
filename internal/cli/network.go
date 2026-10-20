@@ -59,6 +59,7 @@ VMs created before this feature need a rebuild first.`,
 // netPresets are names for sets of domains. Each domain allows its
 // subdomains too.
 var netPresets = map[string][]string{
+	"aws":    {"amazonaws.com", "awsapps.com"},
 	"azure":  {"azure.com", "microsoft.com", "microsoftonline.com", "windows.net", "azureedge.net"},
 	"claude": {"anthropic.com", "claude.ai", "claude.com"},
 	"dotnet": {"nuget.org", "dot.net", "microsoft.com"},

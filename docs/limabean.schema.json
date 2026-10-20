@@ -92,6 +92,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "aws",
                   "azure",
                   "claude",
                   "docker",
@@ -131,9 +132,11 @@
           {
             "enum": [
               "api",
+              "aws",
               "azure",
               "claude",
               "containers",
+              "data",
               "db",
               "dotnet",
               "elixir",

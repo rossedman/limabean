@@ -28,6 +28,7 @@ Presets name common sets:
 
 | Preset | Domains |
 |---|---|
+| `aws` | amazonaws.com, awsapps.com |
 | `azure` | azure.com, microsoft.com, microsoftonline.com, windows.net, azureedge.net |
 | `claude` | anthropic.com, claude.ai, claude.com |
 | `docker` | docker.io, docker.com |
