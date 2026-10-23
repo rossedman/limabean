@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,7 +195,9 @@ func parseObject(data []byte) (*document, error) {
 	if _, err := dec.Token(); err != nil { // closing brace
 		return nil, err
 	}
-	if dec.More() {
+	// Nothing may follow it. dec.More is false before a stray } or ], so
+	// only reaching the end of the input proves there's nothing.
+	if _, err := dec.Token(); err != io.EOF {
 		return nil, ErrInvalid
 	}
 	return doc, nil

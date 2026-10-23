@@ -87,13 +87,17 @@ func TestMissingOrEmptyFileIsCreated(t *testing.T) {
 }
 
 func TestInvalidJSONIsLeftAlone(t *testing.T) {
-	s := Settings{Path: filepath.Join(t.TempDir(), "settings.json")}
-	writeFile(t, s.Path, "{bad")
-	if err := s.Add("dev"); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("err = %v, want ErrInvalid", err)
-	}
-	if got := readFile(t, s.Path); got != "{bad" {
-		t.Errorf("file changed to %q", got)
+	// Junk after the object starting with } or ] used to be accepted, and
+	// dropped when the file was written back.
+	for _, bad := range []string{"{bad", "{}}", `{"sshConfigs": []}]garbage`} {
+		s := Settings{Path: filepath.Join(t.TempDir(), "settings.json")}
+		writeFile(t, s.Path, bad)
+		if err := s.Add("dev"); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("%q: err = %v, want ErrInvalid", bad, err)
+		}
+		if got := readFile(t, s.Path); got != bad {
+			t.Errorf("%q: file changed to %q", bad, got)
+		}
 	}
 }
 

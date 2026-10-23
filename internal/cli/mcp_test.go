@@ -218,7 +218,10 @@ func TestMCPDestructiveTools(t *testing.T) {
 			t.Fatalf("--allow-destructive should add %s: %v", want, names)
 		}
 	}
-	for tool := range cs.Tools(context.Background(), nil) {
+	for tool, err := range cs.Tools(context.Background(), nil) {
+		if err != nil { // else the guards below would go unchecked
+			t.Fatal(err)
+		}
 		destructive := tool.Annotations.DestructiveHint != nil && *tool.Annotations.DestructiveHint
 		if slices.Contains([]string{"delete_vm", "rebuild_vm", "snapshot_restore", "run_in_vm", "project_run"}, tool.Name) != destructive {
 			t.Errorf("%s: destructiveHint = %v", tool.Name, destructive)

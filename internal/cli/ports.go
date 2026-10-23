@@ -125,7 +125,7 @@ func parseListening(out string) []vmPort {
 			continue
 		}
 		port, err := strconv.Atoi(local[i+1:])
-		if err != nil || port == 22 {
+		if err != nil || port < 1 || port > 65535 || port == 22 {
 			continue
 		}
 		switch strings.Trim(local[:i], "[]") {

@@ -113,7 +113,7 @@ func TestPrefixedVersions(t *testing.T) {
 }
 
 func TestSeries(t *testing.T) {
-	for v, want := range map[string]string{"4.3.1": "4", "v1.27.2": "1", "0.26.1": "0.26", "0": "0", "latest": "", "": "", "21+35": "21"} {
+	for v, want := range map[string]string{"4.3.1": "4", "v1.27.2": "1", "0.26.1": "0.26", "0": "0", "latest": "", "": "", "21+35": "21", "+5.1": "", "0.+.": "", "0.": ""} {
 		if got := Series(v); got != want {
 			t.Errorf("Series(%q) = %q, want %q", v, got, want)
 		}

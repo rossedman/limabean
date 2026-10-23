@@ -795,7 +795,8 @@ LISTEN 0      4096            *:3000        *:* users:(("vite",pid=9,fd=3))
 `
 
 func TestParseListening(t *testing.T) {
-	got := parseListening(ssOutput + "garbage\nLISTEN 0 1 nocolon x\nLISTEN 0 1 1.2.3.4:x y\n")
+	got := parseListening(ssOutput + "garbage\nLISTEN 0 1 nocolon x\nLISTEN 0 1 1.2.3.4:x y\n" +
+		"LISTEN 0 1 127.0.0.1:0 x\nLISTEN 0 1 127.0.0.1:-1 x\nLISTEN 0 1 0.0.0.0:70000 x\n") // not ports
 	want := []vmPort{{Port: 3000, Process: "vite"}, {Port: 5432}, {Port: 8766, Process: "python3"}, {Port: 8768, Process: "node"}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %+v\nwant %+v", got, want)
