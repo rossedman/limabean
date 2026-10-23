@@ -52,6 +52,11 @@ request on any of them:
 | `make bench` | the benchmarks, six runs each into `bench.out`, for `benchstat` |
 | `make fuzz` | every fuzz target for 30 seconds (`FUZZTIME=5m` for longer); CI does the same |
 
+Pull requests also run [sarifix](https://rossedman.io/sarifix/)
+(`.github/workflows/sarifix.yml`, configured in `sarifix.yaml`), which
+reports the golangci-lint, trivy and semgrep findings a change introduces.
+On `main` the same scanners feed the repository's code scanning alerts.
+
 You need `golangci-lint`, `shellcheck` and `actionlint`
 (`brew install golangci-lint shellcheck actionlint`), and the docs packages:
 `pip install -r docs/requirements.txt`.
