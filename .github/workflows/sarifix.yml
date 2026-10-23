@@ -1,0 +1,46 @@
+name: sarifix
+
+# Runs the scanners in sarifix.yaml (golangci-lint, trivy, semgrep). On
+# pushes to main, weekly and by hand it uploads their findings to code
+# scanning (the Security tab); on pull requests it reports the findings the
+# change introduced, in the job summary and as annotations. It opens no
+# issues and starts no agent. https://rossedman.io/sarifix/action/
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "41 6 * * 1" # Mondays: new vulnerabilities and rules
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sarifix-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  sarifix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read # upload-sarif reads the run's metadata on private repos
+      security-events: write # code scanning upload
+    env:
+      # The version lint.yml runs, rather than the action's default.
+      GOLANGCI_LINT_VERSION: 2.14.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # pull requests are compared with their merge base
+          persist-credentials: false
+      # golangci-lint type-checks the code, so it needs Go.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: rossedman/sarifix@0147bd865e6aec0892fce765f16d48b7ac5eb273 # v0.2.3
+        with:
+          # check on pull requests, scan (code scanning only) everywhere else.
+          mode: ${{ github.event_name == 'pull_request' && 'check' || 'scan' }}

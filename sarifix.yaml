@@ -1,0 +1,39 @@
+# sarifix: runs these scanners, uploads their findings to code scanning, and
+# on pull requests reports what the change introduced. Workflow:
+# .github/workflows/sarifix.yml. Reference:
+# https://rossedman.io/sarifix/configuration/
+version: 1
+
+scanners:
+  # The repo's own .golangci.yml, so findings match `make lint`.
+  - name: golangci-lint
+    command: ["golangci-lint", "run", "--output.sarif.path={out}", "./..."]
+    workdir: "{dir}"
+    scope: dir
+
+  # Known vulnerabilities in go.mod and docs/requirements.txt, secrets, and
+  # misconfiguration.
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "fs", "--scanners", "vuln,secret,misconfig", "--format", "sarif", "-o", "{out}", "."]
+    workdir: "{dir}" # "." keeps paths repo-relative, as code scanning needs
+    timeout: 10m
+
+  # Semgrep's Go and secrets rules from its registry; metrics off.
+  - name: semgrep
+    match: ["Semgrep OSS"]
+    command: ["semgrep", "scan", "--config", "p/golang", "--config", "p/secrets", "--metrics", "off", "--sarif", "--output", "{out}", "."]
+    workdir: "{dir}"
+    timeout: 10m
+
+rules:
+  # Nothing is fixable yet: findings only go to code scanning. List rule
+  # keys (<scanner>/<ruleId>) here before turning on issues mode.
+  allow: []
+  min_level: warning
+
+paths:
+  # Generated: tools/gendocs writes these, and fuzz inputs are regression seeds.
+  deny:
+    - "docs/reference/commands/**"
+    - "**/testdata/fuzz/**"

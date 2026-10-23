@@ -50,3 +50,6 @@ CLAUDE.local.md
 
 # make bench
 bench.out
+
+# sarifix scan output
+/sarif/
