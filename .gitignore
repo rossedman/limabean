@@ -44,3 +44,6 @@ coverage.out
 # Claude Code: personal settings stay local
 .claude/settings.local.json
 CLAUDE.local.md
+
+# sarifix scan output (sarifix.yaml)
+/sarif/

@@ -26,6 +26,15 @@ gobin=$(go env GOPATH)/bin
 if ! command -v actionlint >/dev/null && [ ! -x "$gobin/actionlint" ]; then
   go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 fi
+
+# sarifix and the scanners in sarifix.yaml, for the Stop hook. Pinned: a
+# scanner upgrade can report old findings as new (then: sarifix check --refresh).
+if [ ! -x "$gobin/sarifix" ]; then
+  go install github.com/rossedman/sarifix/cmd/sarifix@v0.2.1
+fi
+if [ ! -x "$gobin/golangci-lint" ]; then
+  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+fi
 echo "export PATH=\"$gobin:\$PATH\"" >> "${CLAUDE_ENV_FILE:-/dev/null}"
 
 # MkDocs 1.x with Material, as pages.yml builds the site.

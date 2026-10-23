@@ -62,6 +62,11 @@ mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs
 - `docs/limabean.schema.json` is generated: after changing the project file,
   a pack or a network preset, run
   `go test ./internal/cli -run TestSchema -update-schema`.
+- A Stop hook runs [sarifix](https://github.com/rossedman/sarifix)
+  (`sarifix.yaml`: golangci-lint with gosec, and shellcheck) and reports
+  only findings your changes introduced, never the backlog. Fix them rather
+  than suppress them; say so if one is a false positive. Run it by hand with
+  `sarifix check`; after upgrading a scanner, `sarifix check --refresh`.
 - Prefer small, verified changes. If something can't be checked here (it
   needs a Mac, Lima or a real VM), say so in the PR's test plan as an
   unchecked item.

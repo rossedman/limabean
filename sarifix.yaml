@@ -1,0 +1,27 @@
+# sarifix: scanners whose findings `sarifix check --hook` reports to Claude
+# Code when its changes introduce new ones (see .claude/settings.json).
+# Only new findings count, never the existing backlog.
+# Reference: https://rossedman.io/sarifix/configuration/
+version: 1
+scanners:
+  # Go: the default linters plus gosec.
+  - name: golangci-lint
+    # No per-linter or same-issue caps: with them, each run reports a
+    # different subset and unchanged findings look new.
+    command:
+      - golangci-lint
+      - run
+      - --enable=gosec
+      - --max-issues-per-linter=0
+      - --max-same-issues=0
+      - --output.text.path=/dev/null
+      - --output.sarif.path={out}
+      - ./...
+    workdir: "{dir}"
+    timeout: 10m
+
+  # Shell: the same files CLAUDE.md and lint.yml check.
+  - name: shellcheck
+    command: ["sh", "{dir}/.sarifix/shellcheck.sh", "{dir}", "{out}"]
+rules:
+  min_level: warning
