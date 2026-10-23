@@ -63,6 +63,27 @@ You need `golangci-lint`, `shellcheck` and `actionlint`
 - Template changes are validated with `limactl tmpl validate`, which CI runs
   on macOS.
 
+## Critical paths
+
+These functions read input from a repository, a VM, the network or the
+user, or guard what reaches a command line on the Mac. Each has a benchmark
+(`bench_test.go`) and, except `config.Load`, a fuzz target (`fuzz_test.go`)
+that checks a property, not just that nothing panics. A new function like
+these gets both; a fuzz failure's input goes in the package's
+`testdata/fuzz/`, with a unit test for the refusal.
+
+| Function | Input | Fuzz target |
+|---|---|---|
+| `project.Parse` | a repository's `.limabean.yaml` | `FuzzParse` |
+| `secrets.Parse`, `unquote` | `secrets.env` files | `FuzzParse`, `FuzzUnquote` |
+| `pins.Parse`, `Series`, `Prefix`, `compareVersions` | mise TOML, versions from `mise latest` | `FuzzParse`, `FuzzVersions` |
+| `lima.parseList` | `limactl list --format json` | `FuzzParseList` |
+| `claude.parseObject` | Claude Desktop's settings | `FuzzParseObject` |
+| `cli.parseListening` | a VM's `ss` output | `FuzzParseListening` |
+| `cli.validVMName`, `validSnapshotTag`, `checkNames` | names from MCP, project files and flags | `FuzzValidVMName`, `FuzzValidSnapshotTag`, `FuzzCheckNames` |
+| `cli.expandAllow` | network allowlist entries | `FuzzExpandAllow` |
+| `config.Load` | `~/.config/limabean/config` | (benchmark only) |
+
 ## Writing a change
 
 - **Tests**: cover the failure paths, not only the happy one. Command tests
