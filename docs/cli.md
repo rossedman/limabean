@@ -2,7 +2,8 @@
 
 `limabean` is a single Go binary that drives `limactl`. Everything it does is
 plain Lima, so `limactl` keeps working alongside it. Every command has full
-help: `limabean <command> --help` explains it and shows examples.
+help: `limabean <command> --help` explains it and shows examples. The same
+help, every flag included, is in the [command reference](reference/commands/limabean.md).
 
 | Command | What it does |
 |---|---|
