@@ -132,7 +132,7 @@ func parseFile(path string) ([]Secret, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Parse(f, filepath.Base(path))
 }
 

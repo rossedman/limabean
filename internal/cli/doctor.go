@@ -219,7 +219,7 @@ func sshInclude(path string) (include, block int) {
 	if err != nil {
 		return 0, 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sc := bufio.NewScanner(f)
 	for n := 1; sc.Scan(); n++ {
 		line := sc.Text()

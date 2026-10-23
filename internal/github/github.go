@@ -67,7 +67,7 @@ func (c Client) LatestRelease(ctx context.Context, repo string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("couldn't reach GitHub: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("GitHub returned %s", resp.Status)
 	}
@@ -93,7 +93,7 @@ func (c Client) Check(ctx context.Context, token string) (TokenInfo, error) {
 	if err != nil {
 		return TokenInfo{}, fmt.Errorf("couldn't reach GitHub: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return TokenInfo{}, ErrRejected
 	}

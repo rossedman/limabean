@@ -102,7 +102,7 @@ func templatesHash(root string) (string, error) {
 			return err
 		}
 		rel, _ := filepath.Rel(root, path)
-		fmt.Fprintf(h, "%s\x00%d\x00", filepath.ToSlash(rel), len(b))
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", filepath.ToSlash(rel), len(b))
 		h.Write(b)
 		return nil
 	})
@@ -297,8 +297,8 @@ func spawn(args ...string) error {
 	if err != nil {
 		return err
 	}
-	defer log.Close()
-	fmt.Fprintf(log, "\n%s limabean %s\n", time.Now().Format(time.RFC3339), strings.Join(args, " "))
+	defer func() { _ = log.Close() }()
+	_, _ = fmt.Fprintf(log, "\n%s limabean %s\n", time.Now().Format(time.RFC3339), strings.Join(args, " "))
 	cmd := exec.Command(exe, args...)
 	cmd.Stdout, cmd.Stderr = log, log
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -330,11 +330,11 @@ func lockFile(path string, exclusive, wait bool) (unlock func(), err error) {
 		how |= syscall.LOCK_NB
 	}
 	if err := syscall.Flock(int(f.Fd()), how); err != nil {
-		f.Close()
+		_ = f.Close()
 		if errors.Is(err, syscall.EWOULDBLOCK) {
 			return nil, errLocked
 		}
 		return nil, err
 	}
-	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); f.Close() }, nil
+	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); _ = f.Close() }, nil
 }

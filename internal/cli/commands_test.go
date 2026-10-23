@@ -888,7 +888,7 @@ func TestMacListens(t *testing.T) {
 	if !macListens(port) {
 		t.Error("a listening port should answer")
 	}
-	l.Close()
+	_ = l.Close()
 	if macListens(port) {
 		t.Error("a closed port shouldn't answer")
 	}
@@ -1261,7 +1261,7 @@ func TestDoctorBranches(t *testing.T) {
 	h.writeSSHConfig("Host *\n  User x\nInclude ~/.lima/*/ssh.config\n")
 	t.Setenv("FAKE_SSH_ADD", "1")
 	t.Setenv("UNSET_FOR_DOCTOR", "")
-	os.Unsetenv("UNSET_FOR_DOCTOR")
+	_ = os.Unsetenv("UNSET_FOR_DOCTOR")
 	h.must("", "secrets", "set", "FROM_OP", "op://v/i/f", "--no-sync")
 	h.must("", "secrets", "set", "FROM_ENV", "env:UNSET_FOR_DOCTOR", "--no-sync")
 	h.world.keychain["limabean-github-token"] = "revoked"

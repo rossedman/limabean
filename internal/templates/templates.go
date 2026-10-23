@@ -61,15 +61,15 @@ func (d Dirs) Root(embedded fs.FS) (string, error) {
 		}
 	}
 	if err := os.CopyFS(tmp, sub); err != nil {
-		os.RemoveAll(tmp)
+		_ = os.RemoveAll(tmp)
 		return "", err
 	}
 	if err := os.WriteFile(filepath.Join(tmp, ".complete"), nil, 0o644); err != nil {
-		os.RemoveAll(tmp)
+		_ = os.RemoveAll(tmp)
 		return "", err
 	}
 	if err := os.Rename(tmp, dir); err != nil {
-		os.RemoveAll(tmp)
+		_ = os.RemoveAll(tmp)
 		if _, statErr := os.Stat(filepath.Join(dir, ".complete")); statErr != nil {
 			return "", err // nobody else finished it either
 		}
@@ -174,7 +174,7 @@ func hashFS(fsys fs.FS) (string, error) {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(h, "%s\x00%d\x00", path, len(data))
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", path, len(data))
 		h.Write(data)
 		return nil
 	})

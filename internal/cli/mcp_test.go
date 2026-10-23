@@ -34,7 +34,7 @@ func (h *harness) mcpClient(allowDestructive bool) (*mcp.ClientSession, *bytes.B
 	if err != nil {
 		h.t.Fatal(err)
 	}
-	h.t.Cleanup(func() { cs.Close() })
+	h.t.Cleanup(func() { _ = cs.Close() })
 	return cs, &stdout
 }
 

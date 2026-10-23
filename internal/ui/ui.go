@@ -137,7 +137,7 @@ func (u *UI) mark(sym string, c lipgloss.Color, format string, a ...any) {
 	if u.Quiet && sym != "✗" {
 		return
 	}
-	fmt.Fprintf(u.Err, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(u.Err, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
 }
 
 // Hint prints indented, dimmed lines under a status line.
@@ -146,7 +146,7 @@ func (u *UI) Hint(lines ...string) {
 		return
 	}
 	for _, l := range lines {
-		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(l))
+		_, _ = fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(l))
 	}
 }
 
@@ -155,13 +155,13 @@ func (u *UI) Info(format string, a ...any) {
 	if u.Quiet {
 		return
 	}
-	fmt.Fprintf(u.Err, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(u.Err, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
 }
 
 // Detail prints a line only with --verbose.
 func (u *UI) Detail(format string, a ...any) {
 	if u.Verbose && !u.Quiet {
-		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(fmt.Sprintf(format, a...)))
+		_, _ = fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(fmt.Sprintf(format, a...)))
 	}
 }
 
@@ -170,11 +170,11 @@ func (u *UI) Section(title, sub string) {
 	switch {
 	case u.Quiet:
 	case sub == "":
-		fmt.Fprintf(u.Err, "\n%s\n", u.title(title))
+		_, _ = fmt.Fprintf(u.Err, "\n%s\n", u.title(title))
 	case u.Interactive:
-		fmt.Fprintf(u.Err, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
+		_, _ = fmt.Fprintf(u.Err, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
 	default:
-		fmt.Fprintf(u.Err, "\n%s (%s)\n", title, sub)
+		_, _ = fmt.Fprintf(u.Err, "\n%s (%s)\n", title, sub)
 	}
 }
 
@@ -190,10 +190,10 @@ func (u *UI) Box(lines ...string) {
 	switch {
 	case u.Quiet:
 	case !u.Interactive:
-		fmt.Fprintf(u.Err, "\n%s\n", strings.Join(lines, "\n"))
+		_, _ = fmt.Fprintf(u.Err, "\n%s\n", strings.Join(lines, "\n"))
 	default:
 		box := u.style().Border(lipgloss.RoundedBorder()).BorderForeground(Leaf).Padding(0, 2).MarginTop(1)
-		fmt.Fprintln(u.Err, box.Render(strings.Join(lines, "\n")))
+		_, _ = fmt.Fprintln(u.Err, box.Render(strings.Join(lines, "\n")))
 	}
 }
 
@@ -202,11 +202,11 @@ func (u *UI) Box(lines ...string) {
 func (u *UI) Table(headers []string, rows [][]string) {
 	if !u.Interactive {
 		w := tabwriter.NewWriter(u.Out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 		for _, r := range rows {
-			fmt.Fprintln(w, strings.Join(r, "\t"))
+			_, _ = fmt.Fprintln(w, strings.Join(r, "\t"))
 		}
-		w.Flush()
+		_ = w.Flush()
 		return
 	}
 	t := table.New().
@@ -221,7 +221,7 @@ func (u *UI) Table(headers []string, rows [][]string) {
 			}
 			return s
 		})
-	fmt.Fprintln(u.Out, t.Render())
+	_, _ = fmt.Fprintln(u.Out, t.Render())
 }
 
 // Spin runs fn behind a spinner titled title. In plain mode it prints the

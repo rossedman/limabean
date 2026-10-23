@@ -40,7 +40,7 @@ func (a *App) macRootCAs(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	plist := filepath.Join(dir, "trust.plist")
 	if _, err := a.security(ctx, "trust-settings-export", "-d", plist); err != nil {
 		// No admin trust settings at all is the common case, and not an error.

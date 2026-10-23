@@ -106,9 +106,9 @@ func writeJSONError(w io.Writer, err error) {
 // bugReport is what a crash prints: it's limabean's fault, not the user's,
 // and here's how to report it.
 func bugReport(w io.Writer, version string, args []string, r any) {
-	fmt.Fprintf(w, "limabean crashed. That's a bug in limabean, not something you did.\n")
-	fmt.Fprintf(w, "Please report it at https://github.com/rossedman/limabean/issues/new with:\n\n")
-	fmt.Fprintf(w, "  version: %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  command: limabean %s\n", strings.Join(args, " "))
-	fmt.Fprintf(w, "  error:   %v\n\n%s", r, debug.Stack())
+	_, _ = fmt.Fprintf(w, "limabean crashed. That's a bug in limabean, not something you did.\n")
+	_, _ = fmt.Fprintf(w, "Please report it at https://github.com/rossedman/limabean/issues/new with:\n\n")
+	_, _ = fmt.Fprintf(w, "  version: %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
+	_, _ = fmt.Fprintf(w, "  command: limabean %s\n", strings.Join(args, " "))
+	_, _ = fmt.Fprintf(w, "  error:   %v\n\n%s", r, debug.Stack())
 }

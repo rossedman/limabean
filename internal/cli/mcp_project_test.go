@@ -126,14 +126,18 @@ func TestOriginFromConfig(t *testing.T) {
 	if originFromConfig(dir) != "" {
 		t.Error("no .git")
 	}
-	os.MkdirAll(filepath.Join(dir, ".git"), 0o755)
+	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	for config, want := range map[string]string{
 		"[remote \"upstream\"]\n\turl = x/y\n":                            "",
 		"[remote \"origin\"]\n  url=https://github.com/a/b.git\n":         "https://github.com/a/b.git",
 		"[remote \"origin\"]\n\turl = --upload-pack=evil\n":               "",
 		"[remote \"origin\"]\n\tfetch = x\n[branch \"main\"]\nurl = no\n": "",
 	} {
-		os.WriteFile(filepath.Join(dir, ".git", "config"), []byte(config), 0o644)
+		if err := os.WriteFile(filepath.Join(dir, ".git", "config"), []byte(config), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		if got := originFromConfig(dir); got != want {
 			t.Errorf("%q: %q, want %q", config, got, want)
 		}

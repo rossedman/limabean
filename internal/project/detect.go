@@ -122,7 +122,7 @@ func (r reader) read(name string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var b bytes.Buffer
 	_, _ = b.ReadFrom(io.LimitReader(f, 1<<20))
 	return b.String()

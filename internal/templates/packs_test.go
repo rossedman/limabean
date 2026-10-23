@@ -142,7 +142,7 @@ func TestUserPacks(t *testing.T) {
 		t.Errorf("go listed twice: %v", names(packs))
 	}
 
-	os.Remove(filepath.Join(user, "packs", "zig.toml"))
+	_ = os.Remove(filepath.Join(user, "packs", "zig.toml"))
 	if root, err = d.Root(fsys); err != nil {
 		t.Fatal(err)
 	}

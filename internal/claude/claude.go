@@ -129,7 +129,7 @@ func (s Settings) edit(fn func([]json.RawMessage) ([]json.RawMessage, error)) er
 		return err
 	}
 	if _, err := f.Write(out); err != nil {
-		f.Close()
+		_ = f.Close()
 		return err
 	}
 	return f.Close()

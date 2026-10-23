@@ -168,7 +168,7 @@ func (a *App) limaStep(ctx context.Context, title string, fn func(context.Contex
 	})
 	if err != nil {
 		if tail := limaFailure(out); tail != "" {
-			fmt.Fprintf(a.UI.Err, "%s\n", tail)
+			_, _ = fmt.Fprintf(a.UI.Err, "%s\n", tail)
 		}
 		step := strings.ToLower(title[:1]) + title[1:]
 		if bytes.Contains(out, []byte(limaTimedOut)) {
