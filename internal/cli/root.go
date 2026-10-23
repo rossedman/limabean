@@ -45,7 +45,7 @@ terminal, or with --plain, it prints plain text and never prompts.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       a.Version,
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 			return a.setup()
 		},
 		PersistentPostRun: func(cmd *cobra.Command, _ []string) {

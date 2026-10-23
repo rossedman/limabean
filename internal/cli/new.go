@@ -331,7 +331,7 @@ func (a *App) parseSecretFlags(flags []string) ([]secrets.Secret, error) {
 
 // completeEnvs tab-completes the second argument with environment names.
 func completeEnvs(a *App) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 1 || a.setup() != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}

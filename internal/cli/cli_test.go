@@ -461,7 +461,7 @@ func (h *harness) app(u *ui.UI) *App {
 	a := NewApp(firstNonEmpty(h.version, "test"), os.DirFS(repoRoot))
 	a.UI = u
 	a.limaCache = filepath.Join(h.world.limaHome, "cache")
-	a.contentLength = func(_ context.Context, url string) (int64, error) {
+	a.contentLength = func(_ context.Context, _ string) (int64, error) {
 		return 0, errors.New("no network in tests")
 	}
 	a.security = func(_ context.Context, args ...string) ([]byte, error) {
@@ -469,7 +469,7 @@ func (h *harness) app(u *ui.UI) *App {
 		switch args[0] {
 		case "trust-settings-export":
 			if h.world.trustPlist == "" {
-				return nil, errors.New("SecTrustSettingsCreateExternalRepresentation: No Trust Settings were found.")
+				return nil, errors.New("SecTrustSettingsCreateExternalRepresentation: No Trust Settings were found")
 			}
 			return nil, os.WriteFile(args[len(args)-1], []byte(h.world.trustPlist), 0o600)
 		case "find-certificate":

@@ -44,7 +44,7 @@ YAML language server, e.g. the Red Hat YAML extension).`,
   limabean recipes claude-agent --print`,
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeRecipes,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return a.listRecipes()
 			}

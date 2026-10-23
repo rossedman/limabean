@@ -42,7 +42,7 @@ ignore it). Versions are pinned in templates/packs/*.toml, and
   # Give every new VM Go and Node
   echo 'PACKS="go,node"' >> ~/.config/limabean/config`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			root, err := a.templatesRoot()
 			if err != nil {
 				return err

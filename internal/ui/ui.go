@@ -130,7 +130,7 @@ func (u *UI) Code(s string) string { return u.color(Leaf2, s) }
 // Dimmed renders secondary text.
 func (u *UI) Dimmed(s string) string { return u.color(Dim, s) }
 
-// OK, Bad and Warn print a status line marked ✓, ✗ or !.
+// OK prints a ✓ status line.
 func (u *UI) OK(format string, a ...any) { u.mark("✓", Leaf, format, a...) }
 
 // Bad prints a ✗ status line; unlike OK and Warn it shows even in quiet

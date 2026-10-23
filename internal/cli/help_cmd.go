@@ -44,7 +44,7 @@ agents. Hidden commands and flags (old names kept working) aren't listed.`,
 		Example: `  limabean help up
   limabean help --json | jq -r '.commands[].name'
   limabean help network --json`,
-		ValidArgsFunction: func(c *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(c *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			var names []string
 			cmd, _, err := c.Root().Find(args)
 			if err != nil {

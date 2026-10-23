@@ -25,6 +25,8 @@ import (
 // by.
 const FileName = ".limabean.yaml"
 
+// FileNames are the names a project file may have, in the order they are
+// looked for.
 var FileNames = []string{FileName, ".limabean.yml"}
 
 // ErrNotFound is Find's error when there's no project file.
