@@ -20,11 +20,11 @@ For a security problem, don't open an issue: see [SECURITY.md](SECURITY.md).
 
 ## Setting up
 
-You need Go (the version in `go.mod`), and for some checks shellcheck,
-actionlint and Python for the docs:
+You need Go (the version in `go.mod`), and for the checks golangci-lint,
+shellcheck, actionlint and Python for the docs:
 
 ```bash
-brew install go shellcheck actionlint
+brew install go golangci-lint shellcheck actionlint
 git clone https://github.com/rossedman/limabean && cd limabean
 go build -o limabean ./cmd/limabean
 ./limabean --help
@@ -39,20 +39,22 @@ of the repository.
 
 ## Checks
 
-Run these before you push; CI runs the same, and fails a pull request on
-any of them:
+Run `make check` before you push. CI runs the same checks and fails a pull
+request on any of them:
 
-```bash
-gofmt -l .                       # must print nothing
-go vet ./...
-go test ./...                    # and total coverage must stay at 90% or more:
-go test -coverprofile=/tmp/c.out ./... && go tool cover -func=/tmp/c.out | tail -1
-shellcheck templates/features/*.sh templates/files/limabean-network
-shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info templates/files/limabean-statusline
-actionlint                       # when .github/ changes
-pip install -r docs/requirements.txt
-mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
-```
+| Target | What it checks |
+|---|---|
+| `make lint` | gofmt, `go vet`, golangci-lint, a doc comment on every function (`tools/doccheck`), shellcheck and actionlint |
+| `make cover` | `go test -race`, with total coverage at 90% or more |
+| `make docs` | regenerates `docs/reference/commands` from the commands' help; commit what changes |
+| `make docs-build` | `mkdocs build --strict`, outside the repository |
+| `make check` | all of the above, every benchmark once, and govulncheck |
+| `make bench` | the benchmarks, six runs each into `bench.out`, for `benchstat` |
+| `make fuzz` | every fuzz target for 30 seconds (`FUZZTIME=5m` for longer); CI does the same |
+
+You need `golangci-lint`, `shellcheck` and `actionlint`
+(`brew install golangci-lint shellcheck actionlint`), and the docs packages:
+`pip install -r docs/requirements.txt`.
 
 - Build the docs outside the repository (`-d`), so `site/` isn't committed.
 - `docs/limabean.schema.json` is generated: after changing the project file,

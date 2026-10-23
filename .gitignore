@@ -44,3 +44,9 @@ coverage.out
 # Claude Code: personal settings stay local
 .claude/settings.local.json
 CLAUDE.local.md
+
+# make build
+/limabean
+
+# make bench
+bench.out
