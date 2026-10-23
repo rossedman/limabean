@@ -39,6 +39,7 @@ nav:
       - Customizing: customizing.md
   - Reference:
       - CLI: cli.md
+      - Command reference: reference/commands/limabean.md
       - Troubleshooting: troubleshooting.md
   - Project:
       - Design notes: design.md

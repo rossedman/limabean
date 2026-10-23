@@ -12,6 +12,7 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newCloneCmd builds `limabean clone`, which copies a VM.
 func newCloneCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clone <name> <new-name>",

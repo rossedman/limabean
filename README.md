@@ -4,6 +4,9 @@
 
 <p align="center">
   <a href="https://github.com/rossedman/limabean/actions/workflows/lint.yml"><img src="https://github.com/rossedman/limabean/actions/workflows/lint.yml/badge.svg" alt="lint"></a>
+  <a href="https://github.com/rossedman/limabean/releases/latest"><img src="https://img.shields.io/github/v/release/rossedman/limabean?color=8fd16a" alt="latest release"></a>
+  <a href="https://goreportcard.com/report/github.com/rossedman/limabean"><img src="https://goreportcard.com/badge/github.com/rossedman/limabean" alt="Go Report Card"></a>
+  <a href="https://rossedman.io/limabean/"><img src="https://img.shields.io/badge/docs-rossedman.io-8fd16a" alt="docs"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8fd16a" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/macOS-Lima%202.x-8fd16a" alt="macOS with Lima 2.x">
 </p>

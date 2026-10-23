@@ -9,6 +9,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newGitHubLogoutCmd builds `limabean github logout`, which removes the
+// token from the Keychain and the VMs.
 func newGitHubLogoutCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",

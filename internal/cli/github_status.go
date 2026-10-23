@@ -8,6 +8,8 @@ import (
 	"github.com/rossedman/limabean/internal/github"
 )
 
+// newGitHubStatusCmd builds `limabean github status`, which shows the
+// token's account and expiry and which VMs have it.
 func newGitHubStatusCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",

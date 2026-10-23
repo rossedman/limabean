@@ -41,6 +41,7 @@ type Client struct {
 	HTTP    *http.Client
 }
 
+// base returns the API's base URL, GitHub's unless the client sets another.
 func (c Client) base() string {
 	if c.BaseURL == "" {
 		return "https://api.github.com"
@@ -48,6 +49,8 @@ func (c Client) base() string {
 	return c.BaseURL
 }
 
+// http returns the HTTP client to use, one with a 15 second timeout unless
+// the client sets another.
 func (c Client) http() *http.Client {
 	if c.HTTP == nil {
 		return &http.Client{Timeout: 15 * time.Second}
@@ -67,7 +70,7 @@ func (c Client) LatestRelease(ctx context.Context, repo string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("couldn't reach GitHub: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("GitHub returned %s", resp.Status)
 	}
@@ -93,7 +96,7 @@ func (c Client) Check(ctx context.Context, token string) (TokenInfo, error) {
 	if err != nil {
 		return TokenInfo{}, fmt.Errorf("couldn't reach GitHub: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return TokenInfo{}, ErrRejected
 	}

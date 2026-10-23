@@ -18,6 +18,8 @@ import (
 	"github.com/rossedman/limabean/internal/lima"
 )
 
+// newSnapshotCmd builds `limabean snapshot`, the group of commands that save
+// a VM's state and roll back to it.
 func newSnapshotCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "snapshot",
@@ -49,6 +51,8 @@ type snapshotMeta struct {
 
 var snapshotTagRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
+// validSnapshotTag refuses a snapshot name that isn't plain letters, digits,
+// dots, dashes and underscores, so it can't act as a flag or a path.
 func validSnapshotTag(tag string) error {
 	if !snapshotTagRE.MatchString(tag) {
 		return fmt.Errorf("snapshot name %q: use letters, digits, dots, dashes and underscores", tag)
@@ -137,6 +141,7 @@ func cloneFile(ctx context.Context, src, dst string) error {
 	return nil
 }
 
+// fileExists reports whether p can be stat'd.
 func fileExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil

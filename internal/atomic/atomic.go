@@ -11,8 +11,8 @@ import (
 // directory and renames it into place. A symlink at path is followed, so a
 // file kept in a dotfiles repository stays linked.
 func WriteFile(path string, data []byte, perm os.FileMode) (err error) {
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		path = real
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
 	}
 	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.new")
 	if err != nil {

@@ -26,6 +26,27 @@ advisory is published with it, crediting you unless you'd rather not be.
 Fixes go into the latest release only. Update with
 `brew upgrade limabean`.
 
+## Verifying releases
+
+Releases from v0.1.6 on are signed. The release workflow signs
+`checksums.txt`, which lists every archive, with a keyless
+[Sigstore](https://www.sigstore.dev) signature tied to its GitHub identity,
+and attests where each archive was built. Download the archive,
+`checksums.txt` and `checksums.txt.sigstore.json` from the release, then:
+
+```bash
+cosign verify-blob checksums.txt \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/rossedman/limabean/.github/workflows/release.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+shasum -a 256 --ignore-missing -c checksums.txt
+gh attestation verify limabean_*_darwin_universal.tar.gz --repo rossedman/limabean
+```
+
+The first command fails unless the signature came from this repository's
+release workflow on a tag; the second checks the archive against the
+signed list; the third checks GitHub's build provenance.
+
 ## What counts
 
 limabean keeps these true; a way to break one is a vulnerability:

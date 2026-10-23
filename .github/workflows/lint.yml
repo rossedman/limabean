@@ -12,6 +12,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -19,23 +21,75 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - name: go vet
         run: go vet ./...
-      - name: go test, with at least 90% coverage
+      - name: go test -race, with at least 90% coverage
         run: |
-          go test -coverprofile=coverage.out ./...
+          go test -race -coverprofile=coverage.out ./...
           total=$(go tool cover -func=coverage.out | awk '/^total:/ { sub("%", "", $3); print $3 }')
           echo "Total coverage: ${total}%" | tee -a "$GITHUB_STEP_SUMMARY"
           awk -v t="$total" 'BEGIN { exit !(t >= 90) }' || { echo "::error::Coverage ${total}% is below 90%"; exit 1; }
+      - name: Benchmarks run
+        run: go test -run='^$' -bench=. -benchtime=1x ./...
+
+  goreleaser:
+    # Only checks .goreleaser.yaml; no Go and no cache in this job.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
           version: "~> v2"
           args: check
 
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+      - name: Every function has a doc comment
+        run: go run ./tools/doccheck ./...
+      - name: The command reference is up to date
+        run: |
+          go run ./tools/gendocs
+          git add -N docs/reference/commands
+          git diff --exit-code docs/reference/commands || { echo "::error::Run make docs and commit docs/reference/commands"; exit 1; }
+
+  fuzz:
+    # 30 seconds of each fuzz target. Failing inputs go in testdata/fuzz/.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Fuzz
+        run: |
+          for pkg in $(go list ./...); do
+            for target in $(go test -list '^Fuzz' "$pkg" | grep '^Fuzz' || true); do
+              echo "::group::$pkg $target"
+              go test -run='^$' -fuzz="^${target}\$" -fuzztime=30s -fuzzminimizetime=5s "$pkg"
+              echo "::endgroup::"
+            done
+          done
+
   govulncheck:
     # Known vulnerabilities in the Go toolchain and modules limabean calls.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -46,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: shellcheck
         run: shellcheck templates/features/*.sh templates/files/limabean-network && shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info templates/files/limabean-statusline
 
@@ -56,6 +112,8 @@ jobs:
       LIMA_SHA256: 9e9eacce88f37e185c346bad73aa6136f738d8cdf8c3bb23cd42b071824bc66e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install Lima
         run: |
           tarball="lima-${LIMA_VERSION}-Darwin-arm64.tar.gz"

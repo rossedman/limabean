@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkUnlockCmd builds `limabean network unlock`, which gives a VM's
+// user sudo and Docker back.
 func newNetworkUnlockCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unlock <name>",

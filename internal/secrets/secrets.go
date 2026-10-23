@@ -46,6 +46,7 @@ func ValidName(s string) bool { return nameRE.MatchString(s) }
 // SharedFile and VMFile return the reference files in dir.
 func SharedFile(dir string) string { return filepath.Join(dir, "secrets.env") }
 
+// VMFile returns the reference file for one VM's own secrets in dir.
 func VMFile(dir, vm string) string { return filepath.Join(dir, "secrets."+vm+".env") }
 
 // Parse reads NAME=reference lines. Blank lines, comments and a leading
@@ -76,6 +77,7 @@ func Parse(r io.Reader, source string) ([]Secret, []error) {
 	return out, errs
 }
 
+// unquote removes one pair of matching quotes around a reference.
 func unquote(s string) string {
 	if len(s) >= 2 && (s[0] == '"' || s[0] == '\'') && s[len(s)-1] == s[0] {
 		return s[1 : len(s)-1]
@@ -124,6 +126,8 @@ func Load(dir, vm string) ([]Secret, []error) {
 // LoadFile returns the entries of a single reference file.
 func LoadFile(path string) ([]Secret, []error) { return parseFile(path) }
 
+// parseFile parses a reference file; a file that doesn't exist has no
+// entries.
 func parseFile(path string) ([]Secret, []error) {
 	f, err := os.Open(path)
 	if os.IsNotExist(err) {
@@ -132,7 +136,7 @@ func parseFile(path string) ([]Secret, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Parse(f, filepath.Base(path))
 }
 

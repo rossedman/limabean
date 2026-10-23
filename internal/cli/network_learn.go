@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkLearnCmd builds `limabean network learn`, which records what a
+// VM reaches to build its allowlist.
 func newNetworkLearnCmd(a *App) *cobra.Command {
 	var done bool
 	cmd := &cobra.Command{

@@ -49,7 +49,7 @@ func TestNewWithPacks(t *testing.T) {
 	}
 
 	// A VM made before packs gets the defaults when rebuilt.
-	os.Remove(filepath.Join(os.Getenv("XDG_STATE_HOME"), "limabean", "api.packs"))
+	_ = os.Remove(filepath.Join(os.Getenv("XDG_STATE_HOME"), "limabean", "api.packs"))
 	h.world.calls = nil
 	h.must("", "rebuild", "api", "--force")
 	if calls := strings.Join(h.world.calls, "\n"); !strings.Contains(calls, "50-kubernetes.toml") || strings.Contains(calls, "50-rust.toml") {
@@ -58,7 +58,7 @@ func TestNewWithPacks(t *testing.T) {
 	if err := json.Unmarshal([]byte(h.must("", "ls", "--json")), &vms); err != nil || vms[0].Packs == nil {
 		t.Errorf("rebuild should record the packs: %+v", vms)
 	}
-	os.Remove(filepath.Join(os.Getenv("XDG_STATE_HOME"), "limabean", "api.packs"))
+	_ = os.Remove(filepath.Join(os.Getenv("XDG_STATE_HOME"), "limabean", "api.packs"))
 	if err := json.Unmarshal([]byte(h.must("", "ls", "--json")), &vms); err != nil || vms[0].Packs != nil {
 		t.Errorf("unknown packs are null in ls --json: %+v", vms)
 	}

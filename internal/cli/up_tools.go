@@ -37,6 +37,7 @@ func toolsOfFile(f *project.File) projectTools {
 	return t
 }
 
+// empty reports whether the project asks for no tools and no apt packages.
 func (t projectTools) empty() bool { return len(t.Tools) == 0 && len(t.Apt) == 0 }
 
 // toolList describes the tools for plans: "go 1.23, terraform 1.9.8".
@@ -51,6 +52,7 @@ func (t projectTools) toolList() string {
 	return strings.Join(parts, ", ")
 }
 
+// aptList describes the apt packages for plans: "git, jq", or "none".
 func (t projectTools) aptList() string {
 	if len(t.Apt) == 0 {
 		return "none"
@@ -102,6 +104,8 @@ func toolsChanges(have, want projectTools) []string {
 	return lines
 }
 
+// toolsState is the file on the Mac that remembers the project tools a VM
+// was built with.
 func (a *App) toolsState(vm string) string {
 	return filepath.Join(a.stateDir, vm+".tools")
 }

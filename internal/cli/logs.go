@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newLogsCmd builds `limabean logs`, which shows a VM's provisioning log or
+// its project's setup and start output.
 func newLogsCmd(a *App) *cobra.Command {
 	var file string
 	var lines int
@@ -94,7 +96,7 @@ inside it; --lima still works.`,
 				case setup:
 					return fmt.Errorf("%s has no setup log yet: setup runs when limabean up creates the VM, or with --setup", name)
 				default:
-					return fmt.Errorf("%s has no start log yet: start runs after limabean up when .limabean.yaml has start:", name)
+					return fmt.Errorf("%s has no start log yet: start runs after limabean up when .limabean.yaml has a start: section", name)
 				}
 			}
 			_, err = a.UI.Out.Write(out)

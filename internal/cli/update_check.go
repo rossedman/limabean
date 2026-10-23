@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newUpdateCheckCmd builds `limabean update-check`, which checks GitHub for
+// a newer limabean release.
 func newUpdateCheckCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:    "update-check",

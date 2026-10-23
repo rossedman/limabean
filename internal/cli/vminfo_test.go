@@ -135,7 +135,7 @@ func TestLimabeanInfoScript(t *testing.T) {
 	}
 
 	// No vm.json yet, an open network, a bad option.
-	os.Remove(filepath.Join(dir, "vm.json"))
+	_ = os.Remove(filepath.Join(dir, "vm.json"))
 	write("network.conf", "")
 	if out, err := run(); err != nil || !strings.Contains(out, "no vm.json yet") || !strings.Contains(out, "network:   open") {
 		t.Errorf("without vm.json: %v\n%s", err, out)

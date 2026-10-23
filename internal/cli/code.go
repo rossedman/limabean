@@ -16,6 +16,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newCodeCmd builds `limabean code`, which opens a VM, or a repository in
+// it, in an editor.
 func newCodeCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "code [name] [repo]",

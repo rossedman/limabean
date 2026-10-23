@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newAutostopRunCmd builds `limabean autostop run`, which makes one pass of
+// stopping idle VMs and deleting expired ones.
 func newAutostopRunCmd(a *App) *cobra.Command {
 	var idle time.Duration
 	cmd := &cobra.Command{

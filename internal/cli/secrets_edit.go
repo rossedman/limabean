@@ -10,6 +10,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newSecretsEditCmd builds `limabean secrets edit`, which opens a secrets
+// file in the user's editor.
 func newSecretsEditCmd(a *App) *cobra.Command {
 	var vm string
 	cmd := &cobra.Command{

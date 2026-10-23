@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkOpenCmd builds `limabean network open`, which lets a VM reach
+// any host again.
 func newNetworkOpenCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "open <name>",

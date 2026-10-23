@@ -16,6 +16,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newRunCmd builds `limabean run`, which runs a command in a new VM and
+// deletes it afterwards.
 func newRunCmd(a *App) *cobra.Command {
 	var (
 		name, env, repo                        string
@@ -160,6 +162,7 @@ func runScript(dir string, args []string) string {
 	return script
 }
 
+// randomHex returns n random bytes as 2n hex characters.
 func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

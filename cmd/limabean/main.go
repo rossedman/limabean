@@ -13,6 +13,8 @@ import (
 // version is set at build time: -ldflags "-X main.version=1.2.3".
 var version = ""
 
+// main runs limabean with the resolved version, the embedded templates and
+// the command-line arguments, and exits with its status.
 func main() {
 	os.Exit(cli.Execute(resolveVersion(), limabean.Templates, os.Args[1:]))
 }

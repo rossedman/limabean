@@ -12,6 +12,8 @@ import (
 // noInfo is what the VM prints when it has no limabean-info.
 const noInfo = "limabean-info: none"
 
+// newInfoCmd builds `limabean info`, which shows what a VM knows about
+// itself.
 func newInfoCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{
@@ -60,10 +62,10 @@ one from a list. VMs made before limabean-info need a rebuild to have it.`,
 				if err := json.Indent(&b, bytes.TrimSpace(out), "", "  "); err != nil {
 					return fmt.Errorf("limabean-info in %s didn't print JSON: %w", name, err)
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), b.String())
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), b.String())
 				return nil
 			}
-			fmt.Fprint(cmd.OutOrStdout(), string(out))
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), string(out))
 			return nil
 		},
 	}

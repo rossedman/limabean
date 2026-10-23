@@ -16,6 +16,8 @@ import (
 	"github.com/rossedman/limabean/internal/lima"
 )
 
+// newPortsCmd builds `limabean ports`, which lists the ports a VM forwards
+// to the Mac.
 func newPortsCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{
@@ -123,7 +125,7 @@ func parseListening(out string) []vmPort {
 			continue
 		}
 		port, err := strconv.Atoi(local[i+1:])
-		if err != nil || port == 22 {
+		if err != nil || port < 1 || port > 65535 || port == 22 {
 			continue
 		}
 		switch strings.Trim(local[:i], "[]") {
@@ -162,7 +164,7 @@ func macListens(port int) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	_ = conn.Close()
 	return true
 }
 

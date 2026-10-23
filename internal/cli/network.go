@@ -18,6 +18,8 @@ import (
 	"github.com/rossedman/limabean/internal/lima"
 )
 
+// newNetworkCmd builds `limabean network`, the group of commands that limit
+// which hosts a VM can reach.
 func newNetworkCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "network",
@@ -76,6 +78,8 @@ var netPresets = map[string][]string{
 	"ubuntu": {"ubuntu.com"},
 }
 
+// presetHelp lists the network presets and their domains, sorted by name,
+// for command help.
 func presetHelp() string {
 	names := make([]string, 0, len(netPresets))
 	for n := range netPresets {
@@ -111,6 +115,7 @@ func expandAllow(items []string) ([]string, error) {
 	return out, nil
 }
 
+// mapKeys returns m's keys in no particular order.
 func mapKeys(m map[string][]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -145,8 +150,11 @@ func (p netPolicy) summary() string {
 	return s
 }
 
+// networkDir is where a VM's network policy lives on the Mac.
 func (a *App) networkDir(vm string) string { return filepath.Join(a.Cfg.Dir(), "network", vm) }
 
+// loadPolicy reads a VM's network.conf; a VM with none has an empty, open
+// policy.
 func (a *App) loadPolicy(vm string) (netPolicy, error) {
 	var p netPolicy
 	f, err := os.Open(filepath.Join(a.networkDir(vm), "network.conf"))
@@ -155,7 +163,7 @@ func (a *App) loadPolicy(vm string) (netPolicy, error) {
 	} else if err != nil {
 		return p, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		fields := strings.Fields(sc.Text())
@@ -171,6 +179,8 @@ func (a *App) loadPolicy(vm string) (netPolicy, error) {
 	return p, sc.Err()
 }
 
+// savePolicy writes a VM's network.conf with its allowlist sorted and
+// deduplicated.
 func (a *App) savePolicy(vm string, p netPolicy) error {
 	slices.Sort(p.Allow)
 	p.Allow = slices.Compact(p.Allow)

@@ -26,6 +26,7 @@ type lsEntry struct {
 	Expires   string   `json:"expires,omitempty"` // when new --ttl deletes it, RFC 3339
 }
 
+// newLsCmd builds `limabean ls`, which lists the VMs.
 func newLsCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

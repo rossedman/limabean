@@ -795,7 +795,8 @@ LISTEN 0      4096            *:3000        *:* users:(("vite",pid=9,fd=3))
 `
 
 func TestParseListening(t *testing.T) {
-	got := parseListening(ssOutput + "garbage\nLISTEN 0 1 nocolon x\nLISTEN 0 1 1.2.3.4:x y\n")
+	got := parseListening(ssOutput + "garbage\nLISTEN 0 1 nocolon x\nLISTEN 0 1 1.2.3.4:x y\n" +
+		"LISTEN 0 1 127.0.0.1:0 x\nLISTEN 0 1 127.0.0.1:-1 x\nLISTEN 0 1 0.0.0.0:70000 x\n") // not ports
 	want := []vmPort{{Port: 3000, Process: "vite"}, {Port: 5432}, {Port: 8766, Process: "python3"}, {Port: 8768, Process: "node"}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %+v\nwant %+v", got, want)
@@ -888,7 +889,7 @@ func TestMacListens(t *testing.T) {
 	if !macListens(port) {
 		t.Error("a listening port should answer")
 	}
-	l.Close()
+	_ = l.Close()
 	if macListens(port) {
 		t.Error("a closed port shouldn't answer")
 	}
@@ -1261,7 +1262,7 @@ func TestDoctorBranches(t *testing.T) {
 	h.writeSSHConfig("Host *\n  User x\nInclude ~/.lima/*/ssh.config\n")
 	t.Setenv("FAKE_SSH_ADD", "1")
 	t.Setenv("UNSET_FOR_DOCTOR", "")
-	os.Unsetenv("UNSET_FOR_DOCTOR")
+	_ = os.Unsetenv("UNSET_FOR_DOCTOR")
 	h.must("", "secrets", "set", "FROM_OP", "op://v/i/f", "--no-sync")
 	h.must("", "secrets", "set", "FROM_ENV", "env:UNSET_FOR_DOCTOR", "--no-sync")
 	h.world.keychain["limabean-github-token"] = "revoked"

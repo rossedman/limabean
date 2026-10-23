@@ -10,6 +10,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newSecretsLsCmd builds `limabean secrets ls`, which lists secrets and
+// where their values come from.
 func newSecretsLsCmd(a *App) *cobra.Command {
 	var vm string
 	cmd := &cobra.Command{
@@ -26,7 +28,7 @@ its own, its own winning when both set the same name.`,
   # What dev gets
   limabean secrets ls --vm dev`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			dir := a.Cfg.Dir()
 			var rows [][]string
 			if vm != "" {

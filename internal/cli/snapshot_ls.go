@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newSnapshotLsCmd builds `limabean snapshot ls`, which lists a VM's
+// snapshots.
 func newSnapshotLsCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

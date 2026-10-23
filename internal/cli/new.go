@@ -16,6 +16,7 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newNewCmd builds `limabean new`, the older way to create a VM.
 func newNewCmd(a *App) *cobra.Command {
 	var nf newFlags
 	cmd := &cobra.Command{
@@ -94,6 +95,7 @@ type newFlags struct {
 	ttl                           time.Duration
 }
 
+// add registers the flags that create-time options come from on f.
 func (nf *newFlags) add(f *pflag.FlagSet) {
 	f.StringArrayVar(&nf.secrets, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
 	f.StringSliceVar(&nf.with, "with", nil, "give the VM these packs, e.g. go,node (see: limabean packs)")
@@ -329,7 +331,7 @@ func (a *App) parseSecretFlags(flags []string) ([]secrets.Secret, error) {
 
 // completeEnvs tab-completes the second argument with environment names.
 func completeEnvs(a *App) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-	return func(cmd *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+	return func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 1 || a.setup() != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}

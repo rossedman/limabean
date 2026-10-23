@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newSnapshotRestoreCmd builds `limabean snapshot restore`, which puts a VM
+// back the way a snapshot saved it.
 func newSnapshotRestoreCmd(a *App) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{

@@ -2,6 +2,8 @@ package cli
 
 import "github.com/spf13/cobra"
 
+// newGitHubSyncCmd builds `limabean github sync`, which installs the token
+// in every running VM.
 func newGitHubSyncCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync",

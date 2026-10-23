@@ -28,18 +28,16 @@ decisions (D1–D34); read the relevant note before changing a design.
 
 ## Checks
 
-Run these before pushing; CI runs the same (`.github/workflows/lint.yml`):
+Run `make check` before pushing; CI runs the same (`.github/workflows/lint.yml`).
+It runs, in order:
 
 ```bash
-gofmt -l .                       # must print nothing
-go vet ./...
-go test ./...                    # CI also fails below 90% total coverage:
-go test -coverprofile=/tmp/c.out ./... && go tool cover -func=/tmp/c.out | tail -1
-shellcheck templates/features/*.sh templates/files/limabean-network
-shellcheck -s sh templates/files/env.sh templates/files/limabean-github-git templates/files/limabean-info templates/files/limabean-statusline
-actionlint                       # when .github/ changes
-mkdocs build --strict -d /tmp/limabean-site   # when docs/, overrides/ or mkdocs.yml change
-                                 # (pip install -r docs/requirements.txt)
+make lint        # gofmt, go vet, golangci-lint, tools/doccheck, shellcheck, actionlint
+make cover       # go test -race; CI fails below 90% total coverage
+make docs        # regenerate docs/reference/commands; commit the result
+make docs-build  # mkdocs build --strict -d /tmp/limabean-site (pip install -r docs/requirements.txt)
+# then every benchmark once, and govulncheck
+make fuzz        # not in check: each Fuzz target for 30s, as CI does
 ```
 
 - Build the docs **outside the repo** (`-d`): a committed `site/` has

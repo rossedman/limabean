@@ -82,10 +82,13 @@ func Series(version string) string {
 	}
 	parts := strings.SplitN(strings.TrimPrefix(version, "v"), ".", 3)
 	parts[len(parts)-1], _, _ = strings.Cut(parts[len(parts)-1], "+")
-	if _, err := strconv.Atoi(parts[0]); err != nil {
+	if !isNumber(parts[0]) {
 		return ""
 	}
 	if parts[0] == "0" && len(parts) > 1 {
+		if !isNumber(parts[1]) {
+			return ""
+		}
 		return prefix + "0." + parts[1]
 	}
 	return prefix + parts[0]
@@ -97,6 +100,9 @@ func Newer(a, b string) bool {
 	return compare(a, b) > 0
 }
 
+// compare orders two versions, returning a negative number, zero or a
+// positive number as a is older than, the same as or newer than b; versions
+// with different prefixes order by prefix.
 func compare(a, b string) int {
 	if pa, pb := Prefix(a), Prefix(b); pa != pb {
 		return strings.Compare(pa, pb)
@@ -112,6 +118,8 @@ func compare(a, b string) int {
 	return compareVersions(builda, buildb)
 }
 
+// compareVersions compares dot-separated numbers one by one; a pre-release
+// sorts before its release.
 func compareVersions(a, b string) int {
 	split := func(v string) ([]string, string) {
 		v = strings.TrimPrefix(v, "v")
@@ -145,3 +153,17 @@ func compareVersions(a, b string) int {
 
 // String formats a pin for messages.
 func (p Pin) String() string { return fmt.Sprintf("%s %s", p.Tool, p.Version) }
+
+// isNumber reports whether s is one or more ASCII digits; unlike
+// strconv.Atoi it refuses a sign, so "+5" isn't a major version.
+func isNumber(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}

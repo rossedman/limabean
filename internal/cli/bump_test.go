@@ -62,7 +62,7 @@ func TestBump(t *testing.T) {
 	}
 
 	// A real run rewrites only the version strings.
-	h.run("", "bump", file)
+	_, _ = h.run("", "bump", file) // fails for "gone", which mise doesn't know
 	b, _ := os.ReadFile(file)
 	want := strings.NewReplacer(`ripgrep = "15.2.0"`, `ripgrep = "15.3.0"`, `helm = "4.3.1"`, `helm = "4.4.2"`).Replace(bumpTOML)
 	if string(b) != want {
@@ -71,7 +71,7 @@ func TestBump(t *testing.T) {
 
 	// --major takes the newest of everything.
 	write()
-	h.run("", "bump", file, "--major")
+	_, _ = h.run("", "bump", file, "--major") // fails for "gone", which mise doesn't know
 	b, _ = os.ReadFile(file)
 	for _, want := range []string{`helm = "5.0.1"   # charts`, `bat = "0.27.0"`, `go = "1.27.2"`, `gone = "1.0.0"`} {
 		if !strings.Contains(string(b), want) {
@@ -87,7 +87,9 @@ func TestBump(t *testing.T) {
 		t.Errorf("up to date:\n%s", out)
 	}
 	empty := filepath.Join(dir, "empty.toml")
-	os.WriteFile(empty, []byte("[env]\nX = \"1\"\n"), 0o644)
+	if err := os.WriteFile(empty, []byte("[env]\nX = \"1\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if out := h.must("", "bump", empty); !strings.Contains(out, "no pinned tools") {
 		t.Errorf("no pins:\n%s", out)
 	}
@@ -100,11 +102,19 @@ func TestBump(t *testing.T) {
 	if _, err := h.run("", "bump"); err == nil || !strings.Contains(err.Error(), "no templates/packs") {
 		t.Errorf("no templates here: %v", err)
 	}
-	os.MkdirAll(filepath.Join(dir, "templates", "packs"), 0o755)
-	os.MkdirAll(filepath.Join(dir, "templates", "mise"), 0o755)
+	if err := os.MkdirAll(filepath.Join(dir, "templates", "packs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "templates", "mise"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	write()
-	os.Rename(file, filepath.Join(dir, "templates", "packs", "base.toml"))
-	os.WriteFile(filepath.Join(dir, "templates", "mise", "env.toml"), []byte("[tools]\ngo = \"1.27.2\"\n"), 0o644)
+	if err := os.Rename(file, filepath.Join(dir, "templates", "packs", "base.toml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "templates", "mise", "env.toml"), []byte("[tools]\ngo = \"1.27.2\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	out = h.must("", "bump")
 	if !strings.Contains(out, "templates/packs/base.toml: updated 2 pin(s)") || !strings.Contains(out, "templates/mise/env.toml: all 1 pins are up to date") {
 		t.Errorf("default files:\n%s", out)
@@ -115,10 +125,14 @@ func TestBump(t *testing.T) {
 func TestBumpPrefixedVersion(t *testing.T) {
 	h := newHarness(t)
 	bin := t.TempDir()
-	os.WriteFile(filepath.Join(bin, "mise"), []byte("#!/bin/sh\n"), 0o755)
+	if err := os.WriteFile(filepath.Join(bin, "mise"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	file := filepath.Join(t.TempDir(), "java.toml")
-	os.WriteFile(file, []byte("[tools]\njava = \"temurin-25.0.4+101.0.LTS\"\n"), 0o644)
+	if err := os.WriteFile(file, []byte("[tools]\njava = \"temurin-25.0.4+101.0.LTS\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	h.world.latest["java@temurin"] = "temurin-27.0.0+35"
 	h.world.latest["java@temurin-25"] = "temurin-25.0.5+11.0.LTS"
 	h.world.latest["java"] = "27.0.0" // another vendor: never asked
@@ -134,7 +148,9 @@ func TestBumpPrefixedVersion(t *testing.T) {
 func TestBumpInVM(t *testing.T) {
 	h := newHarness(t)
 	file := filepath.Join(t.TempDir(), "base.toml")
-	os.WriteFile(file, []byte("[tools]\nripgrep = \"15.2.0\"\n"), 0o644)
+	if err := os.WriteFile(file, []byte("[tools]\nripgrep = \"15.2.0\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	h.world.latest["ripgrep"] = "15.3.0"
 	if _, err := h.run("", "bump", file, "--vm", "nope"); err == nil {
 		t.Error("a missing VM should fail")
@@ -155,7 +171,9 @@ func TestBumpInVM(t *testing.T) {
 
 func TestMiseLatestAndFirstLine(t *testing.T) {
 	bin := t.TempDir()
-	os.WriteFile(filepath.Join(bin, "mise"), []byte("#!/bin/sh\n[ \"$2\" = ok ] && { echo 1.2.3; exit 0; }\necho 'mise ERROR nope' >&2; exit 1\n"), 0o755)
+	if err := os.WriteFile(filepath.Join(bin, "mise"), []byte("#!/bin/sh\n[ \"$2\" = ok ] && { echo 1.2.3; exit 0; }\necho 'mise ERROR nope' >&2; exit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", bin)
 	if v, err := miseLatest(t.Context(), "ok"); err != nil || v != "1.2.3" {
 		t.Errorf("miseLatest = %q, %v", v, err)

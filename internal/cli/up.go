@@ -17,6 +17,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newUpCmd builds `limabean up`, which creates or starts a VM or brings a
+// project's VM up to date.
 func newUpCmd(a *App) *cobra.Command {
 	var file string
 	var yes, setup, dryRun bool
@@ -240,6 +242,8 @@ type upOptions struct {
 	yes, setup, dryRun bool
 }
 
+// upCreate shows a project's plan, confirms it unless told not to, then
+// creates its VM and applies its vars, secrets, clone, setup and start.
 func (a *App) upCreate(ctx context.Context, f *project.File, dir string, opt upOptions) error {
 	repo := a.projectRepo(ctx, f, dir)
 	own, missing := a.projectSecrets(f.Secrets)

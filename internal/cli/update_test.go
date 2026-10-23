@@ -52,7 +52,7 @@ func TestUpdateNotice(t *testing.T) {
 		t.Errorf("UPDATE_CHECK=no:\n%s", out)
 	}
 	t.Setenv("LIMABEAN_UPDATE_CHECK", "")
-	os.Unsetenv("LIMABEAN_UPDATE_CHECK")
+	_ = os.Unsetenv("LIMABEAN_UPDATE_CHECK")
 
 	// Up to date, a dev build, or a reply that isn't a version: nothing.
 	h.world.latestRelease = "v0.3.0"

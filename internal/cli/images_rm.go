@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newImagesRmCmd builds `limabean images rm`, which deletes images.
 func newImagesRmCmd(a *App) *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{

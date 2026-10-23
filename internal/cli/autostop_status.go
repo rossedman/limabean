@@ -9,6 +9,8 @@ import (
 	"github.com/rossedman/limabean/internal/ui"
 )
 
+// newAutostopStatusCmd builds `limabean autostop status`, which shows
+// whether idle VMs are being stopped.
 func newAutostopStatusCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",

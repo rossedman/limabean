@@ -1,0 +1,50 @@
+version: "2"
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable: [gosec, misspell, revive]
+  settings:
+    misspell:
+      # Tests use this typo to check that a mistyped key is refused.
+      ignore-rules: [enviroment]
+    gosec:
+      excludes:
+        # By design: limabean runs limactl, ssh, git, security and your
+        # editor, and reads files from paths it builds. Names from MCP and
+        # project files are validated first (.claude/rules/security.md).
+        - G204 # subprocess launched with a variable
+        - G304 # file read from a variable path
+        # No secret values are written to disk, and the network policy and
+        # templates are mounted into VMs, so these modes are deliberate.
+        - G301 # directories 0755
+        - G302 # files opened 0644
+        - G306 # files written 0644
+  exclusions:
+    rules:
+      # Tests and repo tools work in temp dirs and the repo itself.
+      - path: (_test\.go|^tools/)
+        linters: [gosec]
+        text: "G101|G703"
+      # ~/.ssh/config, not input.
+      - path: ^internal/cli/init\.go
+        linters: [gosec]
+        text: G703
+      # Single file names from your own templates directory.
+      - path: ^internal/templates/templates\.go
+        linters: [gosec]
+        text: G703
+      # limabean re-running itself, and hashing your own templates.
+      - path: ^internal/cli/images\.go
+        linters: [gosec]
+        text: "G702|G122"
+      # $VISUAL / $EDITOR, with the file passed as "$1", never in the command.
+      - path: ^internal/cli/secrets_edit\.go
+        linters: [gosec]
+        text: G702
+      # The name of the Keychain item and environment variable, not a token.
+      - path: ^internal/github/github\.go
+        linters: [gosec]
+        text: G101
+
+formatters:
+  enable: [gofmt]

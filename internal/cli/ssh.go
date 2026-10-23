@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newSSHCmd builds `limabean ssh`, which opens a shell in a VM or runs a
+// command in it.
 func newSSHCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "ssh [name] [command...]",

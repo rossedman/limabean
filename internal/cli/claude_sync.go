@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newClaudeSyncCmd builds `limabean claude sync`, which registers running
+// VMs in Claude Desktop and removes the rest.
 func newClaudeSyncCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync",

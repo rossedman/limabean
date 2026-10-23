@@ -113,8 +113,10 @@ func NewTerminalForms(out io.Writer, forms ...io.Reader) *UI {
 	return u
 }
 
+// style returns a new lipgloss style for the UI's output.
 func (u *UI) style() lipgloss.Style { return u.r.NewStyle() }
 
+// color paints s in c, but only in a terminal with color on.
 func (u *UI) color(c lipgloss.Color, s string) string {
 	if !u.Interactive || u.NoColor {
 		return s
@@ -128,16 +130,23 @@ func (u *UI) Code(s string) string { return u.color(Leaf2, s) }
 // Dimmed renders secondary text.
 func (u *UI) Dimmed(s string) string { return u.color(Dim, s) }
 
-// OK, Bad and Warn print a status line marked ✓, ✗ or !.
-func (u *UI) OK(format string, a ...any)   { u.mark("✓", Leaf, format, a...) }
-func (u *UI) Bad(format string, a ...any)  { u.mark("✗", Red, format, a...) }
+// OK prints a ✓ status line.
+func (u *UI) OK(format string, a ...any) { u.mark("✓", Leaf, format, a...) }
+
+// Bad prints a ✗ status line; unlike OK and Warn it shows even in quiet
+// mode.
+func (u *UI) Bad(format string, a ...any) { u.mark("✗", Red, format, a...) }
+
+// Warn prints a ! status line.
 func (u *UI) Warn(format string, a ...any) { u.mark("!", Amber, format, a...) }
 
+// mark prints a status line starting with sym in color c to stderr; quiet
+// mode hides everything but ✗.
 func (u *UI) mark(sym string, c lipgloss.Color, format string, a ...any) {
 	if u.Quiet && sym != "✗" {
 		return
 	}
-	fmt.Fprintf(u.Err, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(u.Err, "  %s %s\n", u.color(c, sym), fmt.Sprintf(format, a...))
 }
 
 // Hint prints indented, dimmed lines under a status line.
@@ -146,7 +155,7 @@ func (u *UI) Hint(lines ...string) {
 		return
 	}
 	for _, l := range lines {
-		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(l))
+		_, _ = fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(l))
 	}
 }
 
@@ -155,13 +164,13 @@ func (u *UI) Info(format string, a ...any) {
 	if u.Quiet {
 		return
 	}
-	fmt.Fprintf(u.Err, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
+	_, _ = fmt.Fprintf(u.Err, "%s %s\n", u.color(Leaf, "›"), fmt.Sprintf(format, a...))
 }
 
 // Detail prints a line only with --verbose.
 func (u *UI) Detail(format string, a ...any) {
 	if u.Verbose && !u.Quiet {
-		fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(fmt.Sprintf(format, a...)))
+		_, _ = fmt.Fprintf(u.Err, "    %s\n", u.Dimmed(fmt.Sprintf(format, a...)))
 	}
 }
 
@@ -170,14 +179,15 @@ func (u *UI) Section(title, sub string) {
 	switch {
 	case u.Quiet:
 	case sub == "":
-		fmt.Fprintf(u.Err, "\n%s\n", u.title(title))
+		_, _ = fmt.Fprintf(u.Err, "\n%s\n", u.title(title))
 	case u.Interactive:
-		fmt.Fprintf(u.Err, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
+		_, _ = fmt.Fprintf(u.Err, "\n%s  %s\n", u.title(title), u.Dimmed(sub))
 	default:
-		fmt.Fprintf(u.Err, "\n%s (%s)\n", title, sub)
+		_, _ = fmt.Fprintf(u.Err, "\n%s (%s)\n", title, sub)
 	}
 }
 
+// title renders s in bold, in a terminal with color on.
 func (u *UI) title(s string) string {
 	if !u.Interactive || u.NoColor {
 		return s
@@ -190,10 +200,10 @@ func (u *UI) Box(lines ...string) {
 	switch {
 	case u.Quiet:
 	case !u.Interactive:
-		fmt.Fprintf(u.Err, "\n%s\n", strings.Join(lines, "\n"))
+		_, _ = fmt.Fprintf(u.Err, "\n%s\n", strings.Join(lines, "\n"))
 	default:
 		box := u.style().Border(lipgloss.RoundedBorder()).BorderForeground(Leaf).Padding(0, 2).MarginTop(1)
-		fmt.Fprintln(u.Err, box.Render(strings.Join(lines, "\n")))
+		_, _ = fmt.Fprintln(u.Err, box.Render(strings.Join(lines, "\n")))
 	}
 }
 
@@ -202,11 +212,11 @@ func (u *UI) Box(lines ...string) {
 func (u *UI) Table(headers []string, rows [][]string) {
 	if !u.Interactive {
 		w := tabwriter.NewWriter(u.Out, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 		for _, r := range rows {
-			fmt.Fprintln(w, strings.Join(r, "\t"))
+			_, _ = fmt.Fprintln(w, strings.Join(r, "\t"))
 		}
-		w.Flush()
+		_ = w.Flush()
 		return
 	}
 	t := table.New().
@@ -221,7 +231,7 @@ func (u *UI) Table(headers []string, rows [][]string) {
 			}
 			return s
 		})
-	fmt.Fprintln(u.Out, t.Render())
+	_, _ = fmt.Fprintln(u.Out, t.Render())
 }
 
 // Spin runs fn behind a spinner titled title. In plain mode it prints the

@@ -72,7 +72,7 @@ func TestFormsInATerminal(t *testing.T) {
 		t.Errorf("Confirm = %v, %v", v, err)
 	}
 	u = NewTerminal(Keys(" box ", Enter), &bytes.Buffer{})
-	if v, err := u.Input("name", "", "", func(s string) error { return nil }); err != nil || v != "box" {
+	if v, err := u.Input("name", "", "", func(string) error { return nil }); err != nil || v != "box" {
 		t.Errorf("Input = %q, %v", v, err)
 	}
 	u = NewTerminal(Keys("s3cret", Enter), &bytes.Buffer{})

@@ -14,6 +14,8 @@ import (
 	"github.com/rossedman/limabean/internal/atomic"
 )
 
+// newAutostopOnCmd builds `limabean autostop on`, which installs the
+// background job that stops VMs nobody has used for a while.
 func newAutostopOnCmd(a *App) *cobra.Command {
 	var after time.Duration
 	cmd := &cobra.Command{

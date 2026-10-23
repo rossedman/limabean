@@ -12,6 +12,8 @@ import (
 	"github.com/rossedman/limabean/internal/project"
 )
 
+// newInitCmd builds `limabean init`, which sets up limabean or writes a
+// repository's .limabean.yaml.
 func newInitCmd(a *App) *cobra.Command {
 	var forProject, toStdout, overwrite bool
 	var dir string
@@ -149,8 +151,8 @@ func guessGitConfigDir(home, current string) string {
 	dir := filepath.Dir(target)
 	// Resolve home too, so a symlinked home (or /var → /private/var on
 	// macOS) still compares equal to the resolved target.
-	if real, err := filepath.EvalSymlinks(home); err == nil {
-		home = real
+	if resolved, err := filepath.EvalSymlinks(home); err == nil {
+		home = resolved
 	}
 	if rel, err := filepath.Rel(home, dir); err == nil && !strings.HasPrefix(rel, "..") {
 		return "~/" + rel

@@ -2,6 +2,8 @@ package cli
 
 import "github.com/spf13/cobra"
 
+// newGitHubCmd builds `limabean github`, the group of commands that give VMs
+// a GitHub token.
 func newGitHubCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "github",

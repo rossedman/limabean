@@ -2,6 +2,8 @@ package cli
 
 import "github.com/spf13/cobra"
 
+// newClaudeCmd builds `limabean claude`, the group of commands that keep VMs
+// listed in Claude Desktop.
 func newClaudeCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "claude",

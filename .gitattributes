@@ -1,0 +1,5 @@
+# LF everywhere: shell scripts and templates are copied into Linux VMs.
+* text=auto eol=lf
+
+*.png binary
+go.sum linguist-generated=true

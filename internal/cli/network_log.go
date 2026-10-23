@@ -17,6 +17,8 @@ type lookupEntry struct {
 	Allowed bool   `json:"allowed"`
 }
 
+// newNetworkLogCmd builds `limabean network log`, which shows the names a VM
+// looked up and which were blocked.
 func newNetworkLogCmd(a *App) *cobra.Command {
 	var asJSON, blocked bool
 	cmd := &cobra.Command{

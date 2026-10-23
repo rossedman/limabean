@@ -11,6 +11,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newSecretsSetCmd builds `limabean secrets set`, which adds or changes a
+// secret.
 func newSecretsSetCmd(a *App) *cobra.Command {
 	var vm string
 	var fromStdin, noSync bool

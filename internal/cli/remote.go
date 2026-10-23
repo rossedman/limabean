@@ -22,6 +22,8 @@ var remoteNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 // characters, nothing git or ssh could read as an option or a second host.
 var clonePathRE = regexp.MustCompile(`^/[A-Za-z0-9._@+/-]+$`)
 
+// newRemoteCmd builds `limabean remote`, which adds a VM's clone of this
+// repository as a git remote on the Mac.
 func newRemoteCmd(a *App) *cobra.Command {
 	var remote string
 	var remove bool

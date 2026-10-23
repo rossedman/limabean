@@ -32,17 +32,25 @@ type cliError struct {
 	silent bool // already explained to the user
 }
 
+// Error returns the wrapped error's message.
 func (e *cliError) Error() string { return e.err.Error() }
+
+// Unwrap returns the wrapped error, so errors.Is and errors.As see through a
+// cliError.
 func (e *cliError) Unwrap() error { return e.err }
 
+// usageErr returns a formatted error that exits with the usage status.
 func usageErr(format string, a ...any) error {
 	return &cliError{code: exitUsage, kind: "usage", err: fmt.Errorf(format, a...)}
 }
 
+// notFoundErr returns a formatted error that exits with the not-found
+// status.
 func notFoundErr(format string, a ...any) error {
 	return &cliError{code: exitNotFound, kind: "not_found", err: fmt.Errorf(format, a...)}
 }
 
+// conflictErr returns a formatted error that exits with the conflict status.
 func conflictErr(format string, a ...any) error {
 	return &cliError{code: exitConflict, kind: "conflict", err: fmt.Errorf(format, a...)}
 }
@@ -106,9 +114,9 @@ func writeJSONError(w io.Writer, err error) {
 // bugReport is what a crash prints: it's limabean's fault, not the user's,
 // and here's how to report it.
 func bugReport(w io.Writer, version string, args []string, r any) {
-	fmt.Fprintf(w, "limabean crashed. That's a bug in limabean, not something you did.\n")
-	fmt.Fprintf(w, "Please report it at https://github.com/rossedman/limabean/issues/new with:\n\n")
-	fmt.Fprintf(w, "  version: %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  command: limabean %s\n", strings.Join(args, " "))
-	fmt.Fprintf(w, "  error:   %v\n\n%s", r, debug.Stack())
+	_, _ = fmt.Fprintf(w, "limabean crashed. That's a bug in limabean, not something you did.\n")
+	_, _ = fmt.Fprintf(w, "Please report it at https://github.com/rossedman/limabean/issues/new with:\n\n")
+	_, _ = fmt.Fprintf(w, "  version: %s (%s/%s)\n", version, runtime.GOOS, runtime.GOARCH)
+	_, _ = fmt.Fprintf(w, "  command: limabean %s\n", strings.Join(args, " "))
+	_, _ = fmt.Fprintf(w, "  error:   %v\n\n%s", r, debug.Stack())
 }

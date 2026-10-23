@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newStartCmd builds `limabean start`, the older way to start a stopped VM.
 func newStartCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:    "start [name]",

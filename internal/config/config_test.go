@@ -127,7 +127,7 @@ func TestCodeDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("LIMABEAN_CODE_DISK", "")
-	os.Unsetenv("LIMABEAN_CODE_DISK")
+	_ = os.Unsetenv("LIMABEAN_CODE_DISK")
 	if c, err := Load(New(), path); err != nil || c.CodeDisk != 75 {
 		t.Errorf("saved CODE_DISK: %v, %v", c, err)
 	}

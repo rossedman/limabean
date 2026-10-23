@@ -24,6 +24,8 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newImagesCmd builds `limabean images`, the group of commands that manage
+// the images new VMs start from.
 func newImagesCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "images",
@@ -85,8 +87,10 @@ type image struct {
 	Used      time.Time `json:"used"` // last copied
 }
 
+// stale reports whether the image is older than imageMaxAge.
 func (im image) stale() bool { return time.Since(im.Built) > imageMaxAge }
 
+// imagesDir is where the image records are kept, under the state directory.
 func (a *App) imagesDir() string { return filepath.Join(a.stateDir, "images") }
 
 // templatesHash hashes every file under the templates directory, so any
@@ -102,7 +106,7 @@ func templatesHash(root string) (string, error) {
 			return err
 		}
 		rel, _ := filepath.Rel(root, path)
-		fmt.Fprintf(h, "%s\x00%d\x00", filepath.ToSlash(rel), len(b))
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00", filepath.ToSlash(rel), len(b))
 		h.Write(b)
 		return nil
 	})
@@ -159,6 +163,8 @@ func (a *App) imageFor(ctx context.Context, key string) (image, bool) {
 	return image{}, false
 }
 
+// saveImage writes an image's record as JSON, replacing any earlier one of
+// the same name.
 func (a *App) saveImage(im image) error {
 	if err := os.MkdirAll(a.imagesDir(), 0o755); err != nil {
 		return err
@@ -297,8 +303,8 @@ func spawn(args ...string) error {
 	if err != nil {
 		return err
 	}
-	defer log.Close()
-	fmt.Fprintf(log, "\n%s limabean %s\n", time.Now().Format(time.RFC3339), strings.Join(args, " "))
+	defer func() { _ = log.Close() }()
+	_, _ = fmt.Fprintf(log, "\n%s limabean %s\n", time.Now().Format(time.RFC3339), strings.Join(args, " "))
 	cmd := exec.Command(exe, args...)
 	cmd.Stdout, cmd.Stderr = log, log
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -330,11 +336,11 @@ func lockFile(path string, exclusive, wait bool) (unlock func(), err error) {
 		how |= syscall.LOCK_NB
 	}
 	if err := syscall.Flock(int(f.Fd()), how); err != nil {
-		f.Close()
+		_ = f.Close()
 		if errors.Is(err, syscall.EWOULDBLOCK) {
 			return nil, errLocked
 		}
 		return nil, err
 	}
-	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); f.Close() }, nil
+	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); _ = f.Close() }, nil
 }

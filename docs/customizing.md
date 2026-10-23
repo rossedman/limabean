@@ -68,7 +68,7 @@ limabean is built with [GoReleaser](https://goreleaser.com)
 ([`.goreleaser.yaml`](https://github.com/rossedman/limabean/blob/main/.goreleaser.yaml)) as one universal macOS binary:
 
 ```bash
-goreleaser release --snapshot --clean   # → dist/limabean_darwin_all/limabean
+goreleaser release --snapshot --clean --skip=sign   # → dist/limabean_darwin_all/limabean
 ```
 
 - Every pull request gets a snapshot build

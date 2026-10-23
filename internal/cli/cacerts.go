@@ -40,7 +40,7 @@ func (a *App) macRootCAs(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	plist := filepath.Join(dir, "trust.plist")
 	if _, err := a.security(ctx, "trust-settings-export", "-d", plist); err != nil {
 		// No admin trust settings at all is the common case, and not an error.
@@ -144,6 +144,8 @@ func decodePlist(b []byte) (any, error) {
 	}
 }
 
+// plistValue decodes the plist value that starts at se (a dict, array,
+// boolean or text value) into Go values.
 func plistValue(d *xml.Decoder, se xml.StartElement) (any, error) {
 	switch se.Name.Local {
 	case "dict":

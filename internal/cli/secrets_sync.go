@@ -2,6 +2,8 @@ package cli
 
 import "github.com/spf13/cobra"
 
+// newSecretsSyncCmd builds `limabean secrets sync`, which installs secrets
+// in running VMs.
 func newSecretsSyncCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync [name]",

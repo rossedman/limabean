@@ -8,6 +8,8 @@ import (
 	"github.com/rossedman/limabean/internal/ui"
 )
 
+// newNetworkLsCmd builds `limabean network ls`, which shows a VM's network
+// policy.
 func newNetworkLsCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:     "ls [name]",

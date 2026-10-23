@@ -60,6 +60,8 @@ func (a *App) varsState(vm string) string {
 	return filepath.Join(a.stateDir, vm+".vars")
 }
 
+// appliedVars returns the vars last applied to a VM; none if nothing was
+// recorded.
 func (a *App) appliedVars(vm string) map[string]string {
 	env := map[string]string{}
 	if b, err := os.ReadFile(a.varsState(vm)); err == nil {
@@ -68,6 +70,8 @@ func (a *App) appliedVars(vm string) map[string]string {
 	return env
 }
 
+// saveVars remembers the vars applied to a VM, or forgets them when there
+// are none.
 func (a *App) saveVars(vm string, env map[string]string) error {
 	if len(env) == 0 {
 		if err := os.Remove(a.varsState(vm)); err != nil && !errors.Is(err, fs.ErrNotExist) {

@@ -47,6 +47,7 @@ type downloadWatch struct {
 	rate  float64 // bytes a second, smoothed
 }
 
+// newDownloadWatch returns a watcher with no download seen yet.
 func (a *App) newDownloadWatch() *downloadWatch {
 	return &downloadWatch{a: a, sizes: map[string]int64{}}
 }

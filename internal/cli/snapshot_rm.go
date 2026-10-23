@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newSnapshotRmCmd builds `limabean snapshot rm`, which deletes a snapshot.
 func newSnapshotRmCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:     "rm <name> <snapshot>",

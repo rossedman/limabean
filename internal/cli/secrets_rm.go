@@ -9,6 +9,7 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newSecretsRmCmd builds `limabean secrets rm`, which removes a secret.
 func newSecretsRmCmd(a *App) *cobra.Command {
 	var vm string
 	var noSync bool

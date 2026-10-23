@@ -20,6 +20,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newDoctorCmd builds `limabean doctor`, which checks the things VMs depend
+// on.
 func newDoctorCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
@@ -219,7 +221,7 @@ func sshInclude(path string) (include, block int) {
 	if err != nil {
 		return 0, 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sc := bufio.NewScanner(f)
 	for n := 1; sc.Scan(); n++ {
 		line := sc.Text()

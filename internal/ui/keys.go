@@ -39,6 +39,8 @@ type keyReader struct {
 	after time.Duration // the pause before the next key
 }
 
+// Read hands out the next scripted key, pausing first so a form has time to
+// take the previous one.
 func (k *keyReader) Read(p []byte) (int, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
