@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newAutostopCmd builds `limabean autostop`, the group of commands that stop
+// idle VMs automatically.
 func newAutostopCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "autostop",

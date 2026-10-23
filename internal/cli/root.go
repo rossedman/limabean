@@ -137,4 +137,5 @@ var errSilent = errors.New("failed")
 // exitCode makes limabean exit with a command's own status (run).
 type exitCode int
 
+// Error describes the status a command exited with.
 func (c exitCode) Error() string { return fmt.Sprintf("the command exited with status %d", int(c)) }

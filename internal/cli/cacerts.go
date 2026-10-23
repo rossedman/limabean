@@ -144,6 +144,8 @@ func decodePlist(b []byte) (any, error) {
 	}
 }
 
+// plistValue decodes the plist value that starts at se (a dict, array,
+// boolean or text value) into Go values.
 func plistValue(d *xml.Decoder, se xml.StartElement) (any, error) {
 	switch se.Name.Local {
 	case "dict":

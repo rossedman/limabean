@@ -44,6 +44,7 @@ func (d *Draft) Empty() bool {
 	return len(d.Packs) == 0 && len(d.Tools) == 0 && len(d.Setup) == 0 && len(d.Start) == 0
 }
 
+// pack adds a pack to the draft, once, and records why it was suggested.
 func (d *Draft) pack(name, why string) {
 	if d.why == nil {
 		d.why = map[string][]string{}
@@ -56,6 +57,7 @@ func (d *Draft) pack(name, why string) {
 	}
 }
 
+// port adds a port to the draft, once.
 func (d *Draft) port(p int) {
 	if !slices.Contains(d.Ports, p) {
 		d.Ports = append(d.Ports, p)
@@ -107,13 +109,18 @@ func Detect(dir string, packOf func(tool string) string) (*Draft, error) {
 // only, at most 1 MiB, so a symlink can't point it anywhere else.
 type reader struct{ root, sub string }
 
+// path returns the path of a file in the reader's directory.
 func (r reader) path(name string) string { return filepath.Join(r.root, r.sub, name) }
 
+// has reports whether name is a regular file in the directory; a symlink
+// doesn't count.
 func (r reader) has(name string) bool {
 	fi, err := os.Lstat(r.path(name))
 	return err == nil && fi.Mode().IsRegular()
 }
 
+// read returns the first 1 MiB of a regular file in the directory, or "" if
+// it isn't one or can't be read.
 func (r reader) read(name string) string {
 	if !r.has(name) {
 		return ""
@@ -143,6 +150,8 @@ func (r reader) glob(pattern string) bool {
 // where says which file suggested something: "go.mod", or "api/go.mod".
 func (r reader) where(name string) string { return filepath.ToSlash(filepath.Join(r.sub, name)) }
 
+// detect adds to the draft what this directory's files suggest: packs, setup
+// commands, start commands, ports and secrets.
 func (r reader) detect(d *Draft, packOf func(string) string) {
 	if r.has("go.mod") {
 		d.pack("go", r.where("go.mod"))
@@ -260,6 +269,8 @@ func (r reader) detect(d *Draft, packOf func(string) string) {
 	}
 }
 
+// firstFile returns the first of names that exists in the directory, or the
+// first name when none does.
 func firstFile(r reader, names ...string) string {
 	for _, n := range names {
 		if r.has(n) {

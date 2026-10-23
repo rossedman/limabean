@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newCompletionCmd builds `limabean completion`, which prints a shell
+// completion script.
 func newCompletionCmd(_ *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "completion <bash|zsh|fish|powershell>",

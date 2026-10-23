@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newAutostopOffCmd builds `limabean autostop off`, which stops the
+// background job that stops idle VMs.
 func newAutostopOffCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "off",

@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newLogsCmd builds `limabean logs`, which shows a VM's provisioning log or
+// its project's setup and start output.
 func newLogsCmd(a *App) *cobra.Command {
 	var file string
 	var lines int

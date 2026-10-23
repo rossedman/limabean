@@ -16,6 +16,8 @@ import (
 	"github.com/rossedman/limabean/internal/lima"
 )
 
+// newPortsCmd builds `limabean ports`, which lists the ports a VM forwards
+// to the Mac.
 func newPortsCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

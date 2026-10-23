@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newRmCmd builds `limabean rm`, which deletes a VM.
 func newRmCmd(a *App) *cobra.Command {
 	var force, yes, expired bool
 	cmd := &cobra.Command{

@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkLockCmd builds `limabean network lock`, which takes sudo and
+// Docker away from a VM's user.
 func newNetworkLockCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "lock <name>",

@@ -195,6 +195,8 @@ func (a *App) ownsKeychainRef(ref string) bool {
 	return len(ref) > len(prefix) && ref[:len(prefix)] == prefix
 }
 
+// envOr returns the environment variable key, or def when it's unset or
+// empty.
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -202,6 +204,8 @@ func envOr(key, def string) string {
 	return def
 }
 
+// firstNonEmpty returns the first of vals that isn't empty, or "" if all
+// are.
 func firstNonEmpty(vals ...string) string {
 	for _, v := range vals {
 		if v != "" {
@@ -211,6 +215,8 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
+// stateDir is where limabean keeps its state files:
+// $XDG_STATE_HOME/limabean, or ~/.local/state/limabean.
 func stateDir() string {
 	if d := os.Getenv("XDG_STATE_HOME"); d != "" {
 		return filepath.Join(d, "limabean")
@@ -219,6 +225,8 @@ func stateDir() string {
 	return filepath.Join(home, ".local", "state", "limabean")
 }
 
+// cacheDir is where limabean keeps downloaded files:
+// $XDG_CACHE_HOME/limabean, or ~/.cache/limabean.
 func cacheDir() string {
 	if d := os.Getenv("XDG_CACHE_HOME"); d != "" {
 		return filepath.Join(d, "limabean")
@@ -227,6 +235,7 @@ func cacheDir() string {
 	return filepath.Join(home, ".cache", "limabean")
 }
 
+// hasProgram reports whether a program called name is on the PATH.
 func hasProgram(name string) bool {
 	_, err := lookPath(name)
 	return err == nil
@@ -239,6 +248,8 @@ type verboseRunner struct {
 	ui *ui.UI
 }
 
+// Output prints the command line to stderr, then runs it through the wrapped
+// Runner.
 func (v verboseRunner) Output(ctx context.Context, stdin io.Reader, combined bool, name string, args ...string) ([]byte, error) {
 	v.ui.Detail("$ %s %s", name, strings.Join(args, " "))
 	return v.Runner.Output(ctx, stdin, combined, name, args...)

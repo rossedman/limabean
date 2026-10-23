@@ -10,6 +10,8 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newRebuildCmd builds `limabean rebuild`, which recreates a VM from the
+// current templates.
 func newRebuildCmd(a *App) *cobra.Command {
 	var force, yes bool
 	var withPacks, withoutPacks []string

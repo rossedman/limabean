@@ -16,6 +16,7 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newNewCmd builds `limabean new`, the older way to create a VM.
 func newNewCmd(a *App) *cobra.Command {
 	var nf newFlags
 	cmd := &cobra.Command{
@@ -94,6 +95,7 @@ type newFlags struct {
 	ttl                           time.Duration
 }
 
+// add registers the flags that create-time options come from on f.
 func (nf *newFlags) add(f *pflag.FlagSet) {
 	f.StringArrayVar(&nf.secrets, "secret", nil, "give this VM a secret: NAME=reference (repeatable)")
 	f.StringSliceVar(&nf.with, "with", nil, "give the VM these packs, e.g. go,node (see: limabean packs)")

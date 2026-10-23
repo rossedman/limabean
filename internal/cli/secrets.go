@@ -2,6 +2,8 @@ package cli
 
 import "github.com/spf13/cobra"
 
+// newSecretsCmd builds `limabean secrets`, the group of commands that manage
+// the variables and secrets VMs get.
 func newSecretsCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "secrets",

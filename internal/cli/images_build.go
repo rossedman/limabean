@@ -10,6 +10,8 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newImagesBuildCmd builds `limabean images build`, which builds an image
+// now.
 func newImagesBuildCmd(a *App) *cobra.Command {
 	var env, packList string
 	var with, without []string

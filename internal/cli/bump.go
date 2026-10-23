@@ -17,6 +17,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newBumpCmd builds `limabean bump`, which updates the pinned tool versions
+// in mise TOML files.
 func newBumpCmd(a *App) *cobra.Command {
 	var vm string
 	var major, dryRun bool

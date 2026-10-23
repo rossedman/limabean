@@ -20,6 +20,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newDoctorCmd builds `limabean doctor`, which checks the things VMs depend
+// on.
 func newDoctorCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",

@@ -13,6 +13,7 @@ import (
 	"github.com/rossedman/limabean/internal/lima"
 )
 
+// newStopCmd builds `limabean stop`, the older way to stop a running VM.
 func newStopCmd(a *App) *cobra.Command {
 	var idle time.Duration
 	var dryRun bool

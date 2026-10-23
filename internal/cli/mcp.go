@@ -23,6 +23,8 @@ import (
 	"github.com/rossedman/limabean/internal/ui"
 )
 
+// newMCPCmd builds `limabean mcp`, which serves the MCP server that lets
+// Claude manage VMs.
 func newMCPCmd(a *App) *cobra.Command {
 	var allowDestructive bool
 	cmd := &cobra.Command{
@@ -544,6 +546,7 @@ func tail(out []byte) string {
 	return fmt.Sprintf("[first %d bytes cut]\n%s", len(out)-mcpMaxOutput, out[len(out)-mcpMaxOutput:])
 }
 
+// text wraps s as the text content of a tool result.
 func text(s string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: s}}}
 }

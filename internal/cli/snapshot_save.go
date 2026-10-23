@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newSnapshotSaveCmd builds `limabean snapshot save`, which saves a snapshot
+// of a VM.
 func newSnapshotSaveCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "save [name] [snapshot]",

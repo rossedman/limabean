@@ -27,8 +27,11 @@ type updateState struct {
 	Latest  string    `json:"latest,omitempty"`
 }
 
+// updateFile is where the last update check is recorded.
 func (a *App) updateFile() string { return filepath.Join(a.stateDir, "update.json") }
 
+// readUpdateState returns the recorded update check, or an empty one if
+// there is none.
 func (a *App) readUpdateState() updateState {
 	var s updateState
 	if b, err := os.ReadFile(a.updateFile()); err == nil {
@@ -37,6 +40,7 @@ func (a *App) readUpdateState() updateState {
 	return s
 }
 
+// saveUpdateState records the result of an update check.
 func (a *App) saveUpdateState(s updateState) error {
 	if err := os.MkdirAll(a.stateDir, 0o755); err != nil {
 		return err

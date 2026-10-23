@@ -30,6 +30,7 @@ type flagSchema struct {
 	Global    bool   `json:"global,omitempty"` // a persistent flag every command takes
 }
 
+// newHelpCmd builds `limabean help`, which shows help for any command.
 func newHelpCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

@@ -43,6 +43,7 @@ func (p Progress) String() string {
 	return p.Label + ": " + strings.Join(parts, ", ")
 }
 
+// mib formats a byte count as whole MiB.
 func mib(n int64) string { return fmt.Sprintf("%d MiB", n>>20) }
 
 // roundLeft rounds a time left to what's worth reading: seconds under a
@@ -131,6 +132,8 @@ type (
 // progressEvery is how often the progress line is read.
 const progressEvery = 500 * time.Millisecond
 
+// Init starts the spinner, the action and, if there is one, the progress
+// polling.
 func (m *spinModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{m.spin.Tick, func() tea.Msg { return spinDone{m.action()} }}
 	if m.progress != nil {
@@ -139,6 +142,8 @@ func (m *spinModel) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+// Update handles the spinner's tick, the action finishing, a progress poll
+// and ctrl+c.
 func (m *spinModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case spinDone:
@@ -158,6 +163,8 @@ func (m *spinModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// View draws the spinner and title, with the progress line below when there
+// is one.
 func (m *spinModel) View() string {
 	v := m.spin.View() + " " + m.title
 	if !m.have {

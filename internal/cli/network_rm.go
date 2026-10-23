@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkRmCmd builds `limabean network rm`, which stops a VM reaching
+// some domains.
 func newNetworkRmCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:     "rm <name> <domain|preset>...",

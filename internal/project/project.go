@@ -163,6 +163,8 @@ func Parse(b []byte, path string) (*File, error) {
 	return &f, nil
 }
 
+// check validates the file's names, packs, ports, secrets, vars and Claude
+// settings, so nothing odd reaches a command line.
 func (f *File) check() error {
 	if !nameRE.MatchString(f.Name) {
 		return fmt.Errorf("name %q: use letters, digits and dashes", f.Name)
@@ -200,6 +202,8 @@ func (f *File) check() error {
 	return f.Claude.check()
 }
 
+// check validates the marketplaces and plugins a project asks Claude to use:
+// their sources and plugin@marketplace names.
 func (c Claude) check() error {
 	names := map[string]bool{}
 	for _, m := range c.Marketplaces {
@@ -230,6 +234,8 @@ func (c Claude) check() error {
 // dynamic linker read them before anything the project runs.
 var reservedEnv = map[string]bool{"PATH": true, "HOME": true, "USER": true, "SHELL": true, "ENV": true, "BASH_ENV": true, "ZDOTDIR": true, "PROMPT_COMMAND": true, "IFS": true}
 
+// checkVars validates the file's vars: their names and values, and that none
+// is reserved or also a secret.
 func (f *File) checkVars() error {
 	if len(f.Vars) > 200 {
 		return errors.New("vars: at most 200 variables")

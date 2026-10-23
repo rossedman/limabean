@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newOpenCmd builds `limabean open`, which opens a port a VM forwards in the
+// browser.
 func newOpenCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "open [name] [port]",

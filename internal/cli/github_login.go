@@ -11,6 +11,8 @@ import (
 	"github.com/rossedman/limabean/internal/secrets"
 )
 
+// newGitHubLoginCmd builds `limabean github login`, which saves a GitHub
+// token and installs it in VMs.
 func newGitHubLoginCmd(a *App) *cobra.Command {
 	var withToken, noSync bool
 	cmd := &cobra.Command{

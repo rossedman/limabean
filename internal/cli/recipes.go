@@ -15,6 +15,8 @@ import (
 	"github.com/rossedman/limabean/recipes"
 )
 
+// newRecipesCmd builds `limabean recipes`, which lists starter
+// .limabean.yaml files or writes one into a repository.
 func newRecipesCmd(a *App) *cobra.Command {
 	var toStdout, force bool
 	cmd := &cobra.Command{
@@ -92,6 +94,7 @@ func recipeDescription(body []byte) string {
 	return strings.TrimSpace(strings.TrimPrefix(line, "#"))
 }
 
+// listRecipes prints a table of the starter recipes and what each is for.
 func (a *App) listRecipes() error {
 	rows := [][]string{}
 	for _, name := range recipeNames() {
@@ -126,6 +129,7 @@ func (a *App) writeRecipe(name string, body []byte, force bool) error {
 	return nil
 }
 
+// completeRecipes completes a recipe name as the command's first argument.
 func completeRecipes(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp

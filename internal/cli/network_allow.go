@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newNetworkAllowCmd builds `limabean network allow`, which lets a VM reach
+// more domains.
 func newNetworkAllowCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "allow <name> <domain|preset>...",

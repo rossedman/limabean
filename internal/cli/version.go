@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newVersionCmd builds `limabean version`, which prints limabean's version.
 func newVersionCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

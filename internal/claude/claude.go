@@ -79,6 +79,8 @@ func (s Settings) Remove(vm string) error {
 	})
 }
 
+// without returns the entries whose id isn't the given one, in their
+// original order, leaving the input slice untouched.
 func without(entries []json.RawMessage, id string) []json.RawMessage {
 	out := entries[:0:0]
 	for _, raw := range entries {
@@ -89,6 +91,8 @@ func without(entries []json.RawMessage, id string) []json.RawMessage {
 	return out
 }
 
+// entryID returns an SSH entry's "id", or "" when the entry doesn't have a
+// readable one.
 func entryID(raw json.RawMessage) string {
 	var e struct {
 		ID string `json:"id"`
@@ -97,6 +101,8 @@ func entryID(raw json.RawMessage) string {
 	return e.ID
 }
 
+// edit loads the settings file, applies fn to its sshConfigs list and writes
+// the result back, leaving every other key as it was.
 func (s Settings) edit(fn func([]json.RawMessage) ([]json.RawMessage, error)) error {
 	doc, err := s.load()
 	if err != nil {
@@ -141,6 +147,8 @@ type document struct {
 	values map[string]json.RawMessage
 }
 
+// load reads the settings file into a document; a missing or empty file is
+// an empty document, and one that isn't a JSON object is ErrInvalid.
 func (s Settings) load() (*document, error) {
 	data, err := os.ReadFile(s.Path)
 	if os.IsNotExist(err) || (err == nil && len(bytes.TrimSpace(data)) == 0) {
@@ -156,6 +164,8 @@ func (s Settings) load() (*document, error) {
 	return doc, nil
 }
 
+// parseObject decodes a JSON object while remembering its key order and
+// keeping each value as raw JSON, so a later write changes nothing else.
 func parseObject(data []byte) (*document, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	tok, err := dec.Token()
@@ -190,6 +200,8 @@ func parseObject(data []byte) (*document, error) {
 	return doc, nil
 }
 
+// entries returns the sshConfigs list, nil when there is none, and an error
+// when the key holds something other than a list.
 func (d *document) entries() ([]json.RawMessage, error) {
 	raw, ok := d.values["sshConfigs"]
 	if !ok || string(raw) == "null" {
@@ -202,6 +214,8 @@ func (d *document) entries() ([]json.RawMessage, error) {
 	return entries, nil
 }
 
+// set stores a value under key, adding the key at the end if it's new so
+// existing keys keep their place.
 func (d *document) set(key string, raw json.RawMessage) {
 	if _, ok := d.values[key]; !ok {
 		d.keys = append(d.keys, key)
@@ -209,6 +223,8 @@ func (d *document) set(key string, raw json.RawMessage) {
 	d.values[key] = raw
 }
 
+// marshal writes the document back as indented JSON with its keys in the
+// order they were read.
 func (d *document) marshal() ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString("{")

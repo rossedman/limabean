@@ -113,8 +113,10 @@ func NewTerminalForms(out io.Writer, forms ...io.Reader) *UI {
 	return u
 }
 
+// style returns a new lipgloss style for the UI's output.
 func (u *UI) style() lipgloss.Style { return u.r.NewStyle() }
 
+// color paints s in c, but only in a terminal with color on.
 func (u *UI) color(c lipgloss.Color, s string) string {
 	if !u.Interactive || u.NoColor {
 		return s
@@ -129,10 +131,17 @@ func (u *UI) Code(s string) string { return u.color(Leaf2, s) }
 func (u *UI) Dimmed(s string) string { return u.color(Dim, s) }
 
 // OK, Bad and Warn print a status line marked ✓, ✗ or !.
-func (u *UI) OK(format string, a ...any)   { u.mark("✓", Leaf, format, a...) }
-func (u *UI) Bad(format string, a ...any)  { u.mark("✗", Red, format, a...) }
+func (u *UI) OK(format string, a ...any) { u.mark("✓", Leaf, format, a...) }
+
+// Bad prints a ✗ status line; unlike OK and Warn it shows even in quiet
+// mode.
+func (u *UI) Bad(format string, a ...any) { u.mark("✗", Red, format, a...) }
+
+// Warn prints a ! status line.
 func (u *UI) Warn(format string, a ...any) { u.mark("!", Amber, format, a...) }
 
+// mark prints a status line starting with sym in color c to stderr; quiet
+// mode hides everything but ✗.
 func (u *UI) mark(sym string, c lipgloss.Color, format string, a ...any) {
 	if u.Quiet && sym != "✗" {
 		return
@@ -178,6 +187,7 @@ func (u *UI) Section(title, sub string) {
 	}
 }
 
+// title renders s in bold, in a terminal with color on.
 func (u *UI) title(s string) string {
 	if !u.Interactive || u.NoColor {
 		return s

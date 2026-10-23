@@ -149,6 +149,8 @@ func Load(v *viper.Viper, path string) (*Config, error) {
 	}, nil
 }
 
+// yes reports whether a setting's value reads as true: yes, y, true, 1 or
+// on, in any case.
 func yes(s string) bool {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "yes", "y", "true", "1", "on":

@@ -12,6 +12,8 @@ import (
 	"github.com/rossedman/limabean/internal/project"
 )
 
+// newInitCmd builds `limabean init`, which sets up limabean or writes a
+// repository's .limabean.yaml.
 func newInitCmd(a *App) *cobra.Command {
 	var forProject, toStdout, overwrite bool
 	var dir string

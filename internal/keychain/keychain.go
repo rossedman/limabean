@@ -38,6 +38,8 @@ func Default() Keychain {
 	return Keychain{Account: name, Security: "security"}
 }
 
+// bin returns the security program to run, "security" unless the keychain
+// sets another.
 func (k Keychain) bin() string {
 	if k.Security != "" {
 		return k.Security

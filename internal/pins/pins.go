@@ -97,6 +97,9 @@ func Newer(a, b string) bool {
 	return compare(a, b) > 0
 }
 
+// compare orders two versions, returning a negative number, zero or a
+// positive number as a is older than, the same as or newer than b; versions
+// with different prefixes order by prefix.
 func compare(a, b string) int {
 	if pa, pb := Prefix(a), Prefix(b); pa != pb {
 		return strings.Compare(pa, pb)
@@ -112,6 +115,8 @@ func compare(a, b string) int {
 	return compareVersions(builda, buildb)
 }
 
+// compareVersions compares dot-separated numbers one by one; a pre-release
+// sorts before its release.
 func compareVersions(a, b string) int {
 	split := func(v string) ([]string, string) {
 		v = strings.TrimPrefix(v, "v")

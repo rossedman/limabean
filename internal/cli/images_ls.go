@@ -18,6 +18,7 @@ type imageEntry struct {
 	Status string    `json:"status"` // current, stale or outdated
 }
 
+// newImagesLsCmd builds `limabean images ls`, which lists images.
 func newImagesLsCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

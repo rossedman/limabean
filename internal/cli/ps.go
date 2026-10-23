@@ -30,6 +30,8 @@ type psEntry struct {
 	Widening []string `json:"widening"` // network changes only the user can make
 }
 
+// newPsCmd builds `limabean ps`, which shows the project's VM: status,
+// start, ports and pending changes.
 func newPsCmd(a *App) *cobra.Command {
 	var file string
 	var asJSON bool
@@ -171,6 +173,7 @@ func (a *App) psShow(e psEntry) {
 	}
 }
 
+// plural returns "s" unless n is 1.
 func plural(n int) string {
 	if n == 1 {
 		return ""

@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newImagesPruneCmd builds `limabean images prune`, which deletes images
+// that are no longer used.
 func newImagesPruneCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "prune",

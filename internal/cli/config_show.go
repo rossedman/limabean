@@ -17,6 +17,8 @@ type settingEntry struct {
 	Source string `json:"source"` // flag, env, file or default
 }
 
+// newConfigCmd builds `limabean config`, which shows the settings and where
+// each one comes from.
 func newConfigCmd(a *App) *cobra.Command {
 	var asJSON bool
 	cmd := &cobra.Command{

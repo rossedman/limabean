@@ -148,6 +148,8 @@ func (a *App) claudeAdd(name string) {
 	a.UI.OK("Added to Claude Desktop")
 }
 
+// claudeRemove takes a VM out of Claude Desktop, when that setting is on; a
+// failure is a warning.
 func (a *App) claudeRemove(name string) {
 	if !a.Cfg.ClaudeDesktop {
 		return
@@ -688,6 +690,8 @@ func (a *App) vmHasSecret(ctx context.Context, inst lima.Instance, name string) 
 	return err == nil
 }
 
+// padRight pads s with spaces to n columns, and always leaves at least one
+// space after it.
 func padRight(s string, n int) string {
 	if len(s) >= n {
 		return s + " "

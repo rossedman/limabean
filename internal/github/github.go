@@ -41,6 +41,7 @@ type Client struct {
 	HTTP    *http.Client
 }
 
+// base returns the API's base URL, GitHub's unless the client sets another.
 func (c Client) base() string {
 	if c.BaseURL == "" {
 		return "https://api.github.com"
@@ -48,6 +49,8 @@ func (c Client) base() string {
 	return c.BaseURL
 }
 
+// http returns the HTTP client to use, one with a 15 second timeout unless
+// the client sets another.
 func (c Client) http() *http.Client {
 	if c.HTTP == nil {
 		return &http.Client{Timeout: 15 * time.Second}

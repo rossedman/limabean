@@ -32,17 +32,25 @@ type cliError struct {
 	silent bool // already explained to the user
 }
 
+// Error returns the wrapped error's message.
 func (e *cliError) Error() string { return e.err.Error() }
+
+// Unwrap returns the wrapped error, so errors.Is and errors.As see through a
+// cliError.
 func (e *cliError) Unwrap() error { return e.err }
 
+// usageErr returns a formatted error that exits with the usage status.
 func usageErr(format string, a ...any) error {
 	return &cliError{code: exitUsage, kind: "usage", err: fmt.Errorf(format, a...)}
 }
 
+// notFoundErr returns a formatted error that exits with the not-found
+// status.
 func notFoundErr(format string, a ...any) error {
 	return &cliError{code: exitNotFound, kind: "not_found", err: fmt.Errorf(format, a...)}
 }
 
+// conflictErr returns a formatted error that exits with the conflict status.
 func conflictErr(format string, a ...any) error {
 	return &cliError{code: exitConflict, kind: "conflict", err: fmt.Errorf(format, a...)}
 }

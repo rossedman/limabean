@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newDownCmd builds `limabean down`, which stops a VM, or the project's.
 func newDownCmd(a *App) *cobra.Command {
 	var file string
 	var idle time.Duration

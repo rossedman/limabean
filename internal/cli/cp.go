@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newCpCmd builds `limabean cp`, which copies files between the Mac and a
+// VM.
 func newCpCmd(a *App) *cobra.Command {
 	var recursive bool
 	cmd := &cobra.Command{

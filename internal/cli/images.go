@@ -24,6 +24,8 @@ import (
 	"github.com/rossedman/limabean/internal/templates"
 )
 
+// newImagesCmd builds `limabean images`, the group of commands that manage
+// the images new VMs start from.
 func newImagesCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "images",
@@ -85,8 +87,10 @@ type image struct {
 	Used      time.Time `json:"used"` // last copied
 }
 
+// stale reports whether the image is older than imageMaxAge.
 func (im image) stale() bool { return time.Since(im.Built) > imageMaxAge }
 
+// imagesDir is where the image records are kept, under the state directory.
 func (a *App) imagesDir() string { return filepath.Join(a.stateDir, "images") }
 
 // templatesHash hashes every file under the templates directory, so any
@@ -159,6 +163,8 @@ func (a *App) imageFor(ctx context.Context, key string) (image, bool) {
 	return image{}, false
 }
 
+// saveImage writes an image's record as JSON, replacing any earlier one of
+// the same name.
 func (a *App) saveImage(im image) error {
 	if err := os.MkdirAll(a.imagesDir(), 0o755); err != nil {
 		return err

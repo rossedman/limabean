@@ -164,6 +164,8 @@ func Path(root, env string) (string, error) {
 	return "", fmt.Errorf("unknown environment %q (available: %s)", env, strings.Join(envs, ", "))
 }
 
+// hashFS hashes the names, sizes and contents of every file in fsys, so any
+// change gives a new hash.
 func hashFS(fsys fs.FS) (string, error) {
 	h := sha256.New()
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {

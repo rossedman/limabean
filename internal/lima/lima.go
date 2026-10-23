@@ -52,7 +52,11 @@ type CommandError struct {
 	Output string
 }
 
+// Error returns the wrapped error's message; the command's stderr is kept in
+// Output.
 func (e *CommandError) Error() string { return e.Err.Error() }
+
+// Unwrap returns the wrapped error.
 func (e *CommandError) Unwrap() error { return e.Err }
 
 // Instance is one entry of `limactl list --format json`.
@@ -87,6 +91,8 @@ type Client struct {
 // New returns a Client that runs real programs.
 func New() *Client { return &Client{Runner: ExecRunner{}, Limactl: "limactl"} }
 
+// limactl returns the limactl program to run, "limactl" unless the client
+// sets another.
 func (c *Client) limactl() string {
 	if c.Limactl != "" {
 		return c.Limactl
@@ -116,6 +122,8 @@ func (c *Client) List(ctx context.Context) ([]Instance, error) {
 	return parseList(out)
 }
 
+// parseList reads `limactl list --format json` output, one JSON object per
+// line, skipping lines that aren't objects.
 func parseList(out []byte) ([]Instance, error) {
 	var list []Instance
 	sc := bufio.NewScanner(bytes.NewReader(out))
@@ -345,6 +353,7 @@ func ExecIn(inst Instance, dir string, command ...string) error {
 	return execve(path, append([]string{"ssh"}, ExecInArgs(inst, dir, command...)...), os.Environ())
 }
 
+// sortedKeys returns m's keys in order.
 func sortedKeys(m map[string]string) []string {
 	return slices.Sorted(maps.Keys(m))
 }

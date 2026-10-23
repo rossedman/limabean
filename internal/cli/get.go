@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newGetCmd builds `limabean get`, which clones a repository into a VM with
+// ghq.
 func newGetCmd(a *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get [name] <repo> [ghq flags...]",
