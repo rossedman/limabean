@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/rossedman/limabean/internal/claude"
@@ -28,6 +29,7 @@ import (
 
 // fakeWorld stands in for limactl, ssh and the Keychain.
 type fakeWorld struct {
+	mu       sync.Mutex        // bump looks tools up in parallel
 	vms      map[string]string // name → status
 	calls    []string
 	sshStdin map[string]string // VM → last stdin written over ssh
@@ -397,7 +399,8 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	t.Setenv("HOME", home)
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	// Only the system's own programs: never the machine's limactl, mise or editors.
+	t.Setenv("PATH", strings.Join([]string{bin, "/usr/bin", "/bin", "/usr/sbin", "/sbin"}, string(os.PathListSeparator)))
 	h.bin = bin
 	// No editors but the ones a test installs: never the machine's /Applications.
 	apps := filepath.Join(dir, "Applications")
@@ -503,6 +506,8 @@ func (h *harness) app(u *ui.UI) *App {
 		return nil, nil
 	}
 	a.miseLatest = func(_ context.Context, spec string) (string, error) {
+		h.world.mu.Lock()
+		defer h.world.mu.Unlock()
 		h.world.calls = append(h.world.calls, "mise latest "+spec)
 		if v, ok := h.world.latest[spec]; ok {
 			return v, nil
