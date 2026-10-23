@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # Builds and releases limabean. Releases run from .github/workflows/release.yml
 # when a v* tag is pushed; pull requests get snapshot builds from
-# .github/workflows/snapshot.yml. Locally: goreleaser release --snapshot --clean
+# .github/workflows/snapshot.yml. Locally: goreleaser release --snapshot --clean --skip=sign
 version: 2
 
 project_name: limabean
@@ -35,6 +35,15 @@ archives:
 
 checksum:
   name_template: checksums.txt
+
+# Keyless Sigstore signature of checksums.txt, which covers every archive,
+# with the release workflow's GitHub identity: no keys or secrets. Snapshot
+# builds skip it (--skip=sign). How to verify: SECURITY.md.
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
 
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"

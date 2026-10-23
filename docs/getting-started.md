@@ -24,6 +24,23 @@ xattr -d com.apple.quarantine limabean 2>/dev/null   # downloaded binaries are q
 mv limabean ~/.local/bin/                            # any directory on your PATH
 ```
 
+To check the download first, also fetch `checksums.txt` and
+`checksums.txt.sigstore.json` from the release (signed since v0.1.6) and run:
+
+```bash
+cosign verify-blob checksums.txt \
+  --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/rossedman/limabean/.github/workflows/release.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+shasum -a 256 --ignore-missing -c checksums.txt
+gh attestation verify limabean_*_darwin_universal.tar.gz --repo rossedman/limabean
+```
+
+The first command checks that the release workflow signed the checksums,
+the second that your archive matches them, and the third GitHub's record of
+where it was built. [SECURITY.md](https://github.com/rossedman/limabean/blob/main/SECURITY.md#verifying-releases)
+has more.
+
 **With Go:**
 
 ```bash

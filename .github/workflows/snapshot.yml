@@ -24,7 +24,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --snapshot --clean
+          args: release --snapshot --clean --skip=sign # nothing to sign for
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: limabean-snapshot-${{ github.event.pull_request.number || github.run_number }}
