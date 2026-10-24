@@ -1,5 +1,6 @@
-# sarifix: runs these scanners, uploads their findings to code scanning, and
-# on pull requests reports what the change introduced. Workflow:
+# sarifix: runs these scanners, uploads their findings to code scanning,
+# keeps one issue per batch for agent-queue.yml to fix, and on pull requests
+# reports what the change introduced. Workflow:
 # .github/workflows/sarifix.yml. Reference:
 # https://rossedman.io/sarifix/configuration/
 version: 1
@@ -27,13 +28,21 @@ scanners:
     timeout: 10m
 
 rules:
-  # Nothing is fixable yet: findings only go to code scanning. List rule
-  # keys (<scanner>/<ruleId>) here before turning on issues mode.
-  allow: []
+  # Rules the sarifix workflow may open issues for, and so hand to the agent
+  # queue (the SARIFIX_QUEUE variable). Deny a rule you won't fix: the next
+  # scan closes its issue.
+  allow: ["golangci-lint/*", "trivy/*", "semgrep/*"]
+  deny: []
   min_level: warning
 
 paths:
   # Generated: tools/gendocs writes these, and fuzz inputs are regression seeds.
+  # Workflows too, sarifix's default: the queue's token can't push them.
   deny:
+    - ".github/workflows/**"
     - "docs/reference/commands/**"
     - "**/testdata/fuzz/**"
+
+publish:
+  issues:
+    max_open: 10 # the most severe batches; the rest open as these close
