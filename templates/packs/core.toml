@@ -4,8 +4,8 @@
 ripgrep = "15.2.0"
 fzf = "0.74.5"
 bat = "0.26.1"   # pager in the host gitconfig
-gh = "2.102.0"
-jq = "1.8.1"   # also from apt, for provisioning scripts that run before mise
+gh = "2.103.0"
+jq = "1.8.2"   # also from apt, for provisioning scripts that run before mise
 yq = "4.54.1"
 fd = "10.5.0"
 direnv = "2.38.2"   # hooked into the shell by features/shell.sh

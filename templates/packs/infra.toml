@@ -1,5 +1,5 @@
 # Infrastructure: Terraform, tflint and the AWS CLI.
 [tools]
-terraform = "1.16.6"   # other versions: `mise use terraform@<v>` (replaces tfswitch)
+terraform = "1.17.0"   # other versions: `mise use terraform@<v>` (replaces tfswitch)
 tflint = "0.64.0"
-aws-cli = "2.38.1"
+aws-cli = "2.38.5"
