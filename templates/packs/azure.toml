@@ -1,4 +1,4 @@
 # Azure: the az CLI.
 [tools]
 "pipx:azure-cli" = "2.91.0"   # log in in the VM: az login --use-device-code
-uv = "0.13.1"   # installs azure-cli
+uv = "0.13.5"   # installs azure-cli
