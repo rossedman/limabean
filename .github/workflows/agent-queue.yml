@@ -59,6 +59,9 @@ jobs:
               --jq 'sort_by(.createdAt) | .[0].number // empty')
           fi
           if [ -z "$n" ]; then echo "No agent-ready issues."; exit 0; fi
+          # The labels this workflow sets, in case nobody has created them.
+          gh label create agent-working --color fbca04 --description "Claude is implementing this issue" 2>/dev/null || true
+          gh label create agent-failed --color d93f0b --description "Claude's run on this issue failed" 2>/dev/null || true
           gh issue edit "$n" --add-label agent-working --remove-label agent-ready
           echo "number=$n" >> "$GITHUB_OUTPUT"
 
