@@ -1,0 +1,130 @@
+name: agent-queue
+
+# Labeling an issue agent-ready hands it to Claude, which implements it on a
+# branch and opens a pull request. A label added by hand starts a run. The
+# sarifix workflow queues up to SARIFIX_QUEUE issues and dispatches this
+# workflow once per issue, since labels it adds with GITHUB_TOKEN start no
+# workflows. Nightly it picks the oldest agent-ready issue nobody took.
+on:
+  issues:
+    types: [labeled]
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number to implement (empty picks the oldest agent-ready issue)
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  implement:
+    if: github.event_name != 'issues' || github.event.label.name == 'agent-ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: agent-queue-${{ github.event.issue.number || inputs.issue || 'scheduled' }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    env:
+      # The versions lint.yml runs.
+      GOLANGCI_LINT_VERSION: 2.14.0
+      ACTIONLINT_VERSION: v1.7.12
+    steps:
+      - name: Pick the issue
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_ISSUE: ${{ github.event.issue.number || inputs.issue }}
+        run: |
+          set -euo pipefail
+          n="${EVENT_ISSUE:-}"
+          case "$n" in *[!0-9]*) echo "::error::issue must be a number, got $n"; exit 1 ;; esac
+          # A dispatched or labeled issue must still be open and agent-ready,
+          # so a label and a dispatch for one issue don't start two runs.
+          if [ -n "$n" ] && ! gh issue view "$n" --json state,labels \
+            --jq '.state == "OPEN" and any(.labels[]; .name == "agent-ready")' | grep -qx true; then
+            echo "#$n is closed or already taken."; exit 0
+          fi
+          if [ -z "$n" ]; then
+            n=$(gh issue list --label agent-ready --state open --json number,createdAt \
+              --jq 'sort_by(.createdAt) | .[0].number // empty')
+          fi
+          if [ -z "$n" ]; then echo "No agent-ready issues."; exit 0; fi
+          gh issue edit "$n" --add-label agent-working --remove-label agent-ready
+          echo "number=$n" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pick.outputs.number != ''
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # make check needs Go, the docs packages and actionlint; shellcheck
+      # comes with the runner.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.pick.outputs.number != ''
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: steps.pick.outputs.number != ''
+        with:
+          python-version: "3.13"
+      - name: Install the docs packages and actionlint
+        if: steps.pick.outputs.number != ''
+        # A pinned actionlint, checked against the Go checksum database.
+        run: |
+          pip install -r docs/requirements.txt
+          go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+
+      # Installs sarifix and the scanners in sarifix.yaml (golangci-lint among
+      # them), so Claude can run make check and the Done when commands of
+      # issues the sarifix workflow opens.
+      - uses: rossedman/sarifix@706469faaa3f32eb199873b93219d195583e8537 # v0.3.1
+        if: steps.pick.outputs.number != ''
+        with:
+          mode: install
+
+      - name: Implement
+        if: steps.pick.outputs.number != ''
+        uses: anthropics/claude-code-action@8d70a0dd265122bd65b8e09d3d959e65373ae2a1 # v1.0.260
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The sarifix workflow dispatches this one with GITHUB_TOKEN, so the
+          # run's actor is github-actions[bot]. Only this repo's workflows
+          # can act as it.
+          allowed_bots: github-actions
+          prompt: |
+            Implement GitHub issue #${{ steps.pick.outputs.number }} in this repository.
+            Read it with `gh issue view ${{ steps.pick.outputs.number }}`. Follow CLAUDE.md,
+            CONTRIBUTING.md and the rules in .claude/rules/ for the files you change.
+            Stay within the issue's scope and acceptance criteria.
+            Run `make check` and any commands under the issue's "Done when" until they pass.
+            The permission-error tests CLAUDE.md lists only fail as root; anything else failing
+            is real. Template changes can't be validated here: say so in the pull request.
+            Commit on a new branch with an imperative subject and a body saying why, push it,
+            and open a pull request with `gh pr create` whose body explains the change, lists
+            what you could not check, and includes "Closes #${{ steps.pick.outputs.number }}".
+            If the issue is ambiguous or you cannot make the checks pass, stop and comment on
+            the issue explaining what is missing instead of guessing.
+          claude_args: |
+            --max-turns 60
+            --model claude-sonnet-5-5
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh pr create:*),Bash(make:*),Bash(go test:*),Bash(go build:*),Bash(go vet:*),Bash(go run:*),Bash(gofmt:*),Bash(golangci-lint:*),Bash(shellcheck:*),Bash(actionlint:*),Bash(mkdocs:*),Bash(sarifix:*),Bash(jq:*)"
+
+      - name: Mark failure
+        if: failure() && steps.pick.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ steps.pick.outputs.number }}
+        run: gh issue edit "$ISSUE" --add-label agent-failed --remove-label agent-working

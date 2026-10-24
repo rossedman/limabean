@@ -2,9 +2,11 @@ name: sarifix
 
 # Runs the scanners in sarifix.yaml (golangci-lint, trivy, semgrep). On
 # pushes to main, weekly and by hand it uploads their findings to code
-# scanning (the Security tab); on pull requests it reports the findings the
-# change introduced, in the job summary and as annotations. It opens no
-# issues and starts no agent. https://rossedman.io/sarifix/action/
+# scanning (the Security tab) and keeps one issue per batch of findings; on
+# pull requests it reports the findings the change introduced, in the job
+# summary and as annotations. With the SARIFIX_QUEUE variable above 0 it
+# labels that many issues agent-ready and starts agent-queue.yml for each.
+# https://rossedman.io/sarifix/tutorials/claude-queue/
 on:
   push:
     branches: [main]
@@ -25,8 +27,9 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      actions: read # upload-sarif reads the run's metadata on private repos
+      actions: write # dispatch agent-queue (also covers upload-sarif's read)
       security-events: write # code scanning upload
+      issues: write # one issue per batch, and the agent-ready label
     env:
       # The version lint.yml runs, rather than the action's default.
       GOLANGCI_LINT_VERSION: 2.14.0
@@ -40,7 +43,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - uses: rossedman/sarifix@0147bd865e6aec0892fce765f16d48b7ac5eb273 # v0.2.3
+      - uses: rossedman/sarifix@706469faaa3f32eb199873b93219d195583e8537 # v0.3.1
         with:
-          # check on pull requests, scan (code scanning only) everywhere else.
-          mode: ${{ github.event_name == 'pull_request' && 'check' || 'scan' }}
+          # The default mode: check on pull requests, issues everywhere else.
+          queue: ${{ vars.SARIFIX_QUEUE }}
+          # Start agent-queue for each issue queued: labels added with the
+          # job's token start no workflows.
+          dispatch: agent-queue.yml

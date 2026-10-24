@@ -55,7 +55,20 @@ request on any of them:
 Pull requests also run [sarifix](https://rossedman.io/sarifix/)
 (`.github/workflows/sarifix.yml`, configured in `sarifix.yaml`), which
 reports the golangci-lint, trivy and semgrep findings a change introduces.
-On `main` the same scanners feed the repository's code scanning alerts.
+On `main` the same scanners feed the repository's code scanning alerts, and
+sarifix keeps one issue (labeled `sarifix`) per batch of findings whose rule
+`rules.allow` lists, up to ten open at once.
+
+Issues labeled `agent-ready` go to Claude:
+[`agent-queue.yml`](.github/workflows/agent-queue.yml) implements the issue
+on a branch, runs `make check` and the issue's "Done when" commands, and
+opens a pull request that closes it. It relabels the issue `agent-working`
+while it runs and `agent-failed` if the run fails. Add the label by hand to
+queue any issue, or set the repository variable `SARIFIX_QUEUE` to a number
+and the sarifix workflow keeps that many of its issues queued, starting the
+agent for each. Agent pull requests need review like any other. The queue
+needs the `ANTHROPIC_API_KEY` repository secret; `SARIFIX_QUEUE` unset or
+`0` queues nothing, so no agent runs start on their own.
 
 You need `golangci-lint`, `shellcheck` and `actionlint`
 (`brew install golangci-lint shellcheck actionlint`), and the docs packages:
