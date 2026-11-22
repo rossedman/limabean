@@ -73,7 +73,7 @@ jobs:
 
       # make check needs Go, the docs packages and actionlint; shellcheck
       # comes with the runner.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         if: steps.pick.outputs.number != ''
         with:
           go-version-file: go.mod
@@ -99,7 +99,7 @@ jobs:
 
       - name: Implement
         if: steps.pick.outputs.number != ''
-        uses: anthropics/claude-code-action@c0949c50a78c1ec8ce2647db36629b870e715d0c # v1.0.268
+        uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # The sarifix workflow dispatches this one with GITHUB_TOKEN, so the
